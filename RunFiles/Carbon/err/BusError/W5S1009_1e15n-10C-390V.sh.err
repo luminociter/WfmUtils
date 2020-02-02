@@ -1,0 +1,8 @@
+Info in <TSelector::Notify>: Opening a new file ...
+Info in <TSelector::Notify>: Opening a new file ...
+R__unzip: error -3 in inflate (zlib)
+Error in <TBasket::ReadBasketBuffers>: fNbytes = 12484, fKeylen = 69, fObjlen = 16038, noutot = 0, nout=0, nin=12415, nbuf=16038
+Error in <TBranchElement::GetBasket>: File: /eos/home-e/egkougko/Root/Carbon/CNM_10478_W5S1009_1e15_n/-10C/390V.root at byte:79014684, branch:w02, entry:1542, badread=1, nerrors=1, basketnumber=1542
+R__unzip: error -3 in inflate (zlib)
+Error in <TBasket::ReadBasketBuffers>: fNbytes = 7830, fKeylen = 69, fObjlen = 16038, noutot = 0, nout=0, nin=7761, nbuf=16038
+Error in <TBranchElement::GetBasket>: File: /eos/home-e/egkougko/Root/Carbon/CNM_10478_W5S1009_1e15_n/-10C/390V.root at byte:79144588, branch:w03, entry:1544, badread=1, nerrors=2, basketnumber=1544

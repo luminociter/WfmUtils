@@ -1,0 +1,48 @@
+Info in <TSelector::Notify>: Opening a new file ...
+Info in <TSelector::Notify>: Opening a new file ...
+Error in <TFile::ReadBuffer>: error reading all requested bytes from file /eos/home-e/egkougko/Root/Carbon/CNM_10478_W5S1008_6e14_n/-20C/120V.root, got 241662 of 16007550
+Error in <TBranchElement::GetBasket>: File: /eos/home-e/egkougko/Root/Carbon/CNM_10478_W5S1008_6e14_n/-20C/120V.root at byte:4967645, branch:t02, entry:100, badread=1, nerrors=1, basketnumber=100
+R__unzip: error -3 in inflate (zlib)
+Error in <TBasket::ReadBasketBuffers>: fNbytes = 15414, fKeylen = 69, fObjlen = 16038, noutot = 0, nout=0, nin=15345, nbuf=16038
+Error in <TBranchElement::GetBasket>: File: /eos/home-e/egkougko/Root/Carbon/CNM_10478_W5S1008_6e14_n/-20C/120V.root at byte:5245353, branch:t03, entry:104, badread=1, nerrors=2, basketnumber=104
+Error in <TBasket::Streamer>: The value of fNbytes is incorrect (-1638631595) ; trying to recover by setting it to zero
+Error in <TBranchElement::GetBasket>: File: /eos/home-e/egkougko/Root/Carbon/CNM_10478_W5S1008_6e14_n/-20C/120V.root at byte:888278589, branch:w03, entry:104, badread=1, nerrors=3, basketnumber=104
+Error in <TBasket::Streamer>: The value of fObjlen is incorrect (-1712201715) ; trying to recover by setting it to zero
+Error in <TBasket::Streamer>: The value of fNbytes is incorrect (-1720377045) ; trying to recover by setting it to zero
+Error in <TBasket::Streamer>: The value of fIOBits (00000000000000000000000000001010) contains unknown flags (supported flags are 00000000000000000000000000000001), indicating this was written with a newer version of ROOT utilizing critical IO features this version of ROOT does not support.  Refusing to deserialize.
+Error in <TBranchElement::GetBasket>: File: /eos/home-e/egkougko/Root/Carbon/CNM_10478_W5S1008_6e14_n/-20C/120V.root at byte:733782779, branch:t02, entry:105, badread=1, nerrors=4, basketnumber=105
+Error in <TBasket::Streamer>: The value of fKeylen is incorrect (-13064) ; trying to recover by setting it to zero
+Error in <TBasket::Streamer>: The value of fObjlen is incorrect (-277662207) ; trying to recover by setting it to zero
+Error in <TBasket::Streamer>: The value of fNbytes is incorrect (-81875885) ; trying to recover by setting it to zero
+Error in <TBranchElement::GetBasket>: File: /eos/home-e/egkougko/Root/Carbon/CNM_10478_W5S1008_6e14_n/-20C/120V.root at byte:3107810672, branch:w02, entry:105, badread=1, nerrors=5, basketnumber=105
+Error in <TBasket::Streamer>: The value of fKeylen is incorrect (-23581) ; trying to recover by setting it to zero
+Error in <TBasket::Streamer>: The value of fObjlen is incorrect (-838404629) ; trying to recover by setting it to zero
+Error in <TBasket::Streamer>: The value of fIOBits (00000000000000000000000001101010) contains unknown flags (supported flags are 00000000000000000000000000000001), indicating this was written with a newer version of ROOT utilizing critical IO features this version of ROOT does not support.  Refusing to deserialize.
+Fatal in <TBuffer::TBuffer>: Request to create a buffer with a negative size, likely due to an integer overflow: 0xe2d82388 for a max of 0x7ffffffe.
+aborting
+#0  0x00002b4b89a0c41c in waitpid () from /lib64/libc.so.6
+#1  0x00002b4b89989f12 in do_system () from /lib64/libc.so.6
+#2  0x00002b4b88b19533 in TUnixSystem::StackTrace() () from /cvmfs/sft.cern.ch/lcg/releases/ROOT/6.18.04-c767d/x86_64-centos7-gcc8-opt/lib/libCore.so
+#3  0x00002b4b88a06d21 in DefaultErrorHandler(int, bool, char const*, char const*) () from /cvmfs/sft.cern.ch/lcg/releases/ROOT/6.18.04-c767d/x86_64-centos7-gcc8-opt/lib/libCore.so
+#4  0x00002b4b88a0680a in ErrorHandler () from /cvmfs/sft.cern.ch/lcg/releases/ROOT/6.18.04-c767d/x86_64-centos7-gcc8-opt/lib/libCore.so
+#5  0x00002b4b88a1a084 in TObject::Fatal(char const*, char const*, ...) const () from /cvmfs/sft.cern.ch/lcg/releases/ROOT/6.18.04-c767d/x86_64-centos7-gcc8-opt/lib/libCore.so
+#6  0x00002b4b889f28c0 in TBuffer::TBuffer(TBuffer::EMode, int) () from /cvmfs/sft.cern.ch/lcg/releases/ROOT/6.18.04-c767d/x86_64-centos7-gcc8-opt/lib/libCore.so
+#7  0x00002b4b8b056179 in TBufferIO::TBufferIO(TBuffer::EMode, int) () from /cvmfs/sft.cern.ch/lcg/releases/ROOT/6.18.04-c767d/x86_64-centos7-gcc8-opt/lib/libRIO.so
+#8  0x00002b4b8b04f8d9 in TBufferFile::TBufferFile(TBuffer::EMode, int) () from /cvmfs/sft.cern.ch/lcg/releases/ROOT/6.18.04-c767d/x86_64-centos7-gcc8-opt/lib/libRIO.so
+#9  0x00002b4b97bfbc35 in TBasket::Streamer(TBuffer&) () from /cvmfs/sft.cern.ch/lcg/releases/ROOT/6.18.04-c767d/x86_64-centos7-gcc8-opt/lib/libTree.so
+#10 0x00002b4b97bfa9a9 in TBasket::ReadBasketBuffers(long long, int, TFile*) () from /cvmfs/sft.cern.ch/lcg/releases/ROOT/6.18.04-c767d/x86_64-centos7-gcc8-opt/lib/libTree.so
+#11 0x00002b4b97c04b8b in TBranch::GetBasketImpl(int, TBuffer*) () from /cvmfs/sft.cern.ch/lcg/releases/ROOT/6.18.04-c767d/x86_64-centos7-gcc8-opt/lib/libTree.so
+#12 0x00002b4b97c051f9 in TBranch::GetBasketAndFirst(TBasket*&, long long&, TBuffer*) () from /cvmfs/sft.cern.ch/lcg/releases/ROOT/6.18.04-c767d/x86_64-centos7-gcc8-opt/lib/libTree.so
+#13 0x00002b4b97c05892 in TBranch::GetEntry(long long, int) () from /cvmfs/sft.cern.ch/lcg/releases/ROOT/6.18.04-c767d/x86_64-centos7-gcc8-opt/lib/libTree.so
+#14 0x00002b4b97c15779 in TBranchElement::GetEntry(long long, int) () from /cvmfs/sft.cern.ch/lcg/releases/ROOT/6.18.04-c767d/x86_64-centos7-gcc8-opt/lib/libTree.so
+#15 0x00002b4b9d888d93 in LGADRun::Process(long long) () from /afs/cern.ch/work/e/egkougko/private/LGADUtils/Root/LGADRun_cxx.so
+#16 0x00002b4b9b4b3ee6 in TTreePlayer::Process(TSelector*, char const*, long long, long long) () from /cvmfs/sft.cern.ch/lcg/releases/ROOT/6.18.04-c767d/x86_64-centos7-gcc8-opt/lib/libTreePlayer.so
+#17 0x00002b4b9daa61ff in LGADUtils::Analyse(long long, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) () from /afs/cern.ch/work/e/egkougko/private/LGADUtils/Root/LGADUtils_cxx.so
+#18 0x00002b4b885970aa in ?? ()
+#19 0x0000000005b0bcf0 in ?? ()
+#20 0x0000000000000015 in ?? ()
+#21 0x0000000000000015 in ?? ()
+#22 0x00002b4b89d0e760 in ?? () from /lib64/libc.so.6
+#23 0x00002b4b88597000 in ?? ()
+#24 0x0000000000006b58 in ?? ()
+#25 0x0000000000000000 in ?? ()

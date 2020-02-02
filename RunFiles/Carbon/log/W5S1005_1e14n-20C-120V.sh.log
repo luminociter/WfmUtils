@@ -1,0 +1,82 @@
+000 (3446280.002.000) 01/30 00:14:44 Job submitted from host: <188.185.71.142:9618?addrs=188.185.71.142-9618+[2001-1458-d00-7--100-388]-9618&alias=bigbird09.cern.ch&noUDP&sock=schedd_2208_1533_7>
+...
+040 (3446280.002.000) 01/30 04:18:52 Started transferring input files
+	Transferring to host: <188.184.212.140:9618?addrs=188.184.212.140-9618+[2001-1458-301-10c--100-84]-9618&noUDP&sock=6630_2f47_147769>
+...
+040 (3446280.002.000) 01/30 04:18:53 Finished transferring input files
+...
+001 (3446280.002.000) 01/30 04:18:53 Job executing on host: <188.184.212.140:9618?addrs=188.184.212.140-9618+[2001-1458-301-10c--100-84]-9618&noUDP&sock=5694_3059_3>
+...
+006 (3446280.002.000) 01/30 04:19:02 Image size of job updated: 31669400
+	2  -  MemoryUsage of job (MB)
+	1736  -  ResidentSetSize of job (KB)
+...
+006 (3446280.002.000) 01/30 04:24:02 Image size of job updated: 31669400
+	460  -  MemoryUsage of job (MB)
+	470828  -  ResidentSetSize of job (KB)
+...
+006 (3446280.002.000) 01/30 04:29:02 Image size of job updated: 31669400
+	475  -  MemoryUsage of job (MB)
+	485444  -  ResidentSetSize of job (KB)
+...
+006 (3446280.002.000) 01/30 04:34:04 Image size of job updated: 31669400
+	475  -  MemoryUsage of job (MB)
+	485716  -  ResidentSetSize of job (KB)
+...
+006 (3446280.002.000) 01/30 04:44:04 Image size of job updated: 31669400
+	475  -  MemoryUsage of job (MB)
+	485732  -  ResidentSetSize of job (KB)
+...
+006 (3446280.002.000) 01/30 04:49:05 Image size of job updated: 31669400
+	475  -  MemoryUsage of job (MB)
+	485748  -  ResidentSetSize of job (KB)
+...
+006 (3446280.002.000) 01/30 05:14:08 Image size of job updated: 31669400
+	475  -  MemoryUsage of job (MB)
+	485800  -  ResidentSetSize of job (KB)
+...
+006 (3446280.002.000) 01/30 05:19:09 Image size of job updated: 31669400
+	475  -  MemoryUsage of job (MB)
+	485820  -  ResidentSetSize of job (KB)
+...
+006 (3446280.002.000) 01/30 05:39:12 Image size of job updated: 31669400
+	475  -  MemoryUsage of job (MB)
+	485840  -  ResidentSetSize of job (KB)
+...
+006 (3446280.002.000) 01/30 06:04:13 Image size of job updated: 31669400
+	475  -  MemoryUsage of job (MB)
+	485852  -  ResidentSetSize of job (KB)
+...
+006 (3446280.002.000) 01/30 06:24:15 Image size of job updated: 31669400
+	475  -  MemoryUsage of job (MB)
+	485856  -  ResidentSetSize of job (KB)
+...
+006 (3446280.002.000) 01/30 07:54:24 Image size of job updated: 31669400
+	475  -  MemoryUsage of job (MB)
+	485868  -  ResidentSetSize of job (KB)
+...
+006 (3446280.002.000) 01/30 08:04:25 Image size of job updated: 31669400
+	475  -  MemoryUsage of job (MB)
+	485884  -  ResidentSetSize of job (KB)
+...
+006 (3446280.002.000) 01/30 08:49:31 Image size of job updated: 31669400
+	475  -  MemoryUsage of job (MB)
+	485896  -  ResidentSetSize of job (KB)
+...
+007 (3446280.002.000) 01/31 17:28:26 Shadow exception!
+	Assertion ERROR on (result)
+	0  -  Run Bytes Sent By Job
+	493  -  Run Bytes Received By Job
+...
+040 (3446280.002.000) 02/01 07:54:03 Started transferring input files
+	Transferring to host: <128.142.240.109:9618?addrs=128.142.240.109-9618+[2001-1458-301-f9--100-37]-9618&noUDP&sock=18945_375b_35916>
+...
+040 (3446280.002.000) 02/01 07:54:03 Finished transferring input files
+...
+001 (3446280.002.000) 02/01 07:54:04 Job executing on host: <128.142.240.109:9618?addrs=128.142.240.109-9618+[2001-1458-301-f9--100-37]-9618&noUDP&sock=2354_3a07_3>
+...
+040 (3446280.002.000) 02/01 16:39:18 Started transferring input files
+	Transferring to host: <188.184.197.55:9618?addrs=188.184.197.55-9618+[2001-1458-301-103--100-39]-9618&noUDP&sock=20398_fc77_201121>
+...
+040 (3446280.002.000) 02/01 16:39:18 Finished transferring input files
+...

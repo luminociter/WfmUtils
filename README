@@ -1,0 +1,59 @@
+This Package can be used to support the nalysis of HGTD Data originating
+from a testbeam or a bench top osciloscope testing with beta source.
+Functions should be applid to raw data aquired with the instrument.
+
+More details on the use of specific classes, methods, and utility 
+codes can be found on the following TWiki: 
+https://twiki.cern.ch/twiki/bin/view/AtlasProtected/HGTDUtils
+
+rcSetup Base,2.4.20 # if first time
+rcSetup # after that
+
+rc compile
+
+# there are two ways to run it:
+# through root [Vagg]
+root -l
+.x macros/Run.C
+
+# through an executable run, by just:
+run [options]
+# you need to have either a dir "input" with the initial files
+# or set the inputdir to be sth else adding 
+run -in newInputFolder 
+# there is a default file set to run on 
+# but can be changed by 
+run -f newFile
+# there is the default folder to be created with the output "results"
+# but can be changed by
+run -out newOutput
+# the default operation is "convert" data
+# but can be change to "analyze" converted data by
+run -do analyze
+# and of course combination of all above
+
+
+
+###############################################
+Some info on the output file
+###############################################
+
+Branches: 
+        t01       w01       vScale01  nPoints01 
+        SnRate01  t02       w02       vScale02  
+        nPoints02 SnRate02  t03       w03       
+        vScale03  nPoints03 SnRate03  t04       
+        w04       vScale04  nPoints04 SnRate04  
+        t05       w05       vScale05  nPoints05 
+        SnRate05  t06       w06       vScale06  
+        nPoints06 SnRate06  t07       w07       
+        vScale07  nPoints07 SnRate07  t08       
+        w08       vScale08  nPoints08 SnRate08
+
+The following info is provided for each of the 8 channels:
+ t0x             = (vector<double>*) Time vector
+ w0x             = (vector<double>*) waveform [voltage]
+ vScale0x        = Voltage scale per channel (oscilloscope setting, affects noise)
+ nPoints0x       = vector size
+ SnRate0x        = sampling rate per channel
+

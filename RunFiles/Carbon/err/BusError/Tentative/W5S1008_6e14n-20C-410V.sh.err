@@ -1,0 +1,12 @@
+Info in <TSelector::Notify>: Opening a new file ...
+Info in <TSelector::Notify>: Opening a new file ...
+R__unzip: error -5 in inflate (zlib)
+Error in <TBasket::ReadBasketBuffers>: fNbytes = 15414, fKeylen = 69, fObjlen = 16038, noutot = 0, nout=0, nin=15345, nbuf=16038
+Error in <TBranchElement::GetBasket>: File: /eos/home-e/egkougko/Root/Carbon/CNM_10478_W5S1008_6e14_n/-20C/410V.root at byte:222665617, branch:t02, entry:4355, badread=1, nerrors=1, basketnumber=4355
+R__unzip: error -3 in inflate (zlib)
+Error in <TBasket::ReadBasketBuffers>: fNbytes = 12446, fKeylen = 69, fObjlen = 16038, noutot = 0, nout=0, nin=12377, nbuf=16038
+Error in <TBranchElement::GetBasket>: File: /eos/home-e/egkougko/Root/Carbon/CNM_10478_W5S1008_6e14_n/-20C/410V.root at byte:224263328, branch:w02, entry:4386, badread=1, nerrors=2, basketnumber=4386
+R__unzip: error -3 in inflate (zlib)
+Error in <TBasket::ReadBasketBuffers>: fNbytes = 8012, fKeylen = 69, fObjlen = 16038, noutot = 0, nout=0, nin=7943, nbuf=16038
+Error in <TBranchElement::GetBasket>: File: /eos/home-e/egkougko/Root/Carbon/CNM_10478_W5S1008_6e14_n/-20C/410V.root at byte:224343013, branch:w03, entry:4387, badread=1, nerrors=3, basketnumber=4387
+SysError in <TFile::Flush>: error flushing file /eos/home-e/egkougko/Root/Carbon/CNM_10478_W5S1008_6e14_n/-20C/410V.root (Protocol error)

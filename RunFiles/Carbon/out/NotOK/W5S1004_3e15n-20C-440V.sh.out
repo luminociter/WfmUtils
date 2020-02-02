@@ -1,0 +1,29 @@
+I am here for the asetup: 
+/afs/cern.ch/work/e/egkougko/private
+ROOT setup OK
+Running on host b7s10n2171.cern.ch
+I am here for to run the macro: 
+/afs/cern.ch/work/e/egkougko/private/LGADUtils/Macros
+
+Processing ./Carbon/CNM_10478_W5S1004_3e15_n/-20C/W5S1004_3e15n-20C-440V.C+...
+
+[1mRooFit v3.60 -- Developed by Wouter Verkerke and David Kirkby[0m 
+                Copyright (C) 2000-2013 NIKHEF, University of California & Stanford University
+                All rights reserved, please read http://roofit.sourceforge.net/license.txt
+
+-----------------------------------------------------------------------------------------
+(LGADUtils *) 0x5b86300
+-----------------------------------------------------------------------------------------
+Client master begin!
+-----------------------------------------------------------------------------------------
+Client slave begin!
+-----------------------------------------------------------------------------------------
+--> Running Localy
+--> File Accessed: /eos/home-e/egkougko/Root/Carbon/CNM_10478_W5S1004_3e15_n/-20C/440V.root
+--> Total number of entries in file: 4676
+-----------------------------------------------------------------------------------------
+--> Running Localy
+--> File Accessed: /eos/home-e/egkougko/Root/Carbon/CNM_10478_W5S1004_3e15_n/-20C/440V.root
+--> Total number of entries in file: 4676
+-----------------------------------------------------------------------------------------
+<=                   > :0%, Processed entries: 1 / 4676<=                   > :1%, Processed entries: 47 / 4676<=                   > :2%, Processed entries: 94 / 4676Done!!!

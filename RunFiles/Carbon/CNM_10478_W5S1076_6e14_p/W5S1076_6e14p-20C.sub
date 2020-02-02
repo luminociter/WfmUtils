@@ -1,0 +1,12 @@
+executable            = $(name)
+output                = out/$Fnx(name).out
+error                 = err/$Fnx(name).err
+log                   = log/$Fnx(name).log
+# use runtime command that is supported by your system
+# +JobFlavour = "tomorrow" #24h runtime syntax good for lxplus, doesn't work at DESY e.g.
+# +RequestRuntime = 86400 #24h runtime, syntax not valid on lxplus
++JobFlavour = "testmatch"
+on_exit_remove          = (ExitBySignal == False) && (ExitCode == 0)
+max_retries             = 5
+requirements = Machine =!= LastRemoteHost
+queue name matching files (/afs/cern.ch/work/e/egkougko/private/LGADUtils/Scripts/Carbon/CNM_10478_W5S1076_6e14_p/-20C/*.sh)
