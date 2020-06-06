@@ -1313,10 +1313,10 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
   m_ChFitJitNdVdT.second = sqrt(pow(m_ChFitNoise.second/m_ChFitDVDTCFD.first, 2) + pow((m_ChFitNoise.first/pow(m_ChFitDVDTCFD.first, 2))*m_ChFitDVDTCFD.second, 2));
   if (m_verbose >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit Jitter (from dV/dt): " << m_ChFitJitNdVdT.first << " +/- "
                                 << m_ChFitJitNdVdT.second << std::endl;
-  m_ChFitJitRiseSNR.first = (m_ChFitRiseTime.first)*(m_ChFitNoise.first) / (m_ChFitNoise.first);
-  m_ChFitJitRiseSNR.second = sqrt(pow(m_ChFitRiseTime.second*m_ChFitNoise.first/m_ChFitNoise.first, 2) + 
-                                  pow(m_ChFitRiseTime.first*m_ChFitNoise.second / m_ChFitNoise.first, 2) + 
-                                  pow((m_ChFitNoise.second*m_ChFitRiseTime.first*m_ChFitNoise.first)/pow(m_ChFitNoise.first, 2), 2));
+  m_ChFitJitRiseSNR.first = (m_ChFitRiseTime.first)*(m_ChFitMaxVolt.first) / (m_ChFitNoise.first);
+  m_ChFitJitRiseSNR.second = sqrt(pow(m_ChFitRiseTime.second*m_ChFitNoise.first / m_ChFitMaxVolt.first, 2) +
+                                  pow(m_ChFitRiseTime.first*m_ChFitNoise.second / m_ChFitMaxVolt.first, 2) + 
+                                  pow((m_ChFitMaxVolt.second*m_ChFitRiseTime.first*m_ChFitNoise.first)/pow(m_ChFitNoise.first, 2), 2));
   if (m_verbose >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit Jitter (from SNR): " << m_ChFitJitRiseSNR.first << " +/- "
                                 << m_ChFitJitRiseSNR.second << std::endl;
 
