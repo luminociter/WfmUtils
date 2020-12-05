@@ -75,6 +75,11 @@ void LGADBase::SetTrackComb(bool comb)
     m_TrackComb = comb;
 }
 // --------------------------------------------------------------------------------------------------------------
+void LGADBase::SetTransFileName(TString filename) 
+{
+     m_TransFileName = filename;
+}
+// --------------------------------------------------------------------------------------------------------------
 bool LGADBase::GetTrackComb()
 {
     return m_TrackComb;
@@ -82,12 +87,12 @@ bool LGADBase::GetTrackComb()
 // --------------------------------------------------------------------------------------------------------------
 void LGADBase::SetFEi4Eff(bool FEi4Eff)
 {
-	m_fei4Eff = FEi4Eff;
+    m_fei4Eff = FEi4Eff;
 }
 // --------------------------------------------------------------------------------------------------------------
 bool LGADBase::GetFEi4Eff()
 {
-	return m_fei4Eff;
+    return m_fei4Eff;
 }
 // --------------------------------------------------------------------------------------------------------------
 bool LGADBase::SetSRate(double rate, unsigned int ch)
@@ -145,7 +150,7 @@ void LGADBase::Initialize()
              m_npoints.push_back(64);
              m_srate.push_back(8512e6);
             }
-	else if (m_instrument == LabTXT || m_instrument == Unasigned)
+    else if (m_instrument == LabTXT || m_instrument == Unasigned)
             {
              m_npoints.push_back(1024);
              m_srate.push_back(2e10);
@@ -162,7 +167,27 @@ void LGADBase::Initialize()
     m_fei4Eff = false;
     m_convert = false;
     m_WaveShape = false;
+    m_TrnsCorr = false;
+    m_ext = "";
+    m_datadir = "";
+    m_dataname = "";
+    m_treename = "";
+    m_ofdir = "";
+    m_ofname = "";
     if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Initializing sampling rate to default value : " << m_srate.at(0) / 1e6 << "MS/sec and no. of points to : " << m_npoints.at(0) << std::endl;
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADBase::SetStartStopEvnt(int Evnt1, int Evnt2)
+{
+    if (Evnt1 >= 0) m_evnt1 = Evnt1;
+    else std::cout << __FUNCTION__ << " WARNING: Start event value not coherent, setting to zero!" << std::endl;
+    if (Evnt2 > Evnt1 && Evnt2 > 0)  m_evnt2 = Evnt2;
+    else std::cout << __FUNCTION__ << " WARNING: Stop event value not coherent, setting to zero!" << std::endl;
+}
+// --------------------------------------------------------------------------------------------------------------
+std::pair <unsigned int, unsigned int> LGADBase::GetStartStopEvnt()
+{
+    return  std::make_pair(m_evnt1, m_evnt2);
 }
 // --------------------------------------------------------------------------------------------------------------
 void LGADBase::SetVectorSize(unsigned int nch)
@@ -178,6 +203,7 @@ void LGADBase::SetVectorSize(unsigned int nch)
 
     m_t.resize(nch);
     m_w.resize(nch);
+
     if (m_instrument == TektronixScope || m_instrument == Unasigned) m_triggTime.resize(nch);
     if (m_instrument == Sampic)
        {
@@ -194,24 +220,36 @@ void LGADBase::SetVectorSize(unsigned int nch)
 
 }
 // --------------------------------------------------------------------------------------------------------------
+int LGADBase::Addoriel(int val)
+{
+    int fract = 0;
+    if (val > 0) for (int i = 0; i <= val; i++) fract += i;
+    else {
+          fract = -1;
+          std::cout << __FUNCTION__ << " ERROR: Trying to calculate factorial of negative number!" << std::endl;
+         }
+    return fract;
+}
+// --------------------------------------------------------------------------------------------------------------
 void LGADBase::ProgressBar(Long64_t evt, Long64_t total)
 {
     float prd = float(total) / float(100);
-    if (ceil(remainder((float)evt, prd)) == 0 && (evt + 1) < total) 
+    if (((remainder((float)evt, prd) <0 && ceil(remainder((float)evt, prd)) == 0) 
+         || (remainder((float)evt, prd) >=0 && floor(remainder((float)evt, prd)) == 0)) && (evt + 1) < total)
        {
-        std::cout << "<" << setfill('=') << setw(floor((0.2*((float)evt / prd)))) << "=";
-        std::cout << setfill(' ') << setw(20 - floor((0.2*((float)evt / prd))) + 2) << std::right << "> :";
-        std::cout << std::left << round((float)evt / prd) << "%" << ", Processed entries: " << evt + 1 << " / " << total << "\r" << setfill(' ');
+        std::cout << "<" << std::setfill('=') << std::setw(floor((0.2*((float)evt / prd)))) << "=";
+        std::cout << std::setfill(' ') << std::setw(20 - floor((0.2*((float)evt / prd))) + 2) << std::right << "> :";
+        std::cout << std::left << round((float)evt / prd) << "%" << ", Processed entries: " << evt + 1 << " / " << total << "\r" << std::setfill(' ');
        }
-    else if ((evt + 1) == total) std::cout << "<" << setfill('=') << setw(19) << "=" << setfill(' ') 
+    else if ((evt + 1) == total) std::cout << "<" << std::setfill('=') << std::setw(19) << "=" << std::setfill(' ') 
                                            << "> :" << 100 << "%" << ", Processed entries: "  << evt+1 << " / " 
-                                           << total << "\r" << setfill(' ') << std::endl;
+                                           << total << "\r" << std::setfill(' ') << std::endl;
 }
 // --------------------------------------------------------------------------------------------------------------
 bool LGADBase::SetRootTree(TFile* f, std::string name)
 {
 int n = 0;
-TTree* data_tree;
+TTree* data_tree = NULL;
 TIter nextkey(f->GetListOfKeys());
 TKey *key = 0;
 
@@ -249,7 +287,7 @@ std::string LGADBase::trim(const std::string str, const std::string whitespace)
     return str.substr(strBegin, strRange);
 }
 // --------------------------------------------------------------------------------------------------------------
-// Function to remove characters and/or spaces from the totality and the beginning and end of the string.
+// Function to remove characters and/or spaces from the totality, the beginning and end of the string.
 std::string LGADBase::reduce(const std::string str, const std::string fill, const std::string whitespace)
 {
     std::string result = trim(str, whitespace); // trim first
@@ -365,7 +403,7 @@ std::vector<std::string> LGADBase::ListFileNames(const char* path, const char* e
     while ((pdir = readdir(path_dir)))
           {
            search_path = pdir->d_name;
-           if (search_path.find(search_ext) != string::npos) filenames.push_back(pdir->d_name);
+           if (search_path.find(search_ext) != std::string::npos) filenames.push_back(pdir->d_name);
           }
 #endif
 
@@ -481,34 +519,102 @@ template <typename V, typename T> double LGADBase::BayesianErr(V *w, T value)
     double events = w->size();
     double pass = 0;
     for (unsigned int k = 0; k < events; k++) if ((w->at(k)) == value) pass++;
-    return sqrt((((pass + 1)*(pass + 2))/((events + 2)*(events + 3))) - (pow(pass+1, 2)/pow(events+2, 2)));
+    if ( > 0 ) return sqrt((((pass + 1)*(pass + 2))/((events + 2)*(events + 3))) - (pow(pass+1, 2)/pow(events+2, 2)));
+    else {
+          std::cout << __FUNCTION__ << " ERROR: Trying to calculate baysian uncertenty of empty distribution!" << std::endl;
+          return 99.;
+         }
 }
 // --------------------------------------------------------------------------------------------------------------
 template <typename V> double LGADBase::CalcMeadian(V *vec)
 {
     size_t size = vec->size();
-    if (size == 0) return -1;  // Undefined, really.
+    if (size == 0) return -1;  // Undefined, realy.
     else {
           sort(vec->begin(), vec->end());
-          if (size % 2 == 0) return (vec->at((size/2)-1) + vec->at(size/2)) / 2;
-          else return vec->at(size / 2);
+          if (size % 2 == 0) return (vec->at((size / 2) - 1) + vec->at(size / 2)) / 2;
+          else return vec->at(ceil((float)size / 2));
          }
 }
 // --------------------------------------------------------------------------------------------------------------
+template <typename V> V LGADBase::OutlierReject(V *w, unsigned int order, unsigned int elem, int start, int stop)
+{
+    if (stop <= 0 || stop > (int)(w->size()) || stop <= start) stop = w->size();
+    if (start < 0 || start >= (int)(w->size())) start = 0;
+
+    V wmod;
+    for (int ga = start; ga < stop - 1; ga++) wmod.push_back(w->at(ga));
+    sort(wmod.begin(), wmod.end());
+    double mnt = 0.0;
+    for (unsigned int i = 1; i < (elem+1); i++)  mnt += wmod.at((wmod.size() / 2) + i) + wmod.at((wmod.size() / 2) - i);
+    mnt = mnt/elem;
+    for (unsigned int de = 0; de < wmod.size(); de++)
+        {
+         if (wmod.at(de) !=0)
+            {
+             if (fabs(log10(wmod.at(de)/mnt)) >= order)
+                {
+                 wmod.erase(wmod.begin() + de);
+                 de--;
+                }
+            }
+        }
+
+    return wmod;
+}
+// --------------------------------------------------------------------------------------------------------------
+template <typename T, typename V> T LGADBase::CalResolution(V *w, unsigned int order, int start, int stop)
+{ 
+    if (stop <= 0 || stop > (int)(w->size()) || stop <= start) stop = w->size();
+    if (start < 0 || start >= (int)(w->size())) start = 0;
+
+    T res = -1;
+    V mag;
+    mag.reserve(LGADBase::Addoriel(stop-start-1));
+    double l = 0;
+    for (int ga = start; ga < stop - 1; ga++)
+        {
+         for (int ma = ga + 1; ma < stop; ma++)
+             {
+              l = fabs((double)(w->at(ma) - w->at(ga)));
+              if (l > 0) mag.push_back(l);
+             }
+        }
+    // Remove extreme elements from vectors to account for accuracy issues
+    l = LGADBase::Mean(&mag);
+    for (unsigned int kr = 0; kr < mag.size(); kr++)
+            {
+             if (fabs(log10(mag.at(kr)/l)) >= order)
+                {
+                 mag.erase(mag.begin() + kr);
+                 kr--;
+                }
+            }
+    res = *std::min_element(mag.begin(), mag.end());
+
+    return res;
+}
+// --------------------------------------------------------------------------------------------------------------
 // Explicit template instantanization
-template vector<int> LGADBase::Derivate<vector<int> >(vector<int>*, int);
-template vector<float> LGADBase::Derivate<vector<float> >(vector<float>*, int);
-template vector<double> LGADBase::Derivate<vector<double> >(vector<double>*, int);
-template double LGADBase::Mean<vector<int> >(vector<int>*, int, int);
-template double LGADBase::Mean<vector<bool> >(vector<bool>*, int, int);
-template double LGADBase::Mean<vector<float> >(vector<float>*, int, int);
-template double LGADBase::Mean<vector<double> >(vector<double>*, int, int);
-template double LGADBase::Stdev<vector<int> >(vector<int>*, int, int, double);
-template double LGADBase::Stdev<vector<bool> >(vector<bool>*, int, int, double);
-template double LGADBase::Stdev<vector<float> >(vector<float>*, int, int, double);
-template double LGADBase::Stdev<vector<double> >(vector<double>*, int, int, double);
-template double LGADBase::BayesianErr<vector<int>, int>(vector<int>*, int);
-template double LGADBase::BayesianErr<vector<bool>, bool>(vector<bool>*, bool);
-template  double LGADBase::CalcMeadian<vector<int> >(vector<int> *);
-template  double LGADBase::CalcMeadian<vector<float> >(vector<float> *);
-template  double LGADBase::CalcMeadian<vector<double> >(vector<double> *);
+template vector<int> LGADBase::Derivate<vector<int> >(std::vector<int> *, int);
+template vector<float> LGADBase::Derivate<vector<float> >(std::vector<float> *, int);
+template vector<double> LGADBase::Derivate<vector<double> >(std::vector<double> *, int);
+template double LGADBase::Mean<vector<int> >(std::vector<int> *, int, int);
+template double LGADBase::Mean<vector<bool> >(std::vector<bool> *, int, int);
+template double LGADBase::Mean<vector<float> >(std::vector<float> *, int, int);
+template double LGADBase::Mean<vector<double> >(std::vector<double> *, int, int);
+template double LGADBase::Stdev<vector<int> >(std::vector<int> *, int, int, double);
+template double LGADBase::Stdev<vector<bool> >(std::vector<bool> *, int, int, double);
+template double LGADBase::Stdev<vector<float> >(std::vector<float> *, int, int, double);
+template double LGADBase::Stdev<vector<double> >(std::vector<double> *, int, int, double);
+template double LGADBase::BayesianErr<vector<int>, int>(std::vector<int> *, int);
+template double LGADBase::BayesianErr<vector<bool>, bool>(std::vector<bool> *, bool);
+template double LGADBase::CalcMeadian<vector<int> >(std::vector<int> *);
+template double LGADBase::CalcMeadian<vector<float> >(std::vector<float> *);
+template double LGADBase::CalcMeadian<vector<double> >(std::vector<double> *);
+template vector<int> LGADBase::OutlierReject<vector<int> >(std::vector<int> *, unsigned int, unsigned int, int, int);
+template vector<float> LGADBase::OutlierReject<vector<float> >(std::vector<float> *, unsigned int, unsigned int, int, int);
+template vector<double> LGADBase::OutlierReject<vector<double> >(std::vector<double> *, unsigned int, unsigned int, int, int);
+template int LGADBase::CalResolution<int, vector<int> >(std::vector<int> *, unsigned int, int, int);
+template float LGADBase::CalResolution<float, vector<float> >(std::vector<float> *, unsigned int, int, int);
+template double LGADBase::CalResolution<double, vector<double> >(std::vector<double> *, unsigned int, int, int);
