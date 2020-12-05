@@ -12,7 +12,6 @@
 
 #include "LGADUtils/DUTChannel.h"
 #include "LGADUtils/LGADSel.h"
-#include "LGADUtils/LGADBase.h"
 #include <TParameter.h>
 
 class LGADRun : public LGADSel {
@@ -136,10 +135,10 @@ private:
     std::vector<TH1D* > h_NoiseFFTFt;
     std::vector< std::vector<TH1D* > > h_CFDTimeFt;
 
-    LGADBase* m_Base;
-    std::vector<DUTChannel*> m_DUTCh;
-    // std::vector<WaveForm*> m_waveform;
+    std::vector<DUTChannel*> m_RunDUTCh;
+    // std::vector<WaveForm*> m_RunWaveform;
     // ClassDef(LGADRun, 0);
+    LGADBase* m_RunBase;
 
     unsigned int m_init;
 };
