@@ -45,14 +45,6 @@ void LGADBase::SetOutDataNames(TString DataDir, TString DataName)
     m_ofdir = DataDir;
 }
 // --------------------------------------------------------------------------------------------------------------
-void LGADBase::SetStartStopEvnt(unsigned int Evnt1, unsigned int Evnt2)
-{
-    if (Evnt1 > 0) m_evnt1 = Evnt1;
-    else m_evnt1 = 0;
-    if (Evnt2 > 0) m_evnt2 = Evnt2;
-    else m_evnt2 = 0;
-}
-// --------------------------------------------------------------------------------------------------------------
 bool LGADBase::ConvertData()
 {
     if (m_datadir.IsNull()) { std::cout << __FUNCTION__ << " ERROR: Input data directory not set! Abording..." << std::endl; return false; }
@@ -187,7 +179,7 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext)
            else if (ifile < nfiles) continue;
            else break;
           }
-       std::cout << "--> Openning file: " << ifname << endl;
+       std::cout << "--> Openning file: " << ifname << std::endl;
        npoints = 0;
 
        // If first file then read all info for rate and number of active channels
@@ -237,7 +229,7 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext)
               if (l_voltage.size() == 0) sscanf(line.c_str(), "%*s %u %*s %lf %*s %*u %*s %*lf %*s %lf %*s %u", &channel, &phystime, &ordrtime, &npoints);
               else sscanf(line.c_str(), "%*s %u %*s %lf %*s %*u %*s %*lf %*s %lf %*s %*u", &channel, &phystime, &ordrtime);
               if (channel == -1) continue;
-              if (ievent % 1000 == 0) std::cout << "    Converting event " << ievent << endl;
+              if (ievent % 1000 == 0) std::cout << "    Converting event " << ievent << std::endl;
               voltage.reserve(npoints);
               getline(file, line);
               line = reduce(line, "", "DataSamples");
@@ -336,7 +328,7 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext)
                  m_tree->Fill();
                  saved.push_back(l_phystime.at(i));
                  ievent++;
-                 if (ievent % 400 == 0) std::cout << "    Writing event " << ievent << endl;
+                 if (ievent % 400 == 0) std::cout << "    Writing event " << ievent << std::endl;
                 }
            }
        std::cout << "    Wrote " << ievent << " total events from file " << ifname << std::endl;
@@ -347,14 +339,15 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext)
   m_event = tevent;
   m_ofile->Write();
   delete m_trigDt;
+  delete m_trigFr;
   delete m_tree;
   m_ofile->Close();
   return true;
 }
 // --------------------------------------------------------------------------------------------------------------
-// Readout function for the LeCroy scope on a txt file saving mode where eacj channel of each event is writen to a seperate txt file.
+// Readout function for the LeCroy scope on a txt file saving mode where each channel of each event is writen to a seperate txt file.
 // Multiple scopes are supported with a non-limited number of channels as long as the run names are the same
-bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext, unsigned int evt1, unsigned int evt2)
+bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext, int evt1, int evt2)
 {
     // File name format string for scanf with placeholders for the dir, channel, the event number and extension
     //--old-- const char* ifname_format = "%s/C%dTrace%05d.%s";
@@ -370,6 +363,7 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
     std::vector<double> l_triggtimeVec;
     l_npoints.clear();
     bool l_labview = false;
+    int evtfd = -1;
 
     unsigned int nfiles = CountFiles(dir, ext);
     bool end = false;
@@ -423,7 +417,6 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
     if (m_nchan == 0)
        {
         std::cout << __FUNCTION__ << " WARNING: Given start event number " << evt1 << " in disagreement with files in: " << dir << ", attempting to recover... " << std::endl;
-        int evtfd = -1;
         std::vector<std::string> filenames = LGADBase::ListFileNames(dir, ext);
         std::string tr = name;
         tr = "C%*u" + tr + "%05u.%*s";
@@ -432,14 +425,25 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
            {
             std::cout << __FUNCTION__ << "          Found files starting from event " << evtfd << std::endl;
             evt1 = evtfd;
-            evt2 +=  evtfd;
-            goto findchannel;    
+            evt2 += evtfd;
+            goto findchannel;
            }
         else {
               std::cout << __FUNCTION__ << " ERROR: Unsaccsesful in finding first event in folder: " << dir << std::endl;
               return false;
              }
        }
+
+    if (evtfd < 0 && (evt2 > (int)(nfiles/m_nchan)-evt1))
+       {
+        evt2 = (nfiles/m_nchan)-evt1;
+        std::cout << __FUNCTION__ << "          Adjusting stop event to available files " << evt2 << std::endl;
+       }
+    else if (evtfd > 0 && evt2 != 0 && (evt2 - evt1) >(int)(nfiles/m_nchan))
+            { 
+             evt2 = int(nfiles / m_nchan);
+             std::cout << __FUNCTION__ << "          Adjusting stop event to available files " << evt2 << std::endl;
+            }
 
     // time of the standard time_t type: the number of seconds since Jan 1, 1970 
     double trigtime_first = 0; // time of the first event
@@ -457,16 +461,19 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
 
     int points = *min_element(l_npoints.begin(), l_npoints.end());
 
+    bool comma = false;
     unsigned int oi;
     float oi1 = 0;
-    unsigned int a = 1;
+    float a = 1.;
     // Loop over all event files
     count = 0; // Display coiunter for user refernce
     unsigned int n = 0; // Writen events counter
     for (m_event = evt1; true; m_event++)  // NB: an infinite loop -- for (int m_event=0; m_event<10; ++m_event)
         {
-         if (evt2 != 0 && evt2 > evt1 && m_event > evt2) break;
-         if (count % 100 == 0) std::cout << " Converting event " << count << endl;
+         if (evt2 != 0 && evt2 > evt1 && (int)m_event > evt2) break;
+         if (evt2 != 0 && evt2 != evtfd) LGADBase::ProgressBar(m_event-evt1, evt2 - evt1);
+         else if (evtfd == -1 && evt2 == 0) LGADBase::ProgressBar(m_event-evt1, (nfiles/m_nchan)-evt1);
+         else LGADBase::ProgressBar(m_event - evt1, ((nfiles / m_nchan) + evtfd) - evt1);
          if (end) break;
          bool first = false;
          bool bad = false; // Set per event, if one channel is bad, ignore the event
@@ -486,7 +493,7 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
                      {
                       if (m_tree->GetEntries() == 0) 
                          {
-                          std::cout << __FUNCTION__ << " ERROR: Could not open any input file" << ifname <<endl;
+                          std::cout << __FUNCTION__ << " ERROR: Could not open any input file" << ifname << std::endl;
                           return false;
                          }
                       else if ((m_event*m_nchan) < nfiles) continue; // If a file is missing just go to the next
@@ -513,21 +520,20 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
                       else timeinfo.tm_mon = std::string("JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC").find(month_str) / 4;
                       old_trigtime = m_trigtime;
                       m_trigtime = mktime(&timeinfo);
-                      if (l_labview) 
-                         {
-                          if ((float)oi / 10 < 1) a = 10;
-                          else if ((float)oi / 100 < 1) a = 100;
-                          else if ((float)oi / 1000 < 1) a = 1000;
-                         }
-                      if (m_event == evt1) // time of the first event
+                      if (l_labview) a = pow(10, fabs(ceil(log10(abs((int)oi))))); // Rounding factor for limits
+                      if ((int)m_event == evt1) // time of the first event
                          {
                           trigtime_first = m_trigtime;
-                          if (l_labview) oi1 = (float)oi/(float)a;
+                          if (l_labview) oi1 = (float)oi/a;
                          }
                       m_trigtime = (long long int)m_trigtime - (long long int)trigtime_first;
+                      if (m_trigtime < 0)
+                         {
+                          do m_trigtime = m_trigtime + 3600;
+                          while (m_trigtime < 0);
+                         }
                       if (l_labview) m_trigtime = (m_trigtime + ((float)oi/(float)a)) - oi1;
                       l_triggtimeVec.push_back(m_trigtime);
-                      first = true;
                      }
                   line.clear();
                   getline(file, line);    // skip the line Time,Ampl
@@ -538,6 +544,20 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
                        line.clear();
                        if (getline(file,line)) // get line from the file
                           {
+                           if (!first) 
+                              {
+                               if (std::count(line.begin(), line.end(), ',') > 1) 
+                                  {
+                                   comma = true;
+                                   first = true;
+                                  }
+                              }
+                           if (comma)
+                              {
+                               line.replace(line.find(","), 1, ".");
+                               size_t found = line.find(",");
+                               line.replace(line.find(",", found+1), 1, ".");
+                              }
                            std::replace(line.begin(), line.end(), ',', ' ');
                            iss.str("");
                            iss.clear();
@@ -572,25 +592,57 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
     std::vector<double> DeltaTrigTime;
     for (unsigned int hp = 0; hp < l_triggtimeVec.size() - 1; hp++) 
         {
-         oi1 = l_triggtimeVec.at(hp + 1) - l_triggtimeVec.at(hp);
+         oi1 = fabs(l_triggtimeVec.at(hp + 1) - l_triggtimeVec.at(hp));
          if (oi1 > 30) continue;
          else DeltaTrigTime.push_back(oi1);
          m_trigDt->Fill(oi1);
         }
 
-    std::cout << "Wrote " << m_event << " events into output file " << m_ofile->GetName() << endl;
+    float tbin = 0;
+    for (unsigned int ka = 0; ka < l_triggtimeVec.size() - 1; ka++) 
+        {
+         count = 1;
+         oi1 = -1;
+         for (unsigned int ma = ka+1; ma < l_triggtimeVec.size(); ma++)
+             {
+              if ((l_triggtimeVec.at(ma) - l_triggtimeVec.at(ka)) == 0)
+                 {
+                  if (ma < (l_triggtimeVec.size() - 1)) 
+                     {
+                      count++;
+                      continue;
+                     }
+                  else {
+                        if (tbin == 0) tbin = 1;
+                        oi1 = (float)count/tbin;
+                        m_trigFr->Fill(oi1);
+                        ka = ma;
+                       }
+                 }
+              else {
+                    tbin = l_triggtimeVec.at(ma) - l_triggtimeVec.at(ka);
+                    oi1 = (float)count/tbin;
+                    m_trigFr->Fill(oi1);
+                    ka = ma - 1;
+                    break;
+                   }
+             }
+        }
+
+    std::cout << "Wrote " << m_event << " events into output file " << m_ofile->GetName() << std::endl;
     trigtime_first = l_triggtimeVec.back() - l_triggtimeVec.at(0);
-    std::cout << "Event rate = " << m_tree->GetEntries() - 1 << " / " << trigtime_first << " = " << (double)(m_event / trigtime_first) << " Hz" << endl;
+    std::cout << "Event rate = " << m_tree->GetEntries() - 1 << " / " << trigtime_first << " = " << (double)(m_event / trigtime_first) << " Hz" << std::endl;
     trigtime_first = Mean(&DeltaTrigTime);
     std::cout << "Mean Trigger: " << trigtime_first;
-    if (trigtime_first != 0) std::cout << ", mean rate: " << 1 / trigtime_first << std::endl;
+    if (trigtime_first != 0 && trigtime_first!=-1) std::cout << ", mean rate: " << 1 / trigtime_first << std::endl;
     else std::cout << ", no mean rate calculation possible!" << std::endl;
     trigtime_first = CalcMeadian(&DeltaTrigTime);
     std::cout << "Median Trigger: " << trigtime_first;
-    if (trigtime_first != 0) std::cout << ", median rate: " << 1 / trigtime_first << std::endl;
+    if (trigtime_first != 0 && trigtime_first!=-1) std::cout << ", median rate: " << 1 / trigtime_first << std::endl;
     else std::cout << ", no median rate calculation possible!" << std::endl;
     m_ofile->Write();
     delete m_trigDt;
+    delete m_trigFr;
     delete m_tree;
     m_ofile->Close();
     return true;
@@ -634,7 +686,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
              fseek(fd_file, lCurPos, 0);
 #endif
              if (size <= 0) { std::cout << __FUNCTION__ << " ERROR: txt file is zero size, skipping..." << std::endl; continue; }
-             fgets(line, sizeof(line), fd_file);
+             if(fgets(line, sizeof(line), fd_file) == NULL) return false;
              nel = sscanf(line, "%*s %*s %u %*s %lf %lf", &npoints, &time, &volt);
              if (nel !=3 && npoints == 0)
                  {
@@ -663,7 +715,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
        }
 
     SetScale(m_channels, m_nchan, &m_scale);
- 
+
     for (unsigned int i = 0; i < m_nchan; i++)
         { 
          char fn[2];
@@ -681,7 +733,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
          m_w[i].reserve(m_npoints.at(i));
          m_t[i].clear();
          m_t[i].reserve(m_npoints.at(i));
-         fgets(line, sizeof(line), fd_file);
+         if(fgets(line, sizeof(line), fd_file) == NULL) return false;
          nel = sscanf(line, "%*s %*s %*lf %*s %lf %lf", &time, &volt);
          if (nel == 2) 
             {
@@ -689,7 +741,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
              np++;
             }
          else { std::cout << __FUNCTION__ << " ERROR: Invalid parameters from ASCI file, skipping file" << ifname << std::endl; continue; }
-         fgets(line, sizeof(line), fd_file);
+         if(fgets(line, sizeof(line), fd_file) == NULL) return false;
          nel = sscanf(line, "%*s %*s %lf %*s %lf %lf", &interval, &time, &volt);
          if (nel == 3) 
             {
@@ -698,7 +750,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
              np++;
             }
          else { std::cout << __FUNCTION__ << " ERROR: Invalid parameters from ASCI file, skipping file" << ifname << std::endl; continue; }
-         fgets(line, sizeof(line), fd_file);
+         if(fgets(line, sizeof(line), fd_file) == NULL) return false;
          nel = sscanf(line, "%*s %*s %u %*s %lf %lf", &trigpoint, &time, &volt);
          if (nel == 3) 
             {
@@ -707,7 +759,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
              np++;
             }
          else { std::cout << "ERROR: Invalid parameters from ASCI file, skipping file" << ifname << std::endl; continue; }
-         fgets(line, sizeof(line), fd_file);
+         if(fgets(line, sizeof(line), fd_file) == NULL) return false;
          nel = sscanf(line, "%*s %*s %lf %*s %lf %lf", &trigtime, &time, &volt);
          if (nel == 3) 
             {
@@ -716,7 +768,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
              np++;
             }
          else { std::cout << __FUNCTION__ << " ERROR: Invalid parameters from ASCI file, skipping file" << ifname << std::endl; continue; }
-         fgets(line, sizeof(line), fd_file);
+         if(fgets(line, sizeof(line), fd_file) == NULL) return false;
          nel = sscanf(line, " %*s %lf %lf", &time, &volt);
          if (nel == 2) 
             {
@@ -724,7 +776,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
              np++;
             }
          else { std::cout << __FUNCTION__ << " ERROR: Invalid parameters from ASCI file, skipping file" << ifname << std::endl; continue; }
-         fgets(line, sizeof(line), fd_file);
+         if(fgets(line, sizeof(line), fd_file) == NULL) return false;
          nel = sscanf(line, "%*s %*s %*lf %*s %lf %lf", &time, &volt);
          if (nel == 2) 
             {
@@ -732,7 +784,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
              np++;
             }
          else { std::cout << __FUNCTION__ << " ERROR: Invalid parameters from ASCI file, skipping file" << ifname << std::endl; continue; }
-         fgets(line, sizeof(line), fd_file);
+         if(fgets(line, sizeof(line), fd_file) == NULL) return false;
          if (std::string(line).find("\"FastFrame Count\"") != std::string::npos) 
             {
              nel = sscanf(line, "%*s %*s %u %*s %lf %lf", &frame, &time, &volt);
@@ -766,7 +818,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
                  }
               while (np < m_npoints.at(i))
                     {
-                     fgets(line, sizeof(line), fd_file);
+                     if(fgets(line, sizeof(line), fd_file) == NULL) return false;
                      nel = sscanf(line, "%lf %lf", &time, &volt);
                      if (nel == 2)
                         {
@@ -785,6 +837,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
 
     m_ofile->Write();
     delete m_trigDt;
+    delete m_trigFr;
     delete m_tree;
     m_ofile->Close();
     return true;
@@ -1012,7 +1065,7 @@ bool LGADBase::CombineTrack(const char* dir, const char* name)
    // int l_space = 0;
    // while ((b2 = (TBranch*)next()))
    //       {
-   //        std::cout << setw(10) << std::left << b2->GetName();
+   //        std::cout << std::setw(10) << std::left << b2->GetName();
    //        l_space++;
    //        if (l_space % 4 == 0) std::cout << std::endl << "\t";
    //       }
@@ -1024,7 +1077,7 @@ bool LGADBase::CombineTrack(const char* dir, const char* name)
    // int l_space2 = 0;
    // while ((b3 = (TBranch*)next2()))
    //       {
-   //        std::cout << setw(10) << std::left << b3->GetName();
+   //        std::cout << std::setw(10) << std::left << b3->GetName();
    //        l_space2++;
    //        if (l_space2 % 4 == 0) std::cout << std::endl << "\t";
    //       }
@@ -1216,7 +1269,7 @@ bool LGADBase::WriteLecroyBinary(const char* dir, const char* name, const char* 
     int scope = 0;
     char oscillos[1024];
     m_nchan = 0;
-    string line;
+    std::string line;
     int ncycle = 0;
     
     const char* search_ch1 = "Channel 1 will be saved";
@@ -1247,7 +1300,7 @@ bool LGADBase::WriteLecroyBinary(const char* dir, const char* name, const char* 
     strcat(ifname, ".txt");
     fd_file = fopen(ifname, "r");
     if (fd_file == NULL) { std::cout << __FUNCTION__ << " ERROR: Failed to open txt file: " << ifname << std::endl; return false; }
-    else std::cout << "    Opening text file: " << std::string(ifname) << endl;
+    else std::cout << "    Opening text file: " << std::string(ifname) << std::endl;
     
     // GetFile size
     lCurPos = ftell(fd_file);
@@ -1262,7 +1315,7 @@ bool LGADBase::WriteLecroyBinary(const char* dir, const char* name, const char* 
         search = fgets(ifname, sizeof(ifname), fd_file);
         if ((strncmp (search_ch1,search,23) == 0) || (strncmp (search_ch2,search,23) == 0) || (strncmp (search_ch3,search,23) == 0) || (strncmp (search_ch4,search,23) == 0))
             {
-            std::cout << search <<  endl;
+            std::cout << search << std::endl;
             if (m_nchan == 0) m_channels.push_back((scope * 4)+ 1);
             else m_channels.push_back(m_channels.back() + 1); // Same scope    
             m_nchan++;
@@ -1272,12 +1325,12 @@ bool LGADBase::WriteLecroyBinary(const char* dir, const char* name, const char* 
         
     //Get information from txt file
     unsigned int iline;
-    string number;
-    string number2;
-    string number3;
-    string number4;
-    string number5;
-    string number6;
+    std::string number;
+    std::string number2;
+    std::string number3;
+    std::string number4;
+    std::string number5;
+    std::string number6;
     unsigned int num;
     unsigned int num2;
     float num3;
@@ -1359,8 +1412,8 @@ bool LGADBase::WriteLecroyBinary(const char* dir, const char* name, const char* 
     if (sizeof(ifname) == 0) {std::cout << __FUNCTION__ << " ERROR: Could not properly form ASCII file name" << std::endl; return false;};
     strcat(ifname, ".");
     strcat(ifname, ext);
-    if ((fd_file = fopen(std::string(ifname).c_str(), "rb")) == NULL) { std::cout << __FUNCTION__ << " ERROR: Could not open file " << std::string(ifname) << endl; return false; }
-    else std::cout << "    Opening binary file: " << std::string(ifname) << endl;
+    if ((fd_file = fopen(std::string(ifname).c_str(), "rb")) == NULL) { std::cout << __FUNCTION__ << " ERROR: Could not open file " << std::string(ifname) << std::endl; return false; }
+    else std::cout << "    Opening binary file: " << std::string(ifname) << std::endl;
      
     // Check the file size of the dat file
 #ifdef _WIN32
@@ -1473,6 +1526,7 @@ bool LGADBase::WriteLecroyBinary(const char* dir, const char* name, const char* 
     m_event = m_event - 1;
     m_ofile->Write();
     delete m_trigDt;
+    delete m_trigFr;
     delete m_tree;
     m_ofile->Close();
     return true;
@@ -1576,8 +1630,8 @@ bool LGADBase::WriteAgilentBinary(const char* dir, const char* name, const char*
     if (sizeof(ifname) == 0) {std::cout << __FUNCTION__ << " EROOR: Could not properly form ASCI file name" << std::endl; return false;};
     strcat(ifname, ".");
     strcat(ifname, ext);
-    if ((fd_file = fopen(std::string(ifname).c_str(), "rb")) == NULL) { std::cout << "ERROR: Could not open file " << std::string(ifname) << endl; return false; }
-    else std::cout << "    Opening binary file: " << std::string(ifname) << endl;
+    if ((fd_file = fopen(std::string(ifname).c_str(), "rb")) == NULL) { std::cout << "ERROR: Could not open file " << std::string(ifname) << std::endl; return false; }
+    else std::cout << "    Opening binary file: " << std::string(ifname) << std::endl;
      
     // Check the file size of the dat file
 #ifdef _WIN32
@@ -1661,6 +1715,7 @@ bool LGADBase::WriteAgilentBinary(const char* dir, const char* name, const char*
     m_event = m_event - 1;
     m_ofile->Write();
     delete m_trigDt;
+    delete m_trigFr;
     delete m_tree;
     m_ofile->Close();
     return true;
@@ -1668,7 +1723,6 @@ bool LGADBase::WriteAgilentBinary(const char* dir, const char* name, const char*
 // --------------------------------------------------------------------------------------------------------------
 bool LGADBase::CreateOutputFile(const char* dir, const char* ofname, std::vector<unsigned int> nchan)
 {
-
     // Define Output and reserve branches
 #ifdef _WIN32
 	char ifname[MAX_PATH];
@@ -1700,7 +1754,7 @@ bool LGADBase::CreateOutputFile(const char* dir, const char* ofname, std::vector
     strcat(ifname, ofname);
     m_ofile = new TFile(Form("%s.root", ifname), "recreate");
     m_ofile->SetCompressionLevel(6);
-    std::cout << "    Creating output ROOT file: " << m_ofile->GetName() << endl;
+    std::cout << "    Creating output ROOT file: " << m_ofile->GetName() << std::endl;
     m_tree = new TTree("wfm", "Timing part of the LGAD measurements");
     m_tree->SetAutoFlush(10000); // Set autoflush to 30 MB
     LGADBase::SetVectorSize(nchan.size());
@@ -1730,7 +1784,8 @@ bool LGADBase::CreateOutputFile(const char* dir, const char* ofname, std::vector
         m_tree->Branch("SnRate", &(m_srate.at(0)), "m_srate.at(0)/L");
        }
 
-    m_trigDt = new TH1F("trigDt", "DT time", 600, 0.0, 60.0);
+    m_trigDt = new TH1F("trigDt", "DT time", 6000, 0.0, 60.0);
+    m_trigFr = new TH1F("trigFr", "Trigger Frequency", 50000, 0.0, 5000);
 
     // Printout registered Branches
     TIter next(m_tree->GetListOfBranches());
@@ -1739,7 +1794,7 @@ bool LGADBase::CreateOutputFile(const char* dir, const char* ofname, std::vector
     int l_space = 0;
     while ((b = (TBranch*)next()))
           {
-           std::cout << setw(10) << std::left << b->GetName();
+           std::cout << std::setw(10) << std::left << b->GetName();
            l_space++;
            if (l_space % 4 == 0) std::cout << std::endl << "\t";
           }
@@ -1754,12 +1809,12 @@ bool LGADBase::CreateOutputFile(const char* dir, const char* ofname, std::vector
         {
          TString l_objname = l_obj->GetName();
          if (l_objname.Contains("wfm")) continue;
-         std::cout << setw(21) << left << l_objname ;
+         std::cout << std::setw(21) << std::left << l_objname ;
          l_space++;
          if (l_space %5 == 0) cout << std::endl << "\t" ;
         }
   if (l_space % 5 != 0) std::cout << std::endl;
   std::cout << std::endl;
 
-    return true;
+   return true;
 }
