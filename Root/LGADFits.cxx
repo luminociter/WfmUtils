@@ -22,6 +22,7 @@
 #include "TMath.h"
 #include "TGraph.h"
 #include "TGraphErrors.h"
+//#include "TCanvas.h"
 
 #ifndef __CINT__
 #include "RooGlobalFunc.h"
@@ -55,9 +56,11 @@ using namespace RooFit;
 * 0 - Error matrix not calculated at all)
 * */
 
-int LGADBase::IterativeFit(std::vector<double> *w, std::pair<double, double> &gmean, std::pair<double, double> &gsigma, TH1D* &FitHist,
-                           double &minchi2, std::string methode, std::pair<int, int> points)
+int LGADBase::IterativeFit(std::vector<double> *w, std::pair <double, double> &gmean, std::pair <double, double> &gsigma, TH1D* &FitHist,
+                           double &minchi2, std::string methode, std::pair <int, int> points, bool discr)
 {
+    std::vector<double> w2; // Temporary container for used element subset per itereation
+    w2.reserve(w->size());
     gmean = std::make_pair(-1., -1.);
     gsigma = std::make_pair(-1., -1.);
     minchi2 = -1.;
@@ -67,18 +70,21 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair<double, double> &gm
     if (points.first < 0) first = 0;
     else first = points.first;
 
-    if ((methode == "Gauss" && abs(last - first) < 5) || (methode == "LandauXGauss" && abs(last - first) < 10))
+    if (((methode == "Gauss" ||methode == "GaussVarBin" || methode == "GaussInt" || methode == "GaussIntVarBin" ) && abs(last - first) < 5) 
+        || ((methode == "LandauXGauss" || methode == "LandauXGaussVarBin" || methode == "LandauXGaussInt" || methode == "LandauXGaussIntVarBin") && abs(last - first) < 10))
        {
         if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Inadequate number of points for " << methode << " calculation["
                                      << abs(last - first) << "] -> will not cintimue!" << std::endl;
         return -1;
        }
 
-    // Set and populate the 1D histogram on which the fit will be perfirmed
-    double mean = Mean(w, first, last);
-    double strdv = Stdev(w, first, last);
-    double wmax = *std::max_element(w->begin() + first, w->begin() + last);
-    double wmin = *std::min_element(w->begin() + first, w->begin() + last);
+    // Outlier rejection
+    w2 = OutlierReject(w, 5, 6, first, last);
+    // Calculate dataset mean, std, min and max value for limits and binning variations
+    double mean = LGADBase::Mean(&w2);
+    double strdv = LGADBase::Stdev(&w2);
+    double wmax = *std::max_element(w2.begin(), w2.end());
+    double wmin = *std::min_element(w2.begin(), w2.end());
 
     if (mean == -99 || strdv == -99 || strdv == 0)
        {
@@ -87,65 +93,121 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair<double, double> &gm
         return -2;
        }
 
+    // Calculate minimum element distance to define minimum bin width
+    if (methode == "GaussVarBin" || methode == "LandauXGaussVarBin" || methode == "GaussIntVarBin" || methode == "LandauXGaussIntVarBin") discr = true;
+    double acc = -1;
+    if (discr) acc = LGADBase::CalResolution<double>(&w2, 5);
+
     // Histogtam bins and limits
-    m_bins = 0;
     double limit1 = 0.0;
     double limit2 = 0.0;
     double chi2 = 0.0;
+    double gdnes = 0.0;
     bool stop = false;
     // Variables for fit range
     double rmin = 0.0;
     double rmax = 0.0;
     int quality = -99;
     std::vector<double> mag;
-    mag.reserve(35);
+    mag.reserve(42);
     std::vector<double> magErr;
-    magErr.reserve(35);
+    magErr.reserve(42);
     std::vector<double> Sigma;
-    Sigma.reserve(35);
+    Sigma.reserve(42);
     std::vector<double> SigmaErr;
-    SigmaErr.reserve(35);
+    SigmaErr.reserve(42);
     std::vector<double> ChiSq;
-    ChiSq.reserve(35);
+    ChiSq.reserve(42);
+    std::vector<double> GdNess;
+    GdNess.reserve(42);
     std::vector<int> globindx;
-    globindx.reserve(35);
+    globindx.reserve(42);
     std::vector<TH1D* > Fits;
-    Fits.resize(35, NULL);
+    Fits.resize(42, NULL);
     std::vector<unsigned int> itr;
-    itr.reserve(35);
-
+    itr.reserve(42);
     TAxis *xaxis;
     Int_t bin1 = 0;
     Int_t bin2 = 0;
+    int n_bins[7] = {0};
 
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Calculating before fit| Average: " << mean << " , Standard Deviation: " 
+    std::vector<double> VarBinX; // vector only necessry if rebining 
+
+    if (m_verbose >= 2) std::cout << __FUNCTION__ << " INFO: Calculating before fit | Average: " << mean << " , Standard Deviation: " 
                                   << strdv << ", Min Value: " << wmin << ", Max Value: "  << wmax << std::endl;
 
-    double fact = pow(10, fabs(floor(log10(fabs(mean)))));
-    // iterative re-fitting 1, affects the limits of the histogram only
-    for (double gk = 7; gk > 2; gk--) // 5 cases
+    double fact = pow(10, fabs(floor(log10(fabs(mean))))); // Rounding factor for limits
+    int bins_max = 0; // Absolute maximum number of bins extrapolated from minimum resolution and limtis
+    int n_elements = 0; // Number of points included inth e fit
+    double strdv2 = -99; // standard deviation of modified dataset
+    // Iterative re-fitting 1, affects the limits of the histogram only
+    for (double gk = 12; gk > 6; gk--) // 6 cases
         {
          if (stop) break;
-         if (methode == "Gauss")
+         if (methode == "Gauss" || methode == "GaussVarBin" || methode == "GaussInt" || methode == "GaussIntVarBin")
             {
-             limit1 = floor((mean-(gk/2)*strdv)*fact) / fact; // Symentric limit variaton
-             limit2 = ceil((mean+(gk/2)*strdv)*fact) / fact;
+             limit1 = floor((mean-(gk/4)*strdv)*fact) / fact; // Symentric limit variaton
+             limit2 = ceil((mean+(gk/4)*strdv)*fact) / fact;
             }
-         else if (methode == "LandauXGauss")
+         else if (methode == "LandauXGauss" || methode == "LandauXGaussVarBin" || methode == "LandauXGaussInt" || methode == "LandauXGaussIntVarBin")
                  {
-                  limit1 = floor((wmin + ((gk-5)/10)*strdv) * fact) / fact; // Asymentric limit variaton
-                  limit2 = ceil((wmax - ((gk-5)/2)*strdv) * fact) / fact;
+                  limit1 = floor((wmin + ((gk-7)/9)*strdv) * fact) / fact; // Asymentric limit variaton
+                  limit2 = ceil((wmax - ((gk-7)/3)*strdv) * fact) / fact;
                  }
-         // Iterative re-fitting 2, affects only the width of the bin but not the range
-         for (double tmb = 14; tmb > 7; tmb--) // 7 cases
+         w2.clear();
+         std::vector<double>(w2).swap(w2); // setting reserved space back to zero
+         for (int gb = first; gb < last; gb++) if (w->at(gb) >= limit1 && w->at(gb) <= limit2) w2.push_back(w->at(gb));
+         n_elements = w2.size();
+         if (n_elements < 5) continue; // minimum number of elements check
+         strdv2 = LGADBase::Stdev(&w2);
+         // Calculate maximum number of bins that makes sense for discreete histograms
+         if (discr) bins_max = (int)(fabs(limit2 - limit1) / acc);
+         // Calculate bin vector for variable bin histograms
+         if (methode == "GaussVarBin" || methode == "LandauXGaussVarBin" || methode == "GaussIntVarBin" || methode == "LandauXGaussIntVarBin")
+            {
+             VarBinX = LGADBase::ConrtVarBinX(&w2, limit1, limit2, bins_max);
+            }
+         LGADBase::CalcuRebin(discr, n_elements, bins_max, limit1, limit2, strdv2, n_bins);
+         // Iterative re-fitting 2, affects only the width of the bins but not the fit range
+         bool varbinbase = false;
+         for (unsigned int tmb = 0; tmb < 7; tmb++)
              {
-              int iter = ((7-gk)*7)+(14-tmb);
               if (stop) break;
-              if (methode == "Gauss") m_bins = ceil(sqrt(last - (first+1))*(fabs(limit2 - limit1)/((tmb/4)*strdv)));
-              else if (methode == "LandauXGauss") m_bins = ceil(sqrt(last - (first+1))*(fabs(limit2 - limit1)/(0.5*strdv*(tmb/4))));
-              Fits.at(iter) = new TH1D(Form("MagFit%02u", iter), Form("MagFit%02u", iter), m_bins, limit1, limit2);
+              if (n_bins[tmb] == -1) continue;
+              unsigned int iter = (12 - gk) * 7 + tmb;
+              // Variable bin algorithm
+              if (methode == "GaussVarBin" || methode == "LandauXGaussVarBin" || methode == "GaussIntVarBin" || methode == "LandauXGaussIntVarBin")
+                 {
+                  std::vector<double> ReBinXbins;
+                  ReBinXbins.clear();
+                  ReBinXbins.reserve(n_bins[tmb]);
+                  ReBinXbins.push_back(VarBinX.at(0));
+                  for (int pr = 1; pr < bins_max; pr++)
+                      {
+                       double diff = fabs(VarBinX.at(pr) - VarBinX.at(pr-1));
+                       //if (m_verbose >= 2) std::cout << pr << "/" << bins_max << ", bins: " << n_bins[tmb] << ", factor " << (float)bins_max/(float)n_bins[tmb] << ", diff: " << diff << ", mod.diff: " << diff*((float)bins_max / (float)n_bins[tmb]) 
+                       //                              << ", previous bin: " << ReBinXbins.at(pr - 1) << ", next mod.bin: " << ReBinXbins.at(pr - 1) + diff << ", bin upper lim:" << VarBinX.back() << std::endl;
+                       diff = diff*((float)bins_max/(float)n_bins[tmb]);
+                       if ((ReBinXbins.at(pr-1) + diff) <= VarBinX.back()) ReBinXbins.push_back(ReBinXbins.at(pr-1) + diff);
+                       else {
+                             ReBinXbins.push_back(VarBinX.back());
+                             break;
+                            }
+                      }
+                  // if (m_verbose >= 2) std::cout << tmb << " " << ReBinXbins.size() << " " << bins_max << std::endl;
+                  if (varbinbase) continue;
+                  if ((int)ReBinXbins.size() == bins_max) varbinbase = true;
+                  m_bins = ReBinXbins.size();
+                  Fits.at(iter) = new TH1D(Form("MagFit%02u", iter), Form("MagFit%02u", iter), m_bins - 1, &(ReBinXbins[0]));
+                 }
+              // Normal binning algorithm
+              else {
+                    m_bins = n_bins[tmb];
+                    Fits.at(iter) = new TH1D(Form("MagFit%02u", iter), Form("MagFit%02u", iter), m_bins, limit1, limit2);
+                   }
+              // Create the re-binned histogram and calculate quanitites
+              for (int i = 0; i < n_elements; i++) Fits.at(iter)->Fill(w2.at(i));
               itr.push_back(iter);
-              for (int i = first; i < last; i++) Fits.at(iter)->Fill(w->at(i));
               if (Fits.at(iter)->Integral("width") == 0)
                  {
                   if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Integral of " << methode 
@@ -160,29 +222,30 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair<double, double> &gm
                                                << " distribution is 0 -> will not continue!" << std::endl;
                   continue;
                  }
-              if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Magnitude histo mean: " << mx << " , stdev: " << rms << ", integral: " 
+              if (m_verbose >= 3) std::cout << __FUNCTION__ << " INFO: Magnitude histo mean: " << mx << " , stdev: " << rms << ", integral: " 
                                             << Fits.at(iter)->Integral("width") << ", bins: " << m_bins << ", from " << limit1 << " to " << limit2 << std::endl;
               TFitResultPtr fitResult(0);
               xaxis = Fits.at(iter)->GetXaxis();
-              if (methode == "Gauss" || methode == "GaussInt")
+              // Perform the fit and get the parameters
+              if (methode == "Gauss" || methode == "GaussVarBin" || methode == "GaussInt" || methode == "GaussIntVarBin")
                  {
-                  rmin = mx - (gk/2) * rms; // symetric rangre
-                  rmax = mx + (gk/2) * rms;
+                  rmin = mx - (gk/4) * rms; // symetric range
+                  rmax = mx + (gk/4) * rms;
                   bin1 = xaxis->FindBin(rmin);
                   bin2 = xaxis->FindBin(rmax);
                   if (((bin2-bin1) < 2) || (Fits.at(iter)->Integral(bin1 + 1, bin2 - 1) == 0)) continue;
-                  if (methode == "GaussInt") fitResult = LGADBase::Gauss(rmin, rmax, strdv, mean, Fits.at(iter), "I");
-                  else fitResult = LGADBase::Gauss(rmin, rmax, strdv, mean, Fits.at(iter), "N");
+                  if (methode == "GaussInt" || methode == "GaussIntVarBin") fitResult = LGADBase::Gauss(rmin, rmax, strdv2, mean, Fits.at(iter), "I");
+                  else fitResult = LGADBase::Gauss(rmin, rmax, strdv2, mean, Fits.at(iter));
                  }
-              else if (methode == "LandauXGauss" || methode == "LandauXGaussInt")
+              else if (methode == "LandauXGauss" || methode == "LandauXGaussInt" || methode == "LandauXGaussIntVarBin" ||  methode == "LandauXGaussVarBin")
                       {
-                       rmin = wmin + ((gk-5)/10)*rms; // asymentric range
-                       rmax = wmax - ((gk-5)/2)*rms;
+                       rmin = wmin + ((gk-7)/9)*rms; // asymentric range
+                       rmax = wmax - ((gk-7)/3)*rms;
                        bin1 = xaxis->FindBin(rmin);
                        bin2 = xaxis->FindBin(rmax);
                        if (((bin2 - bin1) < 2) || (Fits.at(iter)->Integral(bin1 + 1, bin2 - 1) == 0)) continue;
-                       if (methode == "LandauXGaussInt") fitResult = LGADBase::GauXLandau(rmin, rmax, strdv, Fits.at(iter), "I");
-                       else fitResult = LGADBase::GauXLandau(rmin, rmax, strdv, Fits.at(iter), "N");
+                       if (methode == "LandauXGaussInt" || methode == "LandauXGaussIntVarBin") fitResult = LGADBase::GauXLandau(rmin, rmax, strdv2, Fits.at(iter), "I");
+                       else fitResult = LGADBase::GauXLandau(rmin, rmax, strdv2, Fits.at(iter));
                       }
               else {
                     std::cout << __FUNCTION__ << " ERROR: Uknown fit function!" << std::endl;
@@ -194,45 +257,55 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair<double, double> &gm
                         }
                     return -3;
                    }
+              // Fill the fit parameters to the vectors
               if (fitResult->IsEmpty() || !(fitResult->IsValid()))
                  {
-                  if (m_verbose == 2) std::cout << __FUNCTION__ << " WARNING: Fit result not there -> will not calculate magnitude!" << std::endl;
+                  if (m_verbose > 1) std::cout << __FUNCTION__ << " WARNING: Fit result not there -> will not calculate magnitude!" << std::endl;
                   quality = -4;
                  }
               else {
                     quality = fitResult;
                     if (quality == 0 && (fitResult->Ndf()) != 0)
                        {
-                        chi2 = fabs(1 - (fitResult->MinFcnValue() / fitResult->Ndf()));
-                        if (methode == "Gauss")
+                        chi2 = fabs((fitResult->MinFcnValue() - (float)fitResult->Ndf())/sqrt(2*(float)fitResult->Ndf()));
+                        gdnes = fabs(1 - (fitResult->MinFcnValue()/(float)fitResult->Ndf()));
+                        if (methode == "Gauss" || methode == "GaussVarBin" || methode == "GaussInt" || methode == "GaussIntVarBin")
                            {
                             mag.push_back(fitResult->Parameter(1));
                             magErr.push_back(fitResult->ParError(1));
                             Sigma.push_back(fitResult->Parameter(2));
                             SigmaErr.push_back(fitResult->ParError(2));
                             ChiSq.push_back(chi2);
+                            GdNess.push_back(gdnes);
                             globindx.push_back(iter);
-                            if (chi2 < 0.03) stop = true;
+                            // if (gdnes < 0.03) stop = true;
+                            if (m_verbose >= 2) std::cout << __FUNCTION__ << " INFO: Fit goodness: " << gdnes << ", magnitude: " << fitResult->Parameter(1)  << ", sigma: " 
+                                                          << fitResult->Parameter(2) << " at iteration: " << iter << " from combinations " << gk << " & " << tmb << std::endl;
                            }
-                        else if (methode == "LandauXGauss")
+                        else if (methode == "LandauXGauss" || methode == "LandauXGaussInt" || methode == "LandauXGaussIntVarBin" ||  methode == "LandauXGaussVarBin")
                                 {
                                  double max = -99;
                                  double FWHM = -99;
-                                 if (langaupro(fitResult, max, FWHM) == 0)
+                                 if (LGADBase::langaupro(fitResult, max, FWHM) == 0)
                                     {
                                      mag.push_back(max);
                                      magErr.push_back(fitResult->ParError(1));
                                      Sigma.push_back(FWHM/2);
                                      SigmaErr.push_back(sqrt(pow(2 * fitResult->ParError(0), 2) + pow(2 * fitResult->ParError(3), 2)));
                                      ChiSq.push_back(chi2);
+                                     GdNess.push_back(gdnes);
                                      globindx.push_back(iter);
-                                     if (chi2 < 0.03) stop = true;
+                                     // if (gdnes < 0.03) stop = true;
+                                     if (m_verbose >= 2) std::cout << __FUNCTION__ << " INFO: Fit goodness: " << gdnes << ", magnitude: " << max << ", sigma: "
+                                                                   << FWHM/2 << " at iteration: " << iter << " from combinations " << gk << " & " << tmb << std::endl;
                                     }
+                                 else { if (m_verbose > 1) std::cout << __FUNCTION__ << " WARNING: LandauXGauss renormalization failed!" << std::endl; }
                                 }
                        }
+                     else { if (m_verbose > 1) std::cout << __FUNCTION__ << " WARNING: Bad fit quality (" << quality << ") or problematic Ndf (Ndf = " << fitResult->Ndf() << ")" << std::endl; }
                     }
-              if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Quality of performed fit: " << quality << " at iteration: " 
-                                            << gk << " " << tmb << std::endl;
+              if (m_verbose >= 2) std::cout << __FUNCTION__ << " INFO: Quality of performed fit: " << quality << " at iteration: " 
+                                            << iter << " from combinations " << gk << " & " << tmb << std::endl;
              }
         }
 
@@ -275,11 +348,9 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair<double, double> &gm
           gmean = std::make_pair(mag.at(indx), magErr.at(indx));
           gsigma = std::make_pair(Sigma.at(indx), SigmaErr.at(indx));
           FitHist = (TH1D*)(Fits.at(globindx.at(indx)))->Clone("OutHist");
-          // Fits.at(globindx.at(indx))->SetDirectory(0);
-          // Fits.at(globindx.at(indx))->Draw();
-          minchi2 = ChiSq.at(indx);
-          if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Fit result " << ChiSq.at(indx) << " --> " << mag.at(indx) << " +/- " 
-                                        << magErr.at(indx) << " , " << Sigma.at(indx) << " +/- " << SigmaErr.at(indx) << std::endl;
+          minchi2 = GdNess.at(indx);
+          if (m_verbose >= 2) std::cout << __FUNCTION__ << " INFO: Fit result goodness: " << GdNess.at(indx) << " --> " << mag.at(indx) << " +/- "
+                                       << magErr.at(indx) << " , " << Sigma.at(indx) << " +/- " << SigmaErr.at(indx) << " at iteration " << indx << std::endl;
           // Cleanup Time
           for (unsigned int k = 0; k < itr.size(); k++)
               {
@@ -294,6 +365,8 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair<double, double> &gm
 TFitResultPtr LGADBase::Gauss(double rmin, double rmax, double strdv, double mean, TH1D* &magHist, std::string integ)
 {
     TF1* mygau = new TF1("GaussFit", "gaus(0)", rmin, rmax);
+    // function to fit: [0]*exp(-0.5*((x-[1])/[2])**2)
+    mygau->SetParNames("Normalization", "Mean", "Sigma");
     double limitdown = mean - (5 * strdv);
     double limitup = mean + (5 * strdv);
     if (limitdown < rmin) limitdown = rmin;
@@ -312,10 +385,10 @@ TFitResultPtr LGADBase::Gauss(double rmin, double rmax, double strdv, double mea
     mygau->SetParLimits(1, limitdown, limitup);
     mygau->SetParLimits(2, 0.3*strdv, 3*strdv);
     TFitResultPtr fitResult;
-    // Fit within specified range, use ParLimits, do not plot
-    if (integ == "I") fitResult = magHist->Fit(mygau, "S Q N R I");
-    else fitResult = magHist->Fit(mygau, "S Q N R");
-    if (m_verbose == 2) fitResult->Print("V");
+    // Fit within specified range (R), save (S), do not print fitting messages (Q)
+    if (integ == "I") fitResult = magHist->Fit(mygau, "S Q R I"); // Integral (I) option
+    else fitResult = magHist->Fit(mygau, "S Q R");
+    if (m_verbose >= 3) fitResult->Print("V");
     delete mygau;
     return fitResult;
 }
@@ -326,14 +399,16 @@ TFitResultPtr LGADBase::GauXLandau(double rmin, double rmax, double strdv, TH1D*
     mygauland->SetParNames("Width", "MPV", "Area", "GaussSigma");
     TAxis *axis = magHist->GetXaxis();
     double wmin = axis->GetBinCenter(magHist->FindFirstBinAbove(0, 1));
-    double wmax = axis->GetBinCenter(magHist->FindLastBinAbove(0, 1));
+    if (m_verbose >= 3) std::cout << __FUNCTION__ << " INFO: First populated bin " << magHist->FindFirstBinAbove(0, 1) << ", last populated bin: " << magHist->FindLastBinAbove(0, 1)
+                                                  << ", maximum in bin " << magHist->GetMaximumBin() << " of " << magHist->GetSize() << " total bins" << std::endl;
+    double wmax = axis->GetBinCenter(magHist->FindLastBinAbove(0, 1)); //abs
     double MPV = axis->GetBinCenter(magHist->GetMaximumBin());
     double integral = magHist->Integral("width");
-    double limitdown = MPV - 3 * strdv;
-    double limitup = MPV + 3 * strdv;
+    double limitdown = MPV - 2 * strdv;
+    double limitup = MPV + 5 * strdv;
     if (limitdown < rmin) limitdown = rmin;
     if (limitup > rmax) limitup = rmax;
-    if (MPV < limitdown || MPV > limitup)
+    if (MPV <= limitdown || MPV >= limitup)
        {
         double a = fabs(MPV - limitdown);
         double b = fabs(limitup - MPV);
@@ -341,19 +416,20 @@ TFitResultPtr LGADBase::GauXLandau(double rmin, double rmax, double strdv, TH1D*
         else mygauland->SetParameter(1, (limitdown + ((limitup - limitdown) / 2)) - (a*(limitup - limitdown) / ((limitup - limitdown) + 2 * a)));
        }
     else mygauland->SetParameter(1, MPV);
-    mygauland->SetParameter(0, (wmax-wmin)/10);    
+    mygauland->SetParameter(0, (wmax-wmin)/10);
     mygauland->SetParameter(2, integral);
-    mygauland->SetParameter(3, strdv/4);
-    //mygauland->SetParLimits(0, (wmax - wmin)/100, 100*(wmax - wmin));
+    mygauland->SetParameter(3, strdv/10);
+    mygauland->SetParLimits(0, (wmax - wmin)/10, 10*(wmax - wmin));
     mygauland->SetParLimits(1, rmin, rmax);
     mygauland->SetParLimits(2, 0.1*integral, 10*integral);
-    //mygauland->SetParLimits(3, 0.01*(strdv/2), 100*strdv/2);
+    mygauland->SetParLimits(3, 0.01*(strdv / 2), 100 * (strdv / 2));
+    //mygauland->FixParameter(3, strdv);
 
-    // Fit within specified range, use ParLimits, do not plot
+    // Fit within specified range (R), save (S), quiet mode (Q)
     TFitResultPtr fitResult;
-    if (integ == "I") fitResult = magHist->Fit(mygauland, "S Q N R I");
-    else fitResult = magHist->Fit(mygauland, "S Q N R");
-    if (m_verbose == 2) fitResult->Print("V");
+    if (integ == "I") fitResult = magHist->Fit(mygauland, "S Q R I");
+    else fitResult = magHist->Fit(mygauland, "S Q R");
+    if (m_verbose >= 3) fitResult->Print("V");
     delete mygauland;
     return fitResult;
 }
@@ -371,13 +447,13 @@ Double_t LGADBase::LandXGauFun(Double_t *x, Double_t *par)
     // so that the actual maximum is identical to the MPV parameter.
 
     // Numeric constants
-    Double_t invsq2pi = 0.3989422804014;   // (2 pi)^(-1/2)
+    Double_t invsq2pi = 0.3989422804014; // (2 pi)^(-1/2)
 
     // Control constants
-    double sc = 5.0;        // convolution extends to +-sc Gaussian sigmas
+    double sc = 5.0; // convolution extends to +-sc Gaussian sigmas
 
     // MP shift correction
-    double mpc = par[1] - 0.22278298 * par[0];
+    double mpc = par[1] + 0.22278298 * par[0];
 
     // Range of convolution integral
     double xlow = x[0] - sc * par[3];
@@ -476,7 +552,7 @@ int LGADBase::langaupro(TFitResultPtr fitResult, double &maxx, double &FWHM)
     return (0);
 }
 // --------------------------------------------------------------------------------------------------------------
-int LGADBase::RooConvFit(std::vector<double>* vec, std::pair<double, double> &magMPV, std::pair<double, double> &magSigma, std::string conv)
+int LGADBase::RooConvFit(std::vector<double>* vec, std::pair <double, double> &magMPV, std::pair <double, double> &magSigma, std::string conv)
 {
     unsigned int npoints = vec->size();
     if (npoints < 10)
@@ -511,7 +587,7 @@ int LGADBase::RooConvFit(std::vector<double>* vec, std::pair<double, double> &ma
         delete mag;
         return -3;
        }
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Calculating mean and std before fit: " << mean << " , " << strd << std::endl;
+    if (m_verbose >= 2) std::cout << __FUNCTION__ << " INFO: Calculating mean and std before fit: " << mean << " , " << strd << std::endl;
 
     // Start RooFit
     RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR);
@@ -591,7 +667,7 @@ int LGADBase::RooConvFit(std::vector<double>* vec, std::pair<double, double> &ma
     double sigmaGerror = sg.getError();
     int quality = 0;
 
-    if (m_verbose == 2) 
+    if (m_verbose >= 2) 
        {
         std::cout << __FUNCTION__ << " INFO: Results from the";
         if (conv == "LanXGau") std::cout << " Landau x Gauss fit" << std::endl << "MPV Landau: " << par1 << "+/-"
@@ -608,7 +684,7 @@ int LGADBase::RooConvFit(std::vector<double>* vec, std::pair<double, double> &ma
        }
     else {
           quality = (int)fitResult->covQual();
-          if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Quality of Landau x Gauss fit: " << quality << std::endl;
+          if (m_verbose >= 2) std::cout << __FUNCTION__ << " INFO: Quality of Landau x Gauss fit: " << quality << std::endl;
           if (quality < 1)
              {
               std::cout << __FUNCTION__ << " WARNING: Convolution quality is bad [" << quality << "] -> will not calculate magnitutde!" << std::endl;
@@ -636,7 +712,7 @@ int LGADBase::RooConvFit(std::vector<double>* vec, std::pair<double, double> &ma
     return quality;
 }
 // --------------------------------------------------------------------------------------------------------------
-int LGADBase::LinearFit(std::vector<double>* vec, std::pair<double, double> &slope, std::pair<double, double> &intersept, std::vector<double>* vecErr)
+int LGADBase::LinearFit(std::vector<double>* vec, std::pair <double, double> &slope, std::pair <double, double> &intersept, std::vector<double>* vecErr)
 {
     unsigned int pulses = vec->size();
     if (pulses < 10)
@@ -670,14 +746,14 @@ int LGADBase::LinearFit(std::vector<double>* vec, std::pair<double, double> &slo
         return -2;
        }
 
-    // if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Calculating before fit| Min: " << wmin << " , Max: " << wmax 
+    // if (m_verbose >= 2) std::cout << __FUNCTION__ << " INFO: Calculating before fit| Min: " << wmin << " , Max: " << wmax 
     //                                  << ", Integral.: " << ped->Integral() << ", Linits: " << limit1 << " to " << limit2 << std::endl;
      
     TF1 *line = new TF1("line", "pol1", 0, pulses);
     line->SetParameter(0, mean);
     line->SetParameter(1, strdv);
-    TFitResultPtr myfit = ped->Fit(line, "S Q N R", "+rob=0.75"); // 'q' to suppress messages  
-    // if (m_verbose == 2) myfit->Print("V");
+    TFitResultPtr myfit = ped->Fit(line, "S Q N E", "+rob=0.75"); // 'q' to suppress messages  
+    // if (m_verbose >= 2) myfit->Print("V");
 
     int qual = 0;
     double chi2 = 0.0;
@@ -699,7 +775,7 @@ int LGADBase::LinearFit(std::vector<double>* vec, std::pair<double, double> &slo
           intersept.second = myfit->ParError(0);              
           }
 
-    // if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Fit quality " << qual << " and fit chi2/NDF: " << chi2 << ", Slope: "
+    // if (m_verbose >= 2) std::cout << __FUNCTION__ << " INFO: Fit quality " << qual << " and fit chi2/NDF: " << chi2 << ", Slope: "
     //                                 << myfit->Parameter(1) << " +/- " << myfit->ParError(1) << " , Intercept: " << myfit->Parameter(0) 
     //                                 << " +/- " << myfit->ParError(0) << std::endl;
 
@@ -721,7 +797,7 @@ double LGADBase::LinearInter(double x1, double y1, double x2, double y2, double 
     return x3;
 }
 // --------------------------------------------------------------------------------------------------------------
-double LGADBase::FFT(vector<double> *w, Long64_t snrate, int start, int stop)
+double LGADBase::FFT(std::vector<double> *w, Long64_t snrate, int start, int stop)
 {
     if (start < 0) start = 0;
     if (stop <= 0) stop = w->size() - 1;
@@ -731,15 +807,20 @@ double LGADBase::FFT(vector<double> *w, Long64_t snrate, int start, int stop)
     double* kk = new double[npoints];
     for (int i = start; i <= stop; i++) kk[i-start] = w->at(i);
             
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO : start indx: " << start << ", stop indx: " << stop << ", no. of points: " << npoints << " " << std::endl;
+    if (m_verbose >= 2) std::cout << __FUNCTION__ << " INFO : start indx: " << start << ", stop indx: " << stop << ", no. of points: " << npoints << " " << std::endl;
     TVirtualFFT *fftWav = TVirtualFFT::FFT(1, &npoints, "R2C");
+    if (strcmp (fftWav->GetDefaultFFT(), "") == 0)
+       {
+        if (m_verbose >= 2) std::cout << __FUNCTION__ << " WARNING : FFT libraryu not installed, no Furrier analys performed!" << std::endl;
+        return  -99.;
+       }
     fftWav->SetPoints(kk);
     fftWav->Transform();
     TH1 *hm = 0;
     hm = TH1::TransformHisto(fftWav, hm, "MAG");
     hm->GetXaxis()->SetRange(0, npoints / 2);
     freq = (snrate/(double)(npoints-1))*hm->GetBinCenter(hm->GetMaximumBin());
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO : estimated frequecy: " << freq  << ", total frequency: " << snrate/(double)(npoints-1) 
+    if (m_verbose >= 2) std::cout << __FUNCTION__ << " INFO : estimated frequecy: " << freq  << ", total frequency: " << snrate/(double)(npoints-1) 
                                   << ", maxbin: " << hm->GetMaximumBin() << ", max bin center: " << hm->GetBinCenter(hm->GetMaximumBin()) << ", Max bin content: "
                                   << hm->GetBinContent(hm->GetMaximumBin()) << std::endl;
     delete fftWav;
@@ -752,4 +833,179 @@ double LGADBase::FFT(vector<double> *w, Long64_t snrate, int start, int stop)
                     << start << " and " << stop << " points of the voltage vector!" << std::endl;
           return -99.;
          }
+}
+// --------------------------------------------------------------------------------------------------------------
+std::vector<double> LGADBase::ConrtVarBinX(std::vector<double> *wmod, double limUp, double limDown, int &nbins)
+{
+    std::vector<double> ReBinX;
+    ReBinX.reserve(nbins);
+    // Find minimum bin width and create temporary histo to rebin
+    TH1D* FTempReBin = new TH1D("FTempReBin", "FTempReBin", nbins + 1, limUp, limDown);
+    for (unsigned int ga = 0; ga < wmod->size(); ga++) FTempReBin->Fill(wmod->at(ga));
+    TAxis *TmpRbinXAxis = FTempReBin->GetXaxis();
+    for (int i = 0; i < nbins; i++)
+        {
+         for (int j = i + 1; j < nbins + 1; j++)
+             {
+              if (FTempReBin->GetBinContent(j) != 0)
+                 {
+                  ReBinX.push_back(TmpRbinXAxis->GetBinLowEdge(j));
+                  i = j - 1;
+                  break;
+                 }
+              else {
+                    if (j < nbins) continue;
+                    else {
+                          ReBinX.push_back(TmpRbinXAxis->GetBinLowEdge(j + 1));
+                          i = nbins + 1;
+                         }
+                   }
+             }
+        }
+    delete FTempReBin;
+    nbins = ReBinX.size(); // Modify maximum amount of bins for variable binning hisots
+    return ReBinX;
+}
+// --------------------------------------------------------------------------------------------------------------
+bool LGADBase::CalcuRebin(bool discr, int n_elements, int nbins, double limUp, double limDown, double stdev, int (&Nofbins)[7])
+{
+    // Rebinning Algorithm
+    for (unsigned int u = 0; u < 7; u++) Nofbins[u] = 0;
+    int varlow = 0;
+    int varhigh = 0;
+    if ((discr && sqrt(n_elements) < nbins) || !discr)
+       {
+        if (fabs((limDown - limUp)/stdev) < sqrt(n_elements) || !discr)
+           {
+            unsigned int dfact = 1;
+            if (fabs((limDown - limUp) / stdev) < sqrt(n_elements))
+               {
+                if (discr) // Define the upper part of the bin arrray for descrete datasets
+                   {
+                    varhigh = floor((float)(fabs(nbins - sqrt(n_elements))) / 3);
+                    // Reduction of number of bins at high statistics mod
+                    if (nbins > 10*ceil(sqrt(n_elements))) dfact = pow(10, floor(fabs(log10(nbins/ceil(sqrt(n_elements))))))/2;
+                    else if (nbins > 5*ceil(sqrt(n_elements))) dfact = 5/2;
+                    // if (m_verbose >= 2) std::cout << "Case 1 discr " << dfact << std::endl;
+                   }
+                else {
+                       //if (m_verbose >= 2) std::cout << "Case 2, !discr" << std::endl;
+                       varhigh = floor((float)fabs((limDown - limUp) / stdev) / 3);
+                      }
+                varlow = ceil((float)(sqrt(n_elements) - (fabs(limDown - limUp)/stdev))/3);
+                Nofbins[3] = ceil(sqrt(n_elements));
+               }
+            else if (fabs((limDown - limUp)/stdev) >= sqrt(n_elements) && !discr)
+                    {
+                     Nofbins[3] = ceil(fabs(limDown - limUp)/stdev);
+                     varlow = ceil((float)((fabs(limDown - limUp)/stdev)-sqrt(n_elements))/3);
+                     varhigh = floor(sqrt(n_elements) / 3);
+                     // if (m_verbose >= 2) std::cout << "Case 3, !discr" << std::endl;
+                    }
+            // if (m_verbose >= 2)  std::cout << "Numbers: " << varlow << " " << varhigh << " " << sqrt(n_elements) << " " << n_elements << " " << fabs((limDown - limUp) / stdev) << " " << stdev << " " << limDown << " " << limUp << std::endl;
+            for (unsigned int gkl = 0; gkl < 3; gkl++)
+                {
+                 int bin1 = ceil(Nofbins[3] - (gkl+1)*varlow);
+                 int bin2 = floor((float)(Nofbins[3] + (gkl + 1)*varhigh) / (float)dfact);
+                 // Checking the array for existing values
+                 bool exist1 = false;
+                 bool exist2 = false;
+                 for (unsigned amr = 0; amr < gkl+1; amr++) 
+                     {
+                      if (dfact == 1)
+                         {
+                          if (!exist1) { if (Nofbins[3 - amr] == bin1) exist1 = true; }
+                          if (!exist2) { if (Nofbins[3 + amr] == bin2) exist2 = true; } 
+                         }
+                      else {
+                            if (bin2 == Nofbins[3+amr] || bin2 == Nofbins[3-amr])
+                               {
+                                bool acrt = true;
+                                do { 
+                                    acrt = false;
+                                    bin2++;
+                                    for (unsigned amb = 0; amb < gkl + 1; amb++) 
+                                        {
+                                         if (Nofbins[3 - amb] == bin2 || Nofbins[3 + amb] == bin2) 
+                                            {
+                                             acrt = true; 
+                                             break; 
+                                            }
+                                        }
+                                   }
+                                while (acrt && bin2 < nbins);
+                                if (bin2 > nbins) exist2 = true;
+                               }
+                            if (bin1 == Nofbins[3+amr] || bin2 == Nofbins[3-amr])
+                               {
+                                bool acrt = true;
+                                do { 
+                                    acrt = false;
+                                    bin1--;
+                                    for (unsigned amb = 0; amb < gkl + 1; amb++) 
+                                        {
+                                         if (Nofbins[3 - amb] == bin1 || Nofbins[3 + amb] == bin1 || (!exist2 && bin1 == bin2)) 
+                                            {
+                                             acrt = true; 
+                                             break; 
+                                            }
+                                        }
+                                  }
+                                while (acrt && bin1 > 0);
+                                if (bin1 <= 0) exist1 = true;
+                               }
+                           }
+                      if (exist1 && exist2) break;
+                     }
+                 if (!exist1) Nofbins[2 - gkl] = bin1;
+                 else Nofbins[2 - gkl] = -1;
+                 if (!exist2) Nofbins[4 + gkl] = bin2;
+                 else Nofbins[4 + gkl] = -1;
+                }
+           }
+        else { 
+              // if (m_verbose >= 2) std::cout << "Case 4, dicr" << std::endl;
+              varhigh = floor((float)(fabs(nbins-sqrt(n_elements)))/6);
+              if (varhigh == 0) varhigh = ceil((float)(fabs(nbins - sqrt(n_elements)))/6);
+              Nofbins[0] = floor(sqrt(n_elements));
+              for (unsigned int gkl = 1; gkl < 7; gkl++) 
+                  {
+                   float dfact = 1;
+                   int bin = floor(sqrt(n_elements) + gkl*varhigh);
+                   if (bin > n_elements) dfact = (float)n_elements/(float)bin;
+                   bin = floor(bin*dfact);
+                   bool exist = false;
+                   for (unsigned int kh = 0; kh < gkl; kh++) if (Nofbins[kh] == bin) { exist = true; break; }
+                   if (!exist && bin <= nbins) Nofbins[gkl] = bin;
+                   else Nofbins[gkl] = -1;
+                  }
+             }
+      }
+    else {
+          // if (m_verbose >= 2) std::cout << "Case 5, dicr" << std::endl;
+          varhigh = floor((float)nbins/7);
+          if (varhigh == 0) varhigh = ceil((float)nbins/7);
+          for (unsigned int gkl = 1; gkl < 8; gkl++) 
+              {
+               int bin = varhigh*gkl;
+               bool exist = false;
+               for (unsigned int kh = 0; kh < gkl-1; kh++) if (Nofbins[kh] == bin) { exist = true; break; }
+               if (!exist && bin <= nbins) Nofbins[gkl-1] = bin;
+               else Nofbins[gkl-1] = -1;
+              }
+         }
+
+    // Printout calculated bins for each case
+    if (m_verbose >= 2)
+       {
+        std::cout << "Bin array: ";
+        for (unsigned int kh = 0; kh < 7; kh++) 
+            {
+             std::cout << Nofbins[kh];
+             if (kh < 6) std::cout << ":";
+            }
+        std::cout << std::endl;
+       }
+
+    return true;
 }
