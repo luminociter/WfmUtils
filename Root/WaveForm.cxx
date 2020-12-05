@@ -17,14 +17,16 @@
 WaveForm::WaveForm()
 {
     m_fitchi2 = -99;
-    InitializeWaveForm();
+    m_WvBase = new LGADBase();
+    InitializeWaveForm(m_WvBase);
 }
 // --------------------------------------------------------------------------------------------------------------
 // Constructor with time and voltage input
 WaveForm::WaveForm(std::vector<double>* voltage, std::vector<double>* time)
 {
     m_fitchi2 = -99;
-    InitializeWaveForm();
+    m_WvBase = new LGADBase();
+    InitializeWaveForm(m_WvBase);
     SetVoltage(voltage);
     SetTime(time);
     SetSnRate((long long int)ceil((Long64_t)(m_time->size() / abs(m_time->back() - m_time->front()))));
@@ -34,7 +36,8 @@ WaveForm::WaveForm(std::vector<double>* voltage, std::vector<double>* time)
 WaveForm::WaveForm(std::vector<double>* voltage, Long64_t snrate)
 {
     m_fitchi2 = -99;
-    InitializeWaveForm();
+    m_WvBase = new LGADBase();
+    InitializeWaveForm(m_WvBase);
     SetVoltage(voltage);
     SetSnRate(snrate);
 }
@@ -43,7 +46,8 @@ WaveForm::WaveForm(std::vector<double>* voltage, Long64_t snrate)
 WaveForm::WaveForm(std::vector<double>* voltage, std::vector<double>* time, Long64_t snrate)
 {
     m_fitchi2 = -99;
-    InitializeWaveForm();
+    m_WvBase = new LGADBase();
+    InitializeWaveForm(m_WvBase);
     SetVoltage(voltage);
     SetTime(time);
     SetSnRate(snrate);
@@ -52,74 +56,57 @@ WaveForm::WaveForm(std::vector<double>* voltage, std::vector<double>* time, Long
 WaveForm::WaveForm(LGADBase *Base)
 {
     m_fitchi2 = -99;
-    InitializeWaveForm();
-    m_instrument = Base->LGADBase::GetInstrument();
-    m_TrackComb = Base->LGADBase::GetTrackComb();
-    m_verbose = Base->LGADBase::GetVerbosity();
-    m_TransFile = Base->LGADBase::GetTransFile();
-    m_TransFileName = Base->LGADBase::GetTransFileName();
-    m_fitopt = Base->LGADBase::GetFitMethode();
-    m_WaveShape = Base->LGADBase::GetWaveShape();
+    m_WvBase = Base;
+    InitializeWaveForm(m_WvBase);
 }
 // --------------------------------------------------------------------------------------------------------------
 // Constructor from LGADBase with time and voltage input
 WaveForm::WaveForm(std::vector<double>* voltage, std::vector<double>* time, LGADBase *Base)
 {
     m_fitchi2 = -99;
-    InitializeWaveForm();
+    m_WvBase = Base;
+    InitializeWaveForm(m_WvBase);
     SetVoltage(voltage);
     SetTime(time);
     SetSnRate((long long int)ceil((Long64_t)(m_time->size() / abs(m_time->back() - m_time->front()))));
-    m_instrument = Base->LGADBase::GetInstrument();
-    m_TrackComb = Base->LGADBase::GetTrackComb();
-    m_verbose = Base->LGADBase::GetVerbosity();
-    m_TransFile = Base->LGADBase::GetTransFile();
-    m_TransFileName = Base->LGADBase::GetTransFileName();
-    m_fitopt = Base->LGADBase::GetFitMethode();
-    m_WaveShape = Base->LGADBase::GetWaveShape();
 }
 // --------------------------------------------------------------------------------------------------------------
 // Constructor from LGADBase with rate and voltage input (time vector is computed internaly)
 WaveForm::WaveForm(std::vector<double>* voltage, Long64_t snrate, LGADBase *Base)
 {
     m_fitchi2 = -99;
-    InitializeWaveForm();
+    m_WvBase = Base;
+    InitializeWaveForm(m_WvBase);
     SetVoltage(voltage);
     SetSnRate(snrate);
-    m_instrument = Base->LGADBase::GetInstrument();
-    m_TrackComb = Base->LGADBase::GetTrackComb();
-    m_verbose = Base->LGADBase::GetVerbosity();
-    m_TransFile = Base->LGADBase::GetTransFile();
-    m_TransFileName = Base->LGADBase::GetTransFileName();
-    m_fitopt = Base->LGADBase::GetFitMethode();
-    m_WaveShape = Base->LGADBase::GetWaveShape();
 }
 // --------------------------------------------------------------------------------------------------------------
 // Constructor from LGADBase with time, voltage and sampling rate input
 WaveForm::WaveForm(std::vector<double>* voltage, std::vector<double>* time, Long64_t snrate, LGADBase *Base)
 {
     m_fitchi2 = -99;
-    InitializeWaveForm();
+    m_WvBase = Base;
+    InitializeWaveForm(m_WvBase);
     SetVoltage(voltage);
     SetTime(time);
     SetSnRate(snrate);
-    m_instrument = Base->LGADBase::GetInstrument();
-    m_TrackComb = Base->LGADBase::GetTrackComb();
-    m_verbose = Base->LGADBase::GetVerbosity();
-    m_TransFile = Base->LGADBase::GetTransFile();
-    m_TransFileName = Base->LGADBase::GetTransFileName();
-    m_fitopt = Base->LGADBase::GetFitMethode();
-    m_WaveShape = Base->LGADBase::GetWaveShape();
 }
 // --------------------------------------------------------------------------------------------------------------
 // Default destructor
 WaveForm::~WaveForm()
 {
+    delete m_WvBase;
     if (m_fitchi2 != -99 && m_fitchi2 != -1) delete m_noiseFit;
 }
 // --------------------------------------------------------------------------------------------------------------
-void WaveForm::InitializeWaveForm(int level)
+void WaveForm::InitializeWaveForm(LGADBase* tBase, int level)
 {
+     m_instrument = tBase->LGADBase::GetInstrument();
+     m_TrackComb = tBase->LGADBase::GetTrackComb();
+     m_TransFile = tBase->LGADBase::GetTransFile();
+     m_TransFileName = tBase->LGADBase::GetTransFileName();
+     m_fitopt = tBase->LGADBase::GetFitMethode();
+     m_WaveShape = tBase->LGADBase::GetWaveShape();
 
      // Pointers
      m_voltage = NULL;
@@ -197,51 +184,51 @@ bool WaveForm::Calculate()
         return false;
        }
     m_pol = FindPolarity(m_voltage);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Polarity: " << m_pol << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Polarity: " << m_pol << std::endl;
     m_maxIndx = VoltMaxIndx(m_voltage, false, false);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Max Voltage Index: " << m_maxIndx << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Max Voltage Index: " << m_maxIndx << std::endl;
     m_maxVolt = VoltMax(m_voltage, false, false);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Max Voltage: " << m_maxVolt << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Max Voltage: " << m_maxVolt << std::endl;
     m_minIndx = VoltMinIndx(m_voltage, false, false);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Min Voltage Index: " << m_minIndx << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Min Voltage Index: " << m_minIndx << std::endl;
     m_minVolt = VoltMin(m_voltage, false, false);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Min Voltage: " << m_minVolt << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Min Voltage: " << m_minVolt << std::endl;
     m_halfPtsIndx = FindHalfPoints(m_voltage, false);
     if (m_halfPtsIndx.size() < 1)
        {
-        if (m_verbose == 1) std::cout << __FUNCTION__ << " WARNING: Could not determine half points, stopping..." << std::endl;
+        if (m_WvBase->LGADBase::GetVerbosity() >= 1) std::cout << __FUNCTION__ << " WARNING: Could not determine half points, stopping..." << std::endl;
         return false;
        }
     m_IsSignal = IsSignal(&m_halfPtsIndx);    
     if (!m_IsSignal)
        {
-        if (m_verbose == 1) std::cout << __FUNCTION__<< " WARNING: Found several reocuring signals, classified as noise, stopping...." << std::endl;
+        if (m_WvBase->LGADBase::GetVerbosity() >= 1) std::cout << __FUNCTION__<< " WARNING: Found several reocuring signals, classified as noise, stopping...." << std::endl;
         m_IsInWindow = true;
         return false;
        }
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: No. of Half points: " << m_halfPtsIndx.size() << " and is signal: " << m_IsSignal << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: No. of Half points: " << m_halfPtsIndx.size() << " and is signal: " << m_IsSignal << std::endl;
     m_StrIndx = StartIndx(m_voltage, false, false);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Start index: " << m_StrIndx << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Start index: " << m_StrIndx << std::endl;
     m_EndIndx = EndIndx(m_voltage, false, false);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: End index : " << m_EndIndx << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: End index : " << m_EndIndx << std::endl;
     m_IsInWindow = InWindow(m_voltage);
     if (!m_IsInWindow)
        {
-        if (m_verbose == 1) std::cout << __FUNCTION__ << " WARNING: Signal ouside of DAQ window, stopping...." << std::endl;
+        if (m_WvBase->LGADBase::GetVerbosity() >= 1) std::cout << __FUNCTION__ << " WARNING: Signal ouside of DAQ window, stopping...." << std::endl;
         return false;
        }
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Pulse is within window: " << m_IsInWindow << std::endl;
-    std::pair<unsigned int, unsigned int> noisepts = FindNoisePoints(m_voltage);
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Pulse is within window: " << m_IsInWindow << std::endl;
+    std::pair <unsigned int, unsigned int> noisepts = FindNoisePoints(m_voltage);
     if ((int)(noisepts.second - noisepts.first) < 4)
        {    
-        if (m_verbose == 1) std::cout << __FUNCTION__ << " WARNING: Too few noise points determined, stopping...." << std::endl;
+        if (m_WvBase->LGADBase::GetVerbosity() >= 1) std::cout << __FUNCTION__ << " WARNING: Too few noise points determined, stopping...." << std::endl;
         return false;
        }
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Using ragne for noise from " << noisepts.first << " to " << noisepts.second << std::endl;
-    std::pair<double, double> baseline (-1., -1.);
-    std::pair<double, double> noise_rms (-1., -1.);
-    if (m_fitopt == "rootInt") m_NoiseFtQl = LGADBase::IterativeFit(m_voltage, baseline, noise_rms, m_noiseFit, m_fitchi2, "GaussInt", noisepts);
-    else m_NoiseFtQl = LGADBase::IterativeFit(m_voltage, baseline, noise_rms, m_noiseFit, m_fitchi2, "Gauss", noisepts);
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Using range for noise from " << noisepts.first << " to " << noisepts.second << std::endl;
+    std::pair <double, double> baseline (-1., -1.);
+    std::pair <double, double> noise_rms (-1., -1.);
+    if (m_fitopt == "rootInt") m_NoiseFtQl = m_WvBase->LGADBase::IterativeFit(m_voltage, baseline, noise_rms, m_noiseFit, m_fitchi2, "GaussInt", noisepts, true);
+    else m_NoiseFtQl = m_WvBase->LGADBase::IterativeFit(m_voltage, baseline, noise_rms, m_noiseFit, m_fitchi2, "Gauss", noisepts, true);
     if (m_fitchi2 != -1) 
        {
         m_noiseFit->SetNameTitle(Form("Or_WavNoise%02u", m_waveId), Form("Or_WavNoise%02u", m_waveId));
@@ -255,19 +242,20 @@ bool WaveForm::Calculate()
         m_noiseErr = noise_rms.second;
        }
     else {
-          m_pedestal = LGADBase::Mean(m_voltage, noisepts.first, noisepts.second);
-          m_noise = LGADBase::Stdev(m_voltage, noisepts.first, noisepts.second);
-          if (m_verbose == 1) std::cout << __FUNCTION__ << " WARNING: Could not calculate GAUSSIAN noise, reventing to mean and stdv...." << std::endl;
+          m_pedestal = m_WvBase->LGADBase::Mean(m_voltage, noisepts.first, noisepts.second);
+          m_noise = m_WvBase->LGADBase::Stdev(m_voltage, noisepts.first, noisepts.second);
+          if (m_WvBase->LGADBase::GetVerbosity() >= 1) std::cout << __FUNCTION__ << " WARNING: Could not calculate GAUSSIAN noise, reventing to mean and stdv...." << std::endl;
          }
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Noise: " << m_noise << " +/- " << m_noiseErr << " and pedestal: " << m_pedestal << " +/- " << m_pedestalErr << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Noise: " << m_noise << " +/- " << m_noiseErr << " and pedestal: " 
+                                                           << m_pedestal << " +/- " << m_pedestalErr << std::endl;
     m_VoltStr = VoltSatur(m_voltage, false);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Saturation test: " << m_VoltStr << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Saturation test: " << m_VoltStr << std::endl;
     // Adjust the pulse to positive, remove pedestal and recalculate max, min values and start, stop points
     if (m_pol == pos && !m_VoltStr) m_voltageAdj = PulseAdj(m_voltage, m_pedestal, 1);
     else if (m_pol == neg && !m_VoltStr) m_voltageAdj = PulseAdj(m_voltage, m_pedestal, -1);
     else if (m_pol == undef && !m_VoltStr)
             {
-             if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Undetermined polarity for adjustment, stopping...." << std::endl;
+             if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Undetermined polarity for adjustment, stopping...." << std::endl;
              m_maxVoltErr = VoltMaxErr(m_voltage, false);
              m_minTime = TimeMin(m_voltage, m_SnRate, false, false);
              m_maxTime = TimeMax(m_voltage, m_SnRate, false, false);
@@ -275,43 +263,46 @@ bool WaveForm::Calculate()
             }
     else if (m_VoltStr) 
             {
-             if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Saturated signal, stopping...." << std::endl;
+             if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Saturated signal, stopping...." << std::endl;
              m_minTime = TimeMin(m_voltage, m_SnRate, false, false);
              return false;
             }
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Pulse has been adjasted " << m_voltageAdj.size() << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Pulse has been adjasted " << m_voltageAdj.size() << std::endl;
     m_RiseTime = RiseTimeLinear(&m_voltageAdj, m_SnRate);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Rise time calculation " << m_RiseTime << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Rise time calculation " << m_RiseTime << std::endl;
     m_CFDTime = CFDTimeLinear(&m_voltageAdj, m_time, m_fraction);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: CFD time calculation " << m_CFDTime << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: CFD time calculation " << m_CFDTime << std::endl;
     m_vAdjCFD = PulseTimeVoltAdj(m_time, &m_voltageAdj, m_fraction);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: TimeWalk corrected pulse: " << m_vAdjCFD.size() << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: TimeWalk corrected pulse: " << m_vAdjCFD.size() << std::endl;
     m_dVdTMax = dVdTMaxLinear(&m_voltageAdj, m_SnRate);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: dV/dT max linear: " << m_dVdTMax << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: dV/dT max linear: " << m_dVdTMax << std::endl;
     m_dVdTCFD = dVdTCFDLinear(&m_voltageAdj, m_SnRate, m_fraction);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: dV/dT CFD linear: " << m_dVdTCFD << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: dV/dT CFD linear: " << m_dVdTCFD << std::endl;
     m_TriggTime = FirstTimeForVoltage(&m_voltageAdj, m_time, m_trigg);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Trigger time: " << m_TriggTime << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Trigger time: " << m_TriggTime << std::endl;
     m_CFDToT = CFDToTLinear(&m_voltageAdj, m_time, m_fraction);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: CFD ToT: " << m_CFDToT << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: CFD ToT: " << m_CFDToT << std::endl;
     m_TriggToT = TriggToTLinear(&m_voltageAdj, m_time, m_trigg);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Triger ToT: " << m_TriggToT << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Triger ToT: " << m_TriggToT << std::endl;
     m_signalFFT = LGADBase::FFT(&m_voltageAdj, m_SnRate, m_StrIndx, m_EndIndx);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Signal FFT: " << m_signalFFT << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Signal FFT: " << m_signalFFT << std::endl;
     m_noiseFFT = LGADBase::FFT(&m_voltageAdj, m_SnRate, noisepts.first, noisepts.second);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Noise FFT: " << m_noiseFFT << std::endl;
-    if (m_signalFFT != -99 && !m_TransFileName.IsNull()) m_transimp = GetTransimpFromFile(m_signalFFT);
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Noise FFT: " << m_noiseFFT << std::endl;
+    if (m_signalFFT != -99 && m_WvBase->LGADBase::GetDoTrnsCorr()) m_transimp = GetTransimpFromFile(m_signalFFT);
     m_charge = CollectedCharge(&m_voltageAdj, m_SnRate, m_transimp, m_ampgain, m_StrIndx, m_EndIndx);
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Collected Charge: " << m_charge << std::endl;
     m_jitter1 = m_noise / m_dVdTCFD;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Jitter from Noise/dVdT: " << m_charge << std::endl;
     m_jitter2 = m_RiseTime*m_noise / m_maxVolt;
-    if (m_verbose == 2) dump();
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Jitter from RieTime/pMax: " << m_charge << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 3) dump();
 
     return true;
 }
 // --------------------------------------------------------------------------------------------------------------
 void WaveForm::SetVoltage(std::vector<double> *volt)
 {
-    if (volt->size() != 0) 
+    if (volt->size() != 0 && volt != NULL)
        {
         m_voltage = volt;
         if (m_time == NULL && m_SnRate > 0) m_time = FillTime(m_voltage, m_SnRate);
@@ -382,8 +373,10 @@ std::vector<double>* WaveForm::FillTime(std::vector<double>* voltage, Long64_t s
        for (unsigned int b = 0; b < voltage->size(); b++) m_intime.push_back((double)b / (double)snrate);
        time = &m_intime;
       }
-   else if (m_verbose == 2) std::cout << __FUNCTION__ << " WARNING: Rate set but no voltage vector found. Cannot establsh time vector, remember to do it before calculations!" 
-                                      << std::endl;
+   else { 
+         if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " WARNING: Rate set but no voltage vector found. Cannot establsh time vector, remember to do it before calculations!" 
+                                                               << std::endl;
+        }
    return time;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -451,7 +444,7 @@ int WaveForm::GetPolarity()
 Long64_t WaveForm::GetSnRate()
 {
     if (m_SnRate != -99) return m_SnRate;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Rate not set!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Rate not set!!" << std::endl;
     return -1;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -467,7 +460,7 @@ float WaveForm::GetCFDfraction()
 // --------------------------------------------------------------------------------------------------------------
 int WaveForm::GetBasePos()
 {
-    if (m_basepos == undet && m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Base Position not established!!" << std::endl;
+    if (m_basepos == undet && m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Base Position not established!!" << std::endl;
     return m_basepos;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -531,8 +524,8 @@ std::vector<double> WaveForm::GetAdjVoltage()
 {
     if (m_voltageAdj.size() == 0)
        {
-        if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Voltage adjustment for pedestal not yet performed!" << std::endl;
-        return vector<double>();
+        if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Voltage adjustment for pedestal not yet performed!" << std::endl;
+        return std::vector<double>();
        }
     else return m_voltageAdj;
 }
@@ -541,13 +534,13 @@ std::vector<double> WaveForm::GetTimeAdjVolt(float fraction)
 {
     if (m_vAdjCFD.size() == 0)
        { 
-        if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Time adjustment for CFD not yet performed!" << std::endl;
-        return vector<double>();
+        if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Time adjustment for CFD not yet performed!" << std::endl;
+        return std::vector<double>();
        }
     else if (fraction == -99) return m_vAdjCFD;
     else if (fraction > 0 && fraction < 1) return PulseTimeVoltAdj(m_time, &m_voltageAdj, fraction);
     else {
-          if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Ubacceptable CFD Value, using 20%..." << std::endl;
+          if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Ubacceptable CFD Value, using 20%..." << std::endl;
           return m_vAdjCFD;
          }
 }
@@ -555,21 +548,21 @@ std::vector<double> WaveForm::GetTimeAdjVolt(float fraction)
 int WaveForm::GetMaxIndx()
 {
     if (m_maxIndx != -99) return m_maxIndx;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << "WARNING: Maximum not defined!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << "WARNING: Maximum not defined!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
 double WaveForm::GetMax()
 {
     if(m_maxVolt != -99) return m_maxVolt;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Maximum not defined!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Maximum not defined!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
 double WaveForm::GetMaxErr()
 {
     if (m_maxVoltErr != -99) return m_maxVoltErr;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Maximum time not defined!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Maximum time not defined!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -577,7 +570,7 @@ std::vector<int> WaveForm::GetHalfPoints()
 {
     if (m_halfPtsIndx.size() > 0) return m_halfPtsIndx;
     else {
-          if (m_verbose > 0) std::cout << __FUNCTION__ << "WARNING: Half Points not calculated!!" << std::endl;
+          if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << "WARNING: Half Points not calculated!!" << std::endl;
           return std::vector<int>();
          }
 }
@@ -585,35 +578,35 @@ std::vector<int> WaveForm::GetHalfPoints()
 double WaveForm::GetMaxTime()
 {
     if (m_maxTime != -99) return m_maxTime;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Maximum time not defined!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Maximum time not defined!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
 int WaveForm::GetMinIndx()
 {
     if (m_minIndx != - 99) return m_minIndx;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Minimum not defined!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Minimum not defined!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
 double WaveForm::GetMin()
 {
     if (m_minVolt != -99) return m_minVolt;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Minimum not defined!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Minimum not defined!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
 double WaveForm::GetMinTime()
 {
     if (m_minTime != -99) return m_minTime;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Minimum not defined!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Minimum not defined!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
 int WaveForm::GetStrIndx()
 {
     if (m_StrIndx != -99) return m_StrIndx;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Signal start not defined!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Signal start not defined!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -627,35 +620,35 @@ int WaveForm::GetEndIndx()
 double WaveForm::GetNoise()
 {
     if (m_noise != -99) return m_noise;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Noise not calculated!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Noise not calculated!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
 double WaveForm::GetNoiseErr()
 {
     if (m_noiseErr != -99) return m_noiseErr;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Noise uncertenty not calculated!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Noise uncertenty not calculated!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
 double WaveForm::GetPedestal()
 {
     if (m_pedestal != -99) return m_pedestal;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Pedestal not determined!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Pedestal not determined!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
 double WaveForm::GetPedestalErr()
 {
     if (m_pedestalErr != -99) return m_pedestalErr;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Pedestal uncertenty not determined!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Pedestal uncertenty not determined!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
 double WaveForm::GetCharge()
 {
     if (m_charge != -99) return m_charge;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Charge has not been calculated!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Charge has not been calculated!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -670,7 +663,7 @@ double WaveForm::GetRiseTime(float bottom, float top)
               return m_RiseTime;
              }
        }
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Rise time has not been estimated!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Rise time has not been estimated!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -685,7 +678,7 @@ double WaveForm::GetCFDTime(float fraction)
               return m_CFDTime;
              }
        }
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: CFD time has not been estimated!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: CFD time has not been estimated!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -700,14 +693,14 @@ double WaveForm::GetTriggTime(float trigg)
               return m_TriggTime;
             }
        }
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Trigger time has not been estimated!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Trigger time has not been estimated!!" << std::endl;
     return -1;
 }
 // --------------------------------------------------------------------------------------------------------------
 double WaveForm::GetdVdTMax()
 {
     if (m_dVdTMax != -99) return m_dVdTMax;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Maximum dV/dT has not been computed!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Maximum dV/dT has not been computed!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -723,7 +716,7 @@ double WaveForm::GetdVdTCFD(float fraction, int ndif)
               return m_dVdTCFD;
             }
        }
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: dV/dT at CFD value has not been computed!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: dV/dT at CFD value has not been computed!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -738,7 +731,7 @@ double WaveForm::GetCFDToT(float fraction)
               return m_CFDToT;
             }
        }
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: ToT for CFD value has not been computed!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: ToT for CFD value has not been computed!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -753,35 +746,35 @@ double WaveForm::GetTriggToT(float trigg)
               return m_TriggToT;
             }
        }
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: ToT for trigger value has not been computed!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: ToT for trigger value has not been computed!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
 double WaveForm::GetSignalFFT()
 {
     if (m_signalFFT != -99) return m_signalFFT;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Fast Fourier Transform for signal not performed!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Fast Fourier Transform for signal not performed!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
 double WaveForm::GetNoiseFFT()
 {
     if (m_noiseFFT != -99) return m_noiseFFT;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Fast Fourier Transform for noise not performed!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Fast Fourier Transform for noise not performed!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
 double WaveForm::GetJitterNdVdT()
 {
     if (m_jitter1 != -99) return m_jitter1;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Jitter [noise/dVdt] calculation not performed!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Jitter [noise/dVdt] calculation not performed!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
 double WaveForm::GetJitterRiseSNR()
 {
     if (m_jitter2 != -99) return m_jitter2;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Jitter [Rise Time/SNR] calculation not performed!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Jitter [Rise Time/SNR] calculation not performed!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -789,20 +782,20 @@ double WaveForm::GetFrequency(int start, int stop)
 {
     if (m_signalFFT != -99)
        {
-        if (start > 0 && stop > 0 && start < stop) return LGADBase::FFT(&m_voltageAdj, m_SnRate, start, stop);
+        if (start > 0 && stop > 0 && start < stop) return m_WvBase->LGADBase::FFT(&m_voltageAdj, m_SnRate, start, stop);
         else {
               std::cout << __FUNCTION__ << " WARNING: Unacceptable values for start and stop, abording..." << std::endl;
               return -1.;
             }
        }
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: FFT not yet performed!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: FFT not yet performed!!" << std::endl;
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
 bool WaveForm::GetSaturation()
 {
     if (m_maxIndx != -99 && m_StrIndx != -99 && m_EndIndx != -99) return m_VoltStr;
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Saturation test not performed!!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Saturation test not performed!!" << std::endl;
     return false;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -828,11 +821,11 @@ WaveForm::basepos WaveForm::FindPosition(std::vector<double> *w)
 WaveForm::polarity WaveForm::FindPolarity(std::vector<double> *w)
 {
     polarity pol = undef;
-    std::vector<double> firstder = LGADBase::Derivate(w, 3);
+    std::vector<double> firstder = m_WvBase->LGADBase::Derivate(w, 3);
 
     if (firstder.size() != 0)
        { 
-        std::vector<double> secordr = LGADBase::Derivate(&firstder, 1);
+        std::vector<double> secordr = m_WvBase->LGADBase::Derivate(&firstder, 1);
         if (secordr.size() != 0)
            { 
             std::vector<int> maxindx;
@@ -852,10 +845,10 @@ WaveForm::polarity WaveForm::FindPolarity(std::vector<double> *w)
                 }
             if (maxvolt.size() !=0 && minvolt.size()!=0)
                {
-                m_maxavg = LGADBase::Mean(&maxvolt);
-                m_minavg = LGADBase::Mean(&minvolt);
-                double maxstdev = LGADBase::Stdev(&maxvolt, -1, -1, m_maxavg);
-                double minstdev = LGADBase::Stdev(&minvolt, -1, -1, m_minavg);
+                m_maxavg = m_WvBase->LGADBase::Mean(&maxvolt);
+                m_minavg = m_WvBase->LGADBase::Mean(&minvolt);
+                double maxstdev = m_WvBase->LGADBase::Stdev(&maxvolt, -1, -1, m_maxavg);
+                double minstdev = m_WvBase->LGADBase::Stdev(&minvolt, -1, -1, m_minavg);
                 // caculate extremum distances
                 double minextr = fabs(*std::min_element(minvolt.begin(), minvolt.end()) - m_minavg);
                 double maxextr = fabs(*std::max_element(maxvolt.begin(), maxvolt.end()) - maxstdev);
@@ -864,13 +857,13 @@ WaveForm::polarity WaveForm::FindPolarity(std::vector<double> *w)
                 else if (maxstdev <= minstdev && maxextr < minextr) pol = neg;
                 else if (maxextr > minextr && minstdev < (1.05*maxstdev)) pol = pos;
                 else if (maxextr < minextr && maxstdev < (1.05*minstdev)) pol = neg;
-                else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Cannot determine polarity with available info!!" << std::endl;
+                else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Cannot determine polarity with available info!!" << std::endl;
                }
-            else if (m_verbose > 0) std::cout << __FUNCTION__ << " ERROR: Cannot determine polarity, no maxima or minima found!" << std::endl;
+            else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " ERROR: Cannot determine polarity, no maxima or minima found!" << std::endl;
            }
-        else if (m_verbose > 0) std::cout << __FUNCTION__ << " ERROR: Cannot determine polarity, second derivative size too small!" << std::endl;
+        else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " ERROR: Cannot determine polarity, second derivative size too small!" << std::endl;
        }
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " ERROR: Cannot determine polarity, first derivative size too small!" << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " ERROR: Cannot determine polarity, first derivative size too small!" << std::endl;
     return pol;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -979,8 +972,8 @@ std::vector<int> WaveForm::FindHalfPoints(std::vector<double> *w, bool adj)
     std::vector<int> halfPtsIndx;
 
     // Calculate 90% of the distance between max and min voiltages
-    if (m_pol == pos || m_pol == undef) halfvalue = m_minVolt + abs(m_maxVolt - m_minVolt)*0.9;
-    else halfvalue = m_minVolt - abs(m_maxVolt - m_minVolt)*0.9;
+    if (m_pol == pos || m_pol == undef || adj) halfvalue = m_minVolt + abs(m_maxVolt - m_minVolt)*0.9;
+    else halfvalue = m_minVolt - abs(m_maxVolt - m_minVolt)*0.8;
     for (unsigned int d = 0; d < (w->size()-1); d++)
         {
          if ((w->at(d) < halfvalue && w->at(d + 1) > halfvalue) ||
@@ -988,40 +981,40 @@ std::vector<int> WaveForm::FindHalfPoints(std::vector<double> *w, bool adj)
              (w->at(d) == halfvalue && w->at(d+1) != halfvalue)) halfPtsIndx.push_back(d);
         }
 
-    if (halfPtsIndx.size() > 2 && (halfPtsIndx.at(halfPtsIndx.size()-1)-halfPtsIndx.at(0)) > 8)
-       { 
+    if (halfPtsIndx.size() > 2 && (halfPtsIndx.at(halfPtsIndx.size()-1)-halfPtsIndx.at(0)) >= 8)
+       {
         halfPtsIndx.clear();
         if (m_pol == pos || m_pol == undef) halfvalue = m_minVolt + abs(m_maxVolt - m_minVolt)*0.8;
-        else halfvalue = m_minVolt - abs(m_maxVolt - m_minVolt)*0.8;
+        else halfvalue = m_minVolt - abs(m_maxVolt - m_minVolt)*0.7;
         for (unsigned int d = 0; d < (w->size()-1); d++)
             {
              if ((w->at(d) < halfvalue && w->at(d + 1) > halfvalue) ||
                 (w->at(d) > halfvalue && w->at(d + 1) < halfvalue) || 
                 (w->at(d) == halfvalue && w->at(d+1) != halfvalue)) halfPtsIndx.push_back(d);
             }
-        if (halfPtsIndx.size() > 2 && (halfPtsIndx.at(halfPtsIndx.size()-1)-halfPtsIndx.at(0)) > 16)
-           { 
+        if (halfPtsIndx.size() > 2 && (halfPtsIndx.at(halfPtsIndx.size()-1)-halfPtsIndx.at(0)) >= 12)
+           {
             halfPtsIndx.clear();
             if (m_pol == pos || m_pol == undef) halfvalue = m_minVolt + abs(m_maxVolt - m_minVolt)*0.7;
-            else halfvalue = m_minVolt - abs(m_maxVolt - m_minVolt)*0.7;
+            else halfvalue = m_minVolt - abs(m_maxVolt - m_minVolt)*0.6;
             for (unsigned int d = 0; d < (w->size()-1); d++)
                 {
                  if ((w->at(d) < halfvalue && w->at(d + 1) > halfvalue) ||
                     (w->at(d) > halfvalue && w->at(d + 1) < halfvalue) || 
                     (w->at(d) == halfvalue && w->at(d + 1) != halfvalue)) halfPtsIndx.push_back(d);
                 }
-            if (halfPtsIndx.size() > 2 && (halfPtsIndx.at(halfPtsIndx.size()-1)-halfPtsIndx.at(0)) > 24)
+            if (halfPtsIndx.size() > 2 && (halfPtsIndx.at(halfPtsIndx.size()-1)-halfPtsIndx.at(0)) >= 16)
                { 
                 halfPtsIndx.clear();
                 if (m_pol == pos || m_pol == undef) halfvalue = m_minVolt + abs(m_maxVolt - m_minVolt)*0.6;
-                else halfvalue = m_minVolt - abs(m_maxVolt - m_minVolt)*0.6;
+                else halfvalue = m_minVolt - abs(m_maxVolt - m_minVolt)*0.5;
                 for (unsigned int d = 0; d < (w->size()-1); d++)
                     {
                      if ((w->at(d) < halfvalue && w->at(d + 1) > halfvalue) ||
                          (w->at(d) > halfvalue && w->at(d + 1) < halfvalue) || 
                          (w->at(d) == halfvalue && w->at(d + 1) != halfvalue)) halfPtsIndx.push_back(d);
                     }
-                if (halfPtsIndx.size() > 2 && (halfPtsIndx.at(halfPtsIndx.size()-1)-halfPtsIndx.at(0)) > 30) halfPtsIndx.push_back(0);
+                if (halfPtsIndx.size() > 2 && (halfPtsIndx.at(halfPtsIndx.size()-1)-halfPtsIndx.at(0)) >= 20) halfPtsIndx.push_back(0);
                 else halfPtsIndx.push_back(1);              
                }
             else halfPtsIndx.push_back(1);
@@ -1054,33 +1047,21 @@ bool WaveForm::VoltSatur(std::vector<double> *w, bool poldef)
     std::vector<unsigned int> indexvect;
     if (m_maxIndx >= 0)
        {
-        for (unsigned int l = 0; l < w->size(); l++) 
+        for (int l = 0; l < (int)(w->size()); l++) 
             {
-             if (w->at(l) == w->at(m_maxIndx)) indexvect.push_back(l);
+             if (w->at(l) == w->at(m_maxIndx) && l >= m_StrIndx && l <= m_EndIndx) indexvect.push_back(l);
             }
        }
 
-    // Find the number of consecutive points with same values as vmax
-    // between signal start and stop
-    unsigned int v = 0;
-    std::vector<unsigned int> consec;
-    consec.push_back(0);
-    if (indexvect.size() > 1)
-       {
-        for (unsigned int k = 0; k < (indexvect.size()-1); k++)
-            {
-             if (indexvect.at(k+1) == (indexvect.at(k)+1) && (int)indexvect.at(k + 1) > m_StrIndx 
-                 && (int)indexvect.at(k + 1) < m_EndIndx)
-                {
-                 consec.at(v)++;
-                }
-             else { 
-                   consec.push_back(0);
-                   v++;
-                  }
-            }
-        if ( *std::max_element(consec.begin(), consec.end()) > 1) satur = true;
-       }
+   // Allow for exactly two consecutive max voltages
+   if (indexvect.size() == 2)
+      {
+       unsigned int v = 0;
+       for (unsigned int k = 0; k < (indexvect.size()-1); k++) if (indexvect.at(k + 1) - indexvect.at(k) == 1) v++;
+       if (v == 1) satur = false;
+       else satur = true;
+      }
+   else if (indexvect.size() > 2) satur = true;
 
     return satur;
 }
@@ -1103,12 +1084,12 @@ bool WaveForm::InWindow(std::vector<double>* w)
        {
         if (endindx == -1 && (m_StrIndx > (int)w->size()/2))
            {
-            if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Pulse within window but located at the higher extremity!" << std::endl;
+            if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Pulse within window but located at the higher extremity!" << std::endl;
             window = true;
            }
         if (m_StrIndx == -1 && (endindx > (int)w->size()/2))
            {
-            if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Pulse outside window, located at the lower extremity, rise time calculation will fail!" << std::endl;
+            if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Pulse outside window, located at the lower extremity, rise time calculation will fail!" << std::endl;
             window = false;
            }
         else window = true;
@@ -1120,16 +1101,16 @@ bool WaveForm::InWindow(std::vector<double>* w)
                  if (m_maxIndx == (int)w->size()) 
                     { 
                       window = false;
-                      if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Pulse rising edge ouside window at high side!" << std::endl;
+                      if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Pulse rising edge ouside window at high side!" << std::endl;
                     }
                  else {
                        window = true;
-                       if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Pulse rising edge within window but located at the higher extremity!" << std::endl;
+                       if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Pulse rising edge within window but located at the higher extremity!" << std::endl;
                       }
                 }
              else if (m_StrIndx == -1 && (endindx > (int)w->size() / 2))
                      {
-                      if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Pulse outside window, located at the lower extremity, rise time calculation will fail!" << std::endl;
+                      if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Pulse outside window, located at the lower extremity, rise time calculation will fail!" << std::endl;
                       window = false;
                      }
              else window = false;
@@ -1172,7 +1153,7 @@ int WaveForm::StartIndx(std::vector<double> *w, bool adj, bool poldef)
     // Sfeguard agains signals at the begining of DAQ window
     if (adj && istart == -1) istart = 0;
 
-    if (istart == -1 && m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Signal start index not found!! " << std::endl;
+    if (istart == -1 && m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Signal start index not found!! " << std::endl;
     return istart;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -1206,17 +1187,17 @@ int WaveForm::EndIndx(std::vector<double> *w, bool adj, bool poldef)
             }
         }
 
-    if (iend == -1 && m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Signal end index not found!! " << std::endl;
+    if (iend == -1 && m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Signal end index not found!! " << std::endl;
     return iend;
 }
 // --------------------------------------------------------------------------------------------------------------
 // Functon to determine the indices of the points used for noise calculation. Defined as the 80% of the point preceeding the
 // begining of the signal. It ignors the first and last 10% of points before and after the signal respectively
-std::pair<unsigned int, unsigned int> WaveForm::FindNoisePoints(std::vector<double> *w)
+std::pair <unsigned int, unsigned int> WaveForm::FindNoisePoints(std::vector<double> *w)
 {
     int npoints = w->size();
     if (m_StrIndx == -99) m_StrIndx = StartIndx(w, false, false);
-    std::pair<unsigned int, unsigned int> noisepoints (0, 0);
+    std::pair <unsigned int, unsigned int> noisepoints (0, 0);
     if (ceil(0.2*m_StrIndx) > 1) noisepoints.first = ceil(0.2*m_StrIndx);
     else noisepoints.first = 1;
     // Enforce a 4 points noise calculation
@@ -1228,13 +1209,13 @@ std::pair<unsigned int, unsigned int> WaveForm::FindNoisePoints(std::vector<doub
               noisepoints.second = m_EndIndx + ceil(0.8*(w->size() - 3 - m_EndIndx));
               noisepoints.first = m_EndIndx + ceil(0.2*(w->size() - 3 - m_EndIndx));
              }
-          else if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING:: Noise Determination Failed, starting point"
-                                            << noisepoints.first << ", ending point: " << ceil(0.9*m_StrIndx) << "!!!!" << std::endl;
+          else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Noise Determination Failed, starting point"
+                                                                     << noisepoints.first << ", ending point: " << ceil(0.9*m_StrIndx) << "!!!!" << std::endl;
          }
     return noisepoints;
 }
 // --------------------------------------------------------------------------------------------------------------
-vector<double> WaveForm::PulseAdj(std::vector<double> *w, double baseline, int factor)
+std::vector<double> WaveForm::PulseAdj(std::vector<double> *w, double baseline, int factor)
 {
     int npoints = w->size();
     std::vector<double> wadj;
@@ -1250,8 +1231,8 @@ vector<double> WaveForm::PulseAdj(std::vector<double> *w, double baseline, int f
     m_halfPtsIndx = FindHalfPoints(&wadj, true);
     m_StrIndx = StartIndx(&wadj, true);
     m_EndIndx = EndIndx(&wadj, true);
-    if (m_verbose == 2) std::cout << "After pedestal subbtraction and inversion: baseline " << baseline 
-                                  << ", corrected vector size: " << wadj .size() << ", factor " << factor << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: After pedestal subbtraction and inversion : baseline " << baseline 
+                                                           << ", corrected vector size: " << wadj .size() << ", factor " << factor << std::endl;
 
     return wadj;
 }
@@ -1266,8 +1247,8 @@ double WaveForm::CollectedCharge(std::vector<double> *w, Long64_t snrate, float 
     if (stop < (int)(w->size())) for (int j = start; j < stop + 1; j++) { charge += abs(w->at(j)); }
     else  for (int j = start; j < stop; j++) { charge += abs(w->at(j)); }
     charge = charge* time_difference / (transimp * (float)ampgain);
-    if (m_verbose == 2) std::cout << "Charge Calculation-> charge " << charge << ", gain: " << ampgain << ", transimpedence: " 
-                                  << transimp  << ", timebin size: " << time_difference << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2)  std::cout << __FUNCTION__ << " INFO: Charge Calculation-> charge " << charge << ", gain: " << ampgain 
+                                                            << ", transimpedence: "<< transimp  << ", timebin size: " << time_difference << std::endl;
     return charge; 
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -1296,17 +1277,17 @@ double WaveForm::FirstTimeForVoltage(std::vector<double> *w, std::vector<double>
         else  tar = LinearInter(t->at(ind_tar), w->at(ind_tar), t->at(ind_tar + 1), w->at(ind_tar + 1), volt);
         if (tar < t->back() && tar > t->front()) return tar;
         else {
-              if (m_verbose > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed to find voltage time for " << volt << " trigger!" << std::endl;
+              if (m_WvBase->LGADBase::GetVerbosity() > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed to find voltage time for " << volt << " trigger!" << std::endl;
               return -1.;
              }
        }
     else if (ind_tar == m_maxIndx)
             {
-             if (m_verbose > 0 ) std::cout << __FUNCTION__ << " ERROR: Voltage value " << volt << " is higher than pulse maximum!" << std::endl;
+             if (m_WvBase->LGADBase::GetVerbosity() > 0 ) std::cout << __FUNCTION__ << " ERROR: Voltage value " << volt << " is higher than pulse maximum!" << std::endl;
              return -1.;
             }
     else {
-          if (m_verbose > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed to find position where voltage " << volt << " first occurrs!" << std::endl;
+          if (m_WvBase->LGADBase::GetVerbosity() > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed to find position where voltage " << volt << " first occurrs!" << std::endl;
           return -1.;
          }
 }
@@ -1319,7 +1300,7 @@ double WaveForm::CFDTimeLinear(std::vector<double> *w, std::vector<double> *t, f
     else return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
-vector<double> WaveForm::PulseTimeVoltAdj(std::vector<double> *t, std::vector<double> *w, float fraction)
+std::vector<double> WaveForm::PulseTimeVoltAdj(std::vector<double> *t, std::vector<double> *w, float fraction)
 {
     unsigned int npoints = t->size();
     std::vector<double> vadjCFD;
@@ -1342,10 +1323,10 @@ vector<double> WaveForm::PulseTimeVoltAdj(std::vector<double> *t, std::vector<do
              if (g == 0) vadjCFD.at(g) = 0.0; // maintain number of points
              else vadjCFD.at(g) = LinearInter(w->at(g-1), t->at(g-1), w->at(g), t->at(g), t->at(g-1) + shift);
             }
-        if (m_verbose == 2) std::cout << "After timewalk correction: CFD fraction " << fraction
-                                      << ", corrected vector size: " << vadjCFD.size() << std::endl;
+        if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: After timewalk correction : CFD fraction " 
+                                                               << fraction << ", corrected vector size: " << vadjCFD.size() << std::endl;
        }
-    else if (m_verbose > 0) std::cout << __FUNCTION__ << " ERROR: Failed to find time index of CFD time: " << time << std::endl;
+    else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " ERROR: Failed to find time index of CFD time: " << time << std::endl;
 
     return vadjCFD;
 }
@@ -1366,7 +1347,7 @@ double WaveForm::dVdTMaxLinear(std::vector<double> *w, Long64_t snrate)
         } 
     if (dvdt != 0) return dvdt*snrate;
     else {
-          if (m_verbose > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed to calculate maximum dV/dt value!" << std::endl;
+          if (m_WvBase->LGADBase::GetVerbosity() > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed to calculate maximum dV/dt value!" << std::endl;
           return -1.;
          }
 }
@@ -1399,12 +1380,12 @@ double WaveForm::dVdTCFDLinear(std::vector<double> *w, Long64_t snrate, float fr
         else { dvdt = (w->at(ifraction + ndif - 1) - w->at(ifraction + ndif - 1))*snrate / (2 * ndif); }
         if (dvdt != 0) return dvdt;
         else {
-              if (m_verbose > 0) std::cout << __FUNCTION__ << " ERROR: Failed to calculate dV/dT at a CFD of " << fraction << std::endl;
+              if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " ERROR: Failed to calculate dV/dT at a CFD of " << fraction << std::endl;
               return -1.;
              }
        }
     else {
-          if (m_verbose > 0) std::cout << __FUNCTION__ << " ERROR: Failed to determine first point at a CFD of " << fraction << std::endl;
+          if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " ERROR: Failed to determine first point at a CFD of " << fraction << std::endl;
           return -1.;
          }
 }
@@ -1448,12 +1429,12 @@ double WaveForm::RiseTimeLinear(std::vector<double> *w, Long64_t snrate, float t
         else ttop = LinearInter((1 / (double)snrate)*(top_indx - 1), w->at(top_indx-1), (1 / (double)snrate)*top_indx, w->at(top_indx), m_maxVolt*top);
         if (fabs(ttop - tbottom) > 0) return fabs(ttop - tbottom); // rise time
         else {
-              if (m_verbose > 0 ) std::cout << __FUNCTION__ << " ERROR: Linear interpolation failed!" << std::endl;
+              if (m_WvBase->LGADBase::GetVerbosity() > 0 ) std::cout << __FUNCTION__ << " ERROR: Linear interpolation failed!" << std::endl;
               return -1.;
              }
        }
     else {
-          if (m_verbose > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed to determine upper and lower values" << std::endl;
+          if (m_WvBase->LGADBase::GetVerbosity() > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed to determine upper and lower values" << std::endl;
           return -1.;
          }
 }
@@ -1478,17 +1459,17 @@ double WaveForm::SecondTimeForVoltage(std::vector<double> *w, std::vector<double
         else tar = LinearInter(t->at(ind_t - 1), w->at(ind_t - 1), t->at(ind_t), w->at(ind_t), volt);
         if (tar != -1 && tar < t->back() && tar > t->front()) return tar; // Time over threshold
         else {
-              if (m_verbose > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed to calculate second time for voltage: " << volt << std::endl;
+              if (m_WvBase->LGADBase::GetVerbosity() > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed to calculate second time for voltage: " << volt << std::endl;
               return -1.;
              }
        }
     else if (ind_t == m_maxIndx)
             {
-             if (m_verbose > 0 ) std::cout << __FUNCTION__ << " ERROR: Voltage value " << volt << " is larger than pulse maximum!" << std::endl;
+             if (m_WvBase->LGADBase::GetVerbosity() > 0 ) std::cout << __FUNCTION__ << " ERROR: Voltage value " << volt << " is larger than pulse maximum!" << std::endl;
              return -1.;
             }
     else {
-          if (m_verbose > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed to determine second index for voltage " << volt << std::endl;
+          if (m_WvBase->LGADBase::GetVerbosity() > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed to determine second index for voltage " << volt << std::endl;
           return -1.;
          }
 }
@@ -1504,7 +1485,7 @@ double WaveForm::CFDToTLinear(std::vector<double> *w, std::vector<double> *t, fl
     double nd_time = SecondTimeForVoltage(w, t, fabs(fraction*m_maxVolt));
     if (nd_time != -99 && st_time != -99 && nd_time != st_time) return fabs(nd_time - st_time);
     else {
-          if (m_verbose > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed to calculate CFD ToT!" << std::endl;
+          if (m_WvBase->LGADBase::GetVerbosity() > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed to calculate CFD ToT!" << std::endl;
           return -1.;
          }
 }
@@ -1519,7 +1500,7 @@ double WaveForm::TriggToTLinear(std::vector<double> *w, std::vector<double> *t, 
     double t2 = SecondTimeForVoltage(w, t, trig);
     if (t1 != -99 && t2 !=-99 && t1 != t2) return fabs(t2 - t1); // Time over threshold
     else {
-          if (m_verbose > 0) std::cout << __FUNCTION__ << " ERROR: Failed to calculate Trigger ToT!" << std::endl;
+          if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " ERROR: Failed to calculate Trigger ToT!" << std::endl;
           return -1.;
          }
 }
