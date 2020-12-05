@@ -16,6 +16,7 @@ class WaveForm : public LGADBase {
 
 public:
 
+    LGADBase* m_WvBase;
     enum polarity {pos, neg, undef};
     enum basepos {poside, negside, zerocross, undet};
 
@@ -28,7 +29,7 @@ public:
     WaveForm(std::vector<double>* voltage, Long64_t snrate, LGADBase *Base);
     WaveForm(std::vector<double>* voltage, std::vector<double>* time, Long64_t snrate, LGADBase *Base);
     virtual ~WaveForm();
-    void InitializeWaveForm(int level = 0);
+    void InitializeWaveForm(LGADBase* tBase, int level = 0);
     bool Calculate();
 
     void SetVoltage(std::vector<double>* volt);
@@ -87,6 +88,7 @@ public:
     double GetJitterRiseSNR();
     double GetSignalFFT();
     double GetNoiseFFT();
+    LGADBase* GetBase() { return m_WvBase; };
     bool dump();
 
 private:
@@ -161,9 +163,9 @@ private:
     bool IsSignal(std::vector<int> *w);
     bool InWindow(std::vector<double> *w);
     bool VoltSatur(std::vector<double> *w, bool poldef = true);
-    std::pair<unsigned int, unsigned int> FindNoisePoints(std::vector<double> *w);
-    vector<double> PulseAdj(std::vector<double> *w, double baseline, int factor = 1);
-    vector<double> PulseTimeVoltAdj(std::vector<double> *t, std::vector<double> *w, float fraction);
+    std::pair <unsigned int, unsigned int> FindNoisePoints(std::vector<double> *w);
+    std::vector<double> PulseAdj(std::vector<double> *w, double baseline, int factor = 1);
+    std::vector<double> PulseTimeVoltAdj(std::vector<double> *t, std::vector<double> *w, float fraction);
     double CollectedCharge(std::vector<double> *w, Long64_t snrate, float transimp, float ampgain, int start = -1, int stop = -1);
 
     double RiseTimeLinear(std::vector<double> *w, Long64_t snrate, float top = 0.9, float bottom = 0.1);
