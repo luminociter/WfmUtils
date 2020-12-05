@@ -59,7 +59,7 @@ class LGADBase : public TSelector {
   bool m_TrackComb;
   bool m_fei4Eff;
   bool m_WaveShape;
-  int m_verbose;
+  bool m_TrnsCorr;
   TString m_ofname;
   TString m_ofdir;
   TString m_TransFileName;  // Transimpedence Simulation File
@@ -68,6 +68,8 @@ class LGADBase : public TSelector {
   TTree* m_tree;
   unsigned int m_event;
   unsigned int m_nchan;
+  unsigned int m_evnt1;
+  unsigned int m_evnt2;
   AqInstrument m_instrument;
   
   // nTuple Variables
@@ -91,6 +93,8 @@ class LGADBase : public TSelector {
   bool SetNPoints(unsigned int points, unsigned int ch);
   void SetInDataNames (TString DataDir = "", TString DataName = "", TString ext = "");
   void SetOutDataNames (TString DataDir = "", TString DataName = "");
+  void SetTransFileName (TString filename = "");
+  void SetDoTrnsCorr(bool TrnsCorr = false) { m_TrnsCorr = TrnsCorr; };
   void SetTrackComb (bool comb = false);
   void SetFEi4Eff(bool FEi4Eff = false);
   void SetTrackInDataNames (TString DataDir = "", TString DataName = "");
@@ -100,6 +104,7 @@ class LGADBase : public TSelector {
   bool SetRootFile(const char* file) { m_ofile = TFile::Open(file); return m_ofile->IsOpen(); };
   bool SetRootTree(TFile* f, std::string name = "");
   void SetWaveShape(bool doShape = false) { m_WaveShape = doShape; };
+  void SetTreeName(std::string treename) { m_treename = treename; };
 
   // Get Methodes
   AqInstrument GetInstrument();
@@ -118,17 +123,20 @@ class LGADBase : public TSelector {
   TTree* GetRootTree() { return m_tree; };
   bool GetConvertSucess() { return m_convert; };
   bool GetWaveShape() { return m_WaveShape; };
+  bool GetDoTrnsCorr() { return m_TrnsCorr; };
   TString GetExtention() { return m_ext; };
   TString GetDataDir() { return m_datadir; };
   TString GetDataName() { return m_dataname; };
   TString GetOutFileaDir() { return m_ofdir; };
   TString GetOutFileName() { return m_ofname; };
+  std::string GetTreeName() { return m_treename; };
 
   // Class funcitons
-  void SetStartStopEvnt(unsigned int Evnt1 = 0, unsigned int Evnt2 = 0);
+  void SetStartStopEvnt(int Evnt1 = 0, int Evnt2 = 0);
+  std::pair <unsigned int, unsigned int> GetStartStopEvnt();
   bool ConvertData();
   void Initialize();
-  void SetVectorSize(unsigned int ch);
+  void SetVectorSize (unsigned int ch);
 
   // General helper functions
   std::string reduce(const std::string str, const std::string fill, const std::string whitespace);
@@ -143,13 +151,17 @@ class LGADBase : public TSelector {
   template <typename V> double Stdev(V *w, int start = -1, int stop = -1, double mean = 0.0);
   template <typename V, typename T> double BayesianErr(V *w, T value = 1);
   template <typename V> double CalcMeadian(V *vec);
+  template <typename V> V OutlierReject(V *w, unsigned int order, unsigned int elem, int start = 0, int stop = 0);
+  template <typename T, typename V> T CalResolution(V *w, unsigned int order, int start = 0, int stop = 0);
+
   void ProgressBar(Long64_t evt, Long64_t total);
+  int Addoriel(int val);
 
   // LGAD Fits
-  int IterativeFit(std::vector<double> *w, std::pair<double, double> &gmean, std::pair<double, double> &gsigma, TH1D* &FitHist,
-                   double &minchi2, std::string methode = "Gauss", std::pair<int, int> points = std::make_pair(-1, -1));
-  int LinearFit(std::vector<double>* vec, std::pair<double, double> &slope, std::pair<double, double> &intersept, std::vector<double>* vecErr = NULL);
-  int RooConvFit(std::vector<double>* vec, std::pair<double, double> &magMPV, std::pair<double, double> &magSigma, std::string conv);
+  int IterativeFit(std::vector<double> *w, std::pair <double, double> &gmean, std::pair <double, double> &gsigma, TH1D* &FitHist,
+                   double &minchi2, std::string methode = "Gauss", std::pair <int, int> points = std::make_pair(-1, -1), bool discr = true);
+  int LinearFit(std::vector<double>* vec, std::pair <double, double> &slope, std::pair <double, double> &intersept, std::vector<double>* vecErr = NULL);
+  int RooConvFit(std::vector<double>* vec, std::pair <double, double> &magMPV, std::pair <double, double> &magSigma, std::string conv);
   double LinearInter(double x1, double y1, double x2, double y2, double y3);
   double FFT(std::vector<double> *w, Long64_t snrate, int start, int stop);
 
@@ -161,27 +173,30 @@ class LGADBase : public TSelector {
   TString m_Trackdatadir;
   TString m_Trackdataname;
   TString m_ext;
-  unsigned int m_evnt1;
-  unsigned int m_evnt2;
   unsigned int m_bins; // number of bins for fitting histos
+  int m_verbose;
+  std::string m_treename;
 
   // Ntuple Variables
   std::vector<std::vector<double> > m_t;
   std::vector<std::vector<double> > m_w;
   TH1F* m_trigDt;
+  TH1F* m_trigFr;
 
   bool WriteSampic(const char* dir, const char* name, const char* ext);
-  bool WriteLecroyTXT(const char* dir, const char* name, const char* ext, unsigned int evt1 = 0, unsigned int evt2 = 0);
+  bool WriteLecroyTXT(const char* dir, const char* name, const char* ext, int evt1, int evt2);
   bool WriteTectronixTXT(const char* dir, const char* name, const char* ext);
   bool WriteAgilentBinary(const char* dir, const char* name, const char* ext, unsigned int evt1 = 0, unsigned int evt2 = 0);
   bool WriteLecroyBinary(const char* dir, const char* name, const char* ext, unsigned int evt1 = 0, unsigned int evt2 = 0);
   bool CombineTrack(const char* dir, const char* name);
   bool CreateOutputFile(const char* dir, const char* ofname, std::vector<unsigned int> nchan);
   bool SetScale(std::vector<unsigned int> channel, unsigned int nchan, std::vector<double>* scale);
+  std::vector<double> ConrtVarBinX(std::vector<double> *wmod, double limUp, double limDown, int &nbins);
+  bool CalcuRebin(bool discr, int n_elements, int nbins, double limUp, double limDown, double stdev, int (&Nofbins)[7]);
 
   // Internal functions for iterative re-fitting
-  TFitResultPtr Gauss(double rmin, double rmax, double strdv, double mean, TH1D* &Magnitude, std::string integ = "N");
-  TFitResultPtr GauXLandau(double rmin, double rmax, double strdv, TH1D* &Magnitude, std::string integ = "N");
+  TFitResultPtr Gauss(double rmin, double rmax, double strdv, double mean, TH1D* &Magnitude, std::string integ = "");
+  TFitResultPtr GauXLandau(double rmin, double rmax, double strdv, TH1D* &Magnitude, std::string integ = "");
   Double_t LandXGauFun(Double_t *x, Double_t *par);
   int langaupro(TFitResultPtr fitResult, double &maxx, double &FWHM);
 
