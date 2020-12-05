@@ -11,7 +11,6 @@
 #define __DUTChannel__
 
 #include "LGADUtils/WaveForm.h"
-#include "LGADUtils/LGADBase.h"
 
 class DUTChannel : public LGADBase {
 
@@ -55,39 +54,39 @@ public:
   int GetChAmpGain() { return m_ChAmpgain; };
   float GetChFract() { return m_ChFraction; };
   double GetChFTrigg() { return m_ChTrigg; };
-  std::pair<int, int> GetChMaxIndx(int methode = 1);
-  std::pair<double, double> GetChMaxVolt(int methode = 1);
-  std::pair<int, int> GetChMinIndx(int methode = 1);
-  std::pair<double, double> GetChMinVolt(int methode = 1);
-  std::pair<double, double> GetChIsSignal();
-  std::pair<double, double> GetChPolarity();
-  std::pair<double, double> GetChInWindow();
-  std::pair<double, double> GetChVoltStr();
-  std::pair<int, int> GetChStrIndx(int methode = 1);
-  std::pair<int, int> GetChEndIndx(int methode = 1);
-  std::pair<double, double> GetChNoise(int methode = 1);
-  std::pair<double, double> GetChPedestal();
-  std::pair<double, double> GetChNoiseSlope();
-  std::pair<double, double> GetChPedestalSlope();
-  std::pair<double, double> GetChNoiseErr(int methode = 1);
-  std::pair<double, double> GetChPedestalErr(int methode = 1);
-  std::pair<double, double> GetChMaxTime(int methode = 1);
-  std::pair<double, double> GetChMinTime(int methode = 1);
-  std::pair<double, double> GetChCharge(int methode = 1);
-  std::pair<double, double> GetChRiseTime(int methode = 1);
-  std::pair<double, double> GetChJitNdVdT(int methode = 1);
-  std::pair<double, double> GetChJitRiseSNR(int methode = 1);
-  std::vector<std::pair<double, double>> GetChCFDTime(int methode = 1);
-  std::pair<double, double> GetChTriggTime(int methode = 1);
-  std::pair<double, double> GetChDVDTMax(int methode = 1);
-  std::pair<double, double> GetChDVDTCFD(int methode = 1);
-  std::pair<double, double> GetChCFDToT(int methode = 1);
-  std::pair<double, double> GetChTriggToT(int methode = 1);
-  std::pair<double, double> GetChSignalFFT(int methode = 1);
-  std::pair<double, double> GetChNoiseFFT(int methode = 1);
-  std::pair<double, double> GetChComplete();
-  std::pair<double, double> GetChSoNR(int methode = 1);
-  std::vector<std::pair<double, double>> GetMeanChPulse() { return m_MeanChPulse; };
+  std::pair <int, int> GetChMaxIndx(int methode = 1);
+  std::pair <double, double> GetChMaxVolt(int methode = 1);
+  std::pair <int, int> GetChMinIndx(int methode = 1);
+  std::pair <double, double> GetChMinVolt(int methode = 1);
+  std::pair <double, double> GetChIsSignal();
+  std::pair <double, double> GetChPolarity();
+  std::pair <double, double> GetChInWindow();
+  std::pair <double, double> GetChVoltStr();
+  std::pair <int, int> GetChStrIndx(int methode = 1);
+  std::pair <int, int> GetChEndIndx(int methode = 1);
+  std::pair <double, double> GetChNoise(int methode = 1);
+  std::pair <double, double> GetChPedestal();
+  std::pair <double, double> GetChNoiseSlope();
+  std::pair <double, double> GetChPedestalSlope();
+  std::pair <double, double> GetChNoiseErr(int methode = 1);
+  std::pair <double, double> GetChPedestalErr(int methode = 1);
+  std::pair <double, double> GetChMaxTime(int methode = 1);
+  std::pair <double, double> GetChMinTime(int methode = 1);
+  std::pair <double, double> GetChCharge(int methode = 1);
+  std::pair <double, double> GetChRiseTime(int methode = 1);
+  std::pair <double, double> GetChJitNdVdT(int methode = 1);
+  std::pair <double, double> GetChJitRiseSNR(int methode = 1);
+  std::vector<std::pair <double, double>> GetChCFDTime(int methode = 1);
+  std::pair <double, double> GetChTriggTime(int methode = 1);
+  std::pair <double, double> GetChDVDTMax(int methode = 1);
+  std::pair <double, double> GetChDVDTCFD(int methode = 1);
+  std::pair <double, double> GetChCFDToT(int methode = 1);
+  std::pair <double, double> GetChTriggToT(int methode = 1);
+  std::pair <double, double> GetChSignalFFT(int methode = 1);
+  std::pair <double, double> GetChNoiseFFT(int methode = 1);
+  std::pair <double, double> GetChComplete();
+  std::pair <double, double> GetChSoNR(int methode = 1);
+  std::vector<std::pair <double, double>> GetMeanChPulse() { return m_MeanChPulse; };
   double GetFitChi2(std::string fit, int i = 3);
   TH1D* GetFit(std::string fit, int i = 3);
 
@@ -125,16 +124,17 @@ public:
   double GetEvntNoiseFFT() { return GetEvntQuantDouble(&m_ChNoiseFFT); };
   int GetEvntComplete() { return GetEvntQuantInt(&m_ChComplete); };
   double GetEvntCFDTime(int bin) { return GetEvntQuantDouble(&(m_ChCFDTime[bin])); };
-  WaveForm* GetWaveform() { return m_waveform; };
+  WaveForm* GetWaveform() { return m_ChWaveform; };
 
   // Publicly accessible methods
-  void ChannelInit(/*unsigned int fevent, unsigned int points*/);
+  void ChannelInit(LGADBase *tBase);
   bool AppendEvent(std::vector<double> *volt, std::vector<double>* time, bool waveshape = false);
   int updateChProperties(bool waveshape = false, TTree* wavetree = NULL);
 
 private:
 
-  WaveForm* m_waveform;
+  LGADBase* m_ChBase;
+  WaveForm* m_ChWaveform;
   int m_channelID;
   TString m_channelName;
   Long64_t m_ChRate;
@@ -170,41 +170,41 @@ private:
   double m_ChMeanTriggToT;
   double m_ChMeanSignalFFT;
   double m_ChMeanNoiseFFT;
-  std::pair<double, double> m_ChMeanSoN;
+  std::pair <double, double> m_ChMeanSoN;
   std::vector<double> m_ChMeanCFDTime;
 
   // Outword variables, propertirs from pulse fit
-  std::pair<int, int> m_ChFitMaxIndx;
-  std::pair<double, double> m_ChFitMaxVolt;
-  std::pair<int, int> m_ChFitMinIndx;
-  std::pair<double, double> m_ChFitMinVolt;
-  std::pair<double, double> m_ChFitIsSignal;
-  std::pair<double, double> m_ChFitIsInWindow;
-  std::pair<double, double> m_ChFitVoltStr;
-  std::pair<int, int> m_ChFitStrIndx;
-  std::pair<int, int> m_ChFitEndIndx;
-  std::pair<double, double> m_ChFitNoise;
-  std::pair<double, double> m_ChFitNoiseSlope;
-  std::pair<double, double> m_ChFitPedestalSlope;
-  std::pair<double, double> m_ChFitPedestal;
-  std::pair<double, double> m_ChFitNoiseErr;
-  std::pair<double, double> m_ChFitPedestalErr;
-  std::pair<double, double> m_ChFitMaxTime;
-  std::pair<double, double> m_ChFitMinTime;
-  std::pair<double, double> m_ChFitCharge;
-  std::pair<double, double> m_ChFitRiseTime;
-  std::pair<double, double> m_ChFitJitNdVdT;
-  std::pair<double, double> m_ChFitJitRiseSNR;
-  std::vector<std::pair<double, double>> m_FitChCFDTime;
-  std::pair<double, double> m_ChFitTriggTime;
-  std::pair<double, double> m_ChFitDVDTMax;
-  std::pair<double, double> m_ChFitDVDTCFD;
-  std::pair<double, double> m_ChFitCFDToT;
-  std::pair<double, double> m_ChFitTriggToT;
-  std::pair<double, double> m_ChFitSignalFFT;
-  std::pair<double, double> m_ChFitNoiseFFT;
-  std::pair<double, double> m_ChFitComplete;
-  std::pair<double, double> m_ChFitSoN;
+  std::pair <double, double> m_ChFitMaxIndx;
+  std::pair <double, double> m_ChFitMaxVolt;
+  std::pair <double, double> m_ChFitMinIndx;
+  std::pair <double, double> m_ChFitMinVolt;
+  std::pair <double, double> m_ChFitIsSignal;
+  std::pair <double, double> m_ChFitIsInWindow;
+  std::pair <double, double> m_ChFitVoltStr;
+  std::pair <double, double> m_ChFitStrIndx;
+  std::pair <double, double> m_ChFitEndIndx;
+  std::pair <double, double> m_ChFitNoise;
+  std::pair <double, double> m_ChFitNoiseSlope;
+  std::pair <double, double> m_ChFitPedestalSlope;
+  std::pair <double, double> m_ChFitPedestal;
+  std::pair <double, double> m_ChFitNoiseErr;
+  std::pair <double, double> m_ChFitPedestalErr;
+  std::pair <double, double> m_ChFitMaxTime;
+  std::pair <double, double> m_ChFitMinTime;
+  std::pair <double, double> m_ChFitCharge;
+  std::pair <double, double> m_ChFitRiseTime;
+  std::pair <double, double> m_ChFitJitNdVdT;
+  std::pair <double, double> m_ChFitJitRiseSNR;
+  std::vector<std::pair <double, double>> m_FitChCFDTime;
+  std::pair <double, double> m_ChFitTriggTime;
+  std::pair <double, double> m_ChFitDVDTMax;
+  std::pair <double, double> m_ChFitDVDTCFD;
+  std::pair <double, double> m_ChFitCFDToT;
+  std::pair <double, double> m_ChFitTriggToT;
+  std::pair <double, double> m_ChFitSignalFFT;
+  std::pair <double, double> m_ChFitNoiseFFT;
+  std::pair <double, double> m_ChFitComplete;
+  std::pair <double, double> m_ChFitSoN;
 
   TH1D* m_ChFitMaxIndxFt;
   TH1D* m_ChFitMaxVoltFt;
@@ -285,22 +285,22 @@ private:
   std::vector<double> m_ChNoiseFFT;
   std::vector<int> m_ChHalfPts;
 
-  std::vector<std::pair<double, double> > m_MeanChPulse;
+  std::vector<std::pair <double, double> > m_MeanChPulse;
   std::vector<TH1D*> m_MeanChPlFt;
   std::vector<double> m_MeanChPlFtChi2;
 
   bool FillDefault(int k);
   bool AppendWaveform(WaveForm* k);
   int CalculateShape(TTree* wavetree);
-  std::pair<double, double> CalculateMeanG(vector<double>* vec, std::vector<int>* signal, TH1D* &hitHist,
-                                           double &fitChi2, int level, std::string fitopt = "root");
-  std::pair<double, double> CalculateMeanGLandau(std::vector<double>* vec, std::vector<int>* signal, TH1D* &hitHist,
-                                                double &fitChi2, int level, std::string fitopt = "root");
-  std::pair<double, double> CalculateMeanLinear(vector<double>* vec, std::vector<bool>* signal, vector<double>* vecErr = NULL);
-  std::pair<double, double> CalculateMeanGLinear(vector<double>* vec, std::vector<int>* signal, TH1D* &hitHist,
-                                                 double &fitChi2, int level, std::string fitopt = "root");
-  std::pair<double, double> calculateSoN(double noise, double noiseErr, double VMax, double VMaxErr);
-  std::pair<double, double> GetChValue(int med, double ChMean, double ChMeanErr, std::pair<double, double> ChFit);
+  std::pair <double, double> CalculateMeanG(std::vector<double>* vec, std::vector<int>* signal, TH1D* &hitHist,
+                                           double &fitChi2, int level, std::string fitopt = "root", bool dicrt = false);
+  std::pair <double, double> CalculateMeanGLandau(std::vector<double>* vec, std::vector<int>* signal, TH1D* &hitHist,
+                                                 double &fitChi2, int level, std::string fitopt = "root", bool dicrt = false);
+  std::pair <double, double> CalculateMeanLinear(std::vector<double>* vec, std::vector<bool>* signal, std::vector<double>* vecErr = NULL);
+  std::pair <double, double> CalculateMeanGLinear(std::vector<double>* vec, std::vector<int>* signal, TH1D* &hitHist,
+                                                 double &fitChi2, int level, std::string fitopt = "root", bool dicrt = false);
+  std::pair <double, double> calculateSoN(double noise, double noiseErr, double VMax, double VMaxErr);
+  std::pair <double, double> GetChValue(int med, double ChMean, double ChMeanErr, std::pair <double, double> ChFit);
   int GetEvntQuantInt(std::vector<int>* ChQuant);
   int GetEvntQuantBool(std::vector<bool>* ChQuant);
   double GetEvntQuantDouble(std::vector<double>* ChQuant);
