@@ -12,6 +12,18 @@
 //#if !defined(__CINT__)
 //ClassImp(DUTChannel);
 //#endif
+//
+//#if !defined(__CLING__)
+//ClassImp(DUTChannel);
+//#endif
+//
+//#ifdef __CINT__
+//#pragma link C++ class DUTChannel;
+//#endif
+//
+//#ifdef __ROOTCLING__
+//#pragma link C++ class DUTChannel;
+//#endif
 
 // Empty constructor
 DUTChannel::DUTChannel()
@@ -21,7 +33,7 @@ DUTChannel::DUTChannel()
     ChannelInit(m_ChBase);
 }
 // --------------------------------------------------------------------------------------------------------------
-DUTChannel::DUTChannel(int channelID, TString name)
+DUTChannel::DUTChannel(int channelID, std::string name)
 {
     m_ChWaveform = new WaveForm();
     m_ChBase = m_ChWaveform->WaveForm::GetBase();
@@ -38,7 +50,7 @@ DUTChannel::DUTChannel(int channelID)
     SetChID(channelID);
 }
 // --------------------------------------------------------------------------------------------------------------
-DUTChannel::DUTChannel(TString name)
+DUTChannel::DUTChannel(std::string name)
 {
     m_ChWaveform = new WaveForm();
     m_ChBase = m_ChWaveform->WaveForm::GetBase();
@@ -46,18 +58,33 @@ DUTChannel::DUTChannel(TString name)
     SetChName(name);
 }
 // --------------------------------------------------------------------------------------------------------------
-DUTChannel::DUTChannel(int channelID, TString name, unsigned int board, unsigned int ampl, float fraction, float trigger)
+DUTChannel::DUTChannel(int channelID, std::string name, AqBoard board, SecStage ampl, float fraction, float trigger)
 {
     m_ChWaveform = new WaveForm();
     m_ChBase = m_ChWaveform->WaveForm::GetBase();
     ChannelInit(m_ChBase);
     SetChName(name);
     SetChID(channelID);
-    SetBoard(board);
-    if (board == 1 || board == 2 || board == 3) SetSecStage(none);
+    SetChBoard(board);
+    if (board == FourCh || board == IN2P3 || board == KU) SetSecStage(none);
     else SetSecStage(ampl);
     SetChFract(fraction);
     SetChTrigg(trigger);
+}
+// --------------------------------------------------------------------------------------------------------------
+DUTChannel::DUTChannel(int channelID, std::string name, AqBoard board, SecStage ampl, double cap, float fraction, float trigger)
+{
+    m_ChWaveform = new WaveForm();
+    m_ChBase = m_ChWaveform->WaveForm::GetBase();
+    ChannelInit(m_ChBase);
+    SetChName(name);
+    SetChID(channelID);
+    SetChBoard(board);
+    if (board == FourCh || board == IN2P3 || board == KU) SetSecStage(none);
+    else SetSecStage(ampl);
+    SetChFract(fraction);
+    SetChTrigg(trigger);
+    SetChCap(cap);
 }
 // --------------------------------------------------------------------------------------------------------------
 DUTChannel::DUTChannel(LGADBase *tBase)
@@ -67,7 +94,7 @@ DUTChannel::DUTChannel(LGADBase *tBase)
     ChannelInit(m_ChBase);
 }
 // --------------------------------------------------------------------------------------------------------------
-DUTChannel::DUTChannel(int channelID, TString name, LGADBase *tBase)
+DUTChannel::DUTChannel(int channelID, std::string name, LGADBase *tBase)
 {
     m_ChWaveform = new WaveForm(tBase);
     m_ChBase = tBase;
@@ -84,7 +111,7 @@ DUTChannel::DUTChannel(int channelID, LGADBase *tBase)
     SetChID(channelID);
 }
 // --------------------------------------------------------------------------------------------------------------
-DUTChannel::DUTChannel(TString name, LGADBase *tBase)
+DUTChannel::DUTChannel(std::string name, LGADBase *tBase)
 {
     m_ChWaveform = new WaveForm(tBase);
     m_ChBase = tBase;
@@ -92,23 +119,38 @@ DUTChannel::DUTChannel(TString name, LGADBase *tBase)
     SetChName(name);
 }
 // --------------------------------------------------------------------------------------------------------------
-DUTChannel::DUTChannel(int channelID, TString name, unsigned int board, unsigned int ampl, float fraction, float trigger, LGADBase *tBase)
+DUTChannel::DUTChannel(int channelID, std::string name, AqBoard board, SecStage ampl, float fraction, float trigger, LGADBase *tBase)
 {
     m_ChWaveform = new WaveForm(tBase);
     m_ChBase = tBase;
     ChannelInit(m_ChBase);
     SetChName(name);
     SetChID(channelID);
-    SetBoard(board);
-    if (board == 1 || board == 2 || board == 3) SetSecStage(none);
+    SetChBoard(board);
+    if (board == FourCh || board == IN2P3 || board == KU) SetSecStage(none);
     else SetSecStage(ampl);
     SetChFract(fraction);
     SetChTrigg(trigger);
 }
 // --------------------------------------------------------------------------------------------------------------
-bool DUTChannel::SetChName(TString name)
+DUTChannel::DUTChannel(int channelID, std::string name, AqBoard board, SecStage ampl, double cap, float fraction, float trigger, LGADBase *tBase)
 {
-    if (!(name.IsNull())) { m_channelName = name; return true; }
+    m_ChWaveform = new WaveForm(tBase);
+    m_ChBase = tBase;
+    ChannelInit(m_ChBase);
+    SetChName(name);
+    SetChID(channelID);
+    SetChBoard(board);
+    if (board == FourCh || board == IN2P3 || board == KU) SetSecStage(none);
+    else SetSecStage(ampl);
+    SetChFract(fraction);
+    SetChTrigg(trigger);
+    SetChCap(cap);
+}
+// --------------------------------------------------------------------------------------------------------------
+bool DUTChannel::SetChName(std::string name)
+{
+    if (name.length() != 0 && !(LGADBase::trim(name, " ")).empty()) { m_channelName = name; return true; }
     else {
           std::cout << __FUNCTION__ << " WARNING: Channel name cannot be empty" << std::endl;
           return false;
@@ -199,27 +241,67 @@ bool DUTChannel::SetChTrigg(double trigger)
          }
 }
 // --------------------------------------------------------------------------------------------------------------
-void DUTChannel::SetBoard(unsigned int board)
+void DUTChannel::SetChBoard(AqBoard board)
 {   
-    if (board == 0) { m_board = SingleCh; SetChTransImp(470); }
-    else if (board == 1) { m_board = FourCh; SetChTransImp(2700); }
-    else if (board == 2) { m_board = IN2P3; SetChTransImp(500); }
-    else if (board == 3) { m_board = KU; SetChTransImp(400); }
-    else if (board == 4) { m_board = SiPM; SetChTransImp(50); }
+    if (board == SingleCh || board == FourCh || board == IN2P3 || board == KU || board == SiPM)
+       {
+        m_board = board;
+        if (board == SingleCh) SetChTransImp(470);
+        else if (board == FourCh) SetChTransImp(2700);
+        else if (board == IN2P3) SetChTransImp(500);
+        else if (board == KU) SetChTransImp(400);
+        else if (board == SiPM) SetChTransImp(50);
+       }
     else {
           m_board = SingleCh;
           std::cout << "ERROR: board type " << board 
                     << " not allowed. Allowed values are SingleCh, FourCh, IN2P3, SiPM and KU. Falling back to " 
                     << m_board << std::endl;
          } 
+    if (m_TrnsCorr && m_TrsHists.size() != 0) SetTrnsHist(m_board, m_ChCap, m_TrsHists);
 }
 // --------------------------------------------------------------------------------------------------------------
-void DUTChannel::SetSecStage(unsigned int ampl)
+bool DUTChannel::SetTrnsHist(AqBoard Brd, double Cap, std::vector<TrCrHist> HistVec)
 {
-    if (ampl == 0) { m_amp = MinCircuits; SetChAmpGain(10); }
-    else if (ampl == 1) { m_amp = Particulars; SetChAmpGain(60); }
-    else if (ampl == 2) { m_amp = CIVIDEC; SetChAmpGain(100); }
-    else if (ampl == 3) { m_amp = none; SetChAmpGain(1); }
+   bool found = true;
+   for (unsigned int a = 0; a < HistVec.size(); a++)
+       {
+        if ((HistVec.at(a)).Board == Brd && (HistVec.at(a)).Capacitance == Cap) 
+           {
+            m_ChWaveform->WaveForm::SetTrnsHist((HistVec.at(a)).TransHist);
+            found = true;
+            break;
+           }
+       }
+   if (found) return true;
+   else {
+         m_TrnsCorr = false;
+         m_ChWaveform->WaveForm::SetDoTrnsCorr(m_TrnsCorr);
+         std::cout << __FUNCTION__ << " WARNING: Transimpedence Histo not found for board " << Brd << " and capacitance " << Cap << " !" << std::endl;
+         return false;
+        }
+}
+// --------------------------------------------------------------------------------------------------------------
+bool DUTChannel::SetChCap(double cap)
+{
+    if (cap > 0) {m_ChCap = cap; return true;}
+    else {
+          std::cout << __FUNCTION__ << " WARNING: Zero or negative capacitane values not allowed, reverting to 2 pf... ";
+          m_ChCap = 2;
+          return false;
+         }
+}
+// --------------------------------------------------------------------------------------------------------------
+void DUTChannel::SetSecStage(SecStage ampl)
+{
+    if (ampl == MinCircuits || ampl == Particulars || ampl == CIVIDEC || ampl == none)
+       {
+        m_amp = ampl;
+        if (ampl == MinCircuits) SetChAmpGain(10);
+        else if (ampl == Particulars) SetChAmpGain(60);
+        else if (ampl == CIVIDEC) SetChAmpGain(100);
+        else if (ampl == none) SetChAmpGain(1);
+       }
     else {
           m_amp = MinCircuits;
           std::cout << "ERROR: second stagne mplifier " << ampl
@@ -247,11 +329,14 @@ DUTChannel::~DUTChannel()
     if (m_ChMinTimeChi2 != -99 && m_ChMinTimeChi2 != -1) delete m_ChMinTimeFt;
     if (m_ChChargeChi2 != -99 && m_ChChargeChi2 != -1) delete m_ChChargeFt;
     if (m_ChFitRiseTimeChi2 != -99 && m_ChFitRiseTimeChi2 != -1) delete m_ChFitRiseTimeFt;
-    for (unsigned int i = 0; i < 19; i++) { if (m_ChCFDTimeChi2[i] != -99 && m_ChCFDTimeChi2[i] != -1) delete m_ChCFDTimeFt[i]; }
+    for (unsigned int i = 0; i < 19; i++) 
+        {
+         if (m_ChCFDTimeChi2[i] != -99 && m_ChCFDTimeChi2[i] != -1) delete m_ChCFDTimeFt[i];
+         if (m_ChDVDTCFDChi2[i] != -99 && m_ChDVDTCFDChi2[i] != -1) delete m_ChDVDTCFDFt[i];
+         if (m_ChCFDToTChi2[i] != -99 && m_ChCFDToTChi2[i] != -1) delete m_ChCFDToTFt[i];
+        }
     if (m_ChTriggTimeChi2 != -99 && m_ChTriggTimeChi2 != -1) delete m_ChTriggTimeFt;
     if (m_ChDVDTMaxChi2 != -99 && m_ChDVDTMaxChi2 != -1) delete m_ChDVDTMaxFt;
-    if (m_ChDVDTCFDChi2 != -99 && m_ChDVDTCFDChi2 != -1) delete m_ChDVDTCFDFt;
-    if (m_ChCFDToTChi2 != -99 && m_ChCFDToTChi2 != -1) delete m_ChCFDToTFt;
     if (m_ChTriggToTChi2 != -99 && m_ChTriggToTChi2 != -1) delete m_ChTriggToTFt;
     if (m_ChSignalFFTChi2 != -99 && m_ChSignalFFTChi2 != -1) delete m_ChSignalFFTFt;
     if (m_ChNoiseFFTChi2 != -99 && m_ChNoiseFFTChi2 != -1) delete m_ChNoiseFFTFt;
@@ -307,18 +392,19 @@ double DUTChannel::GetFitChi2(std::string fit, int i)
     else if (fit == "RiseTime") return m_ChFitRiseTimeChi2;
     else if (fit == "TriggTime") return m_ChTriggTimeChi2;
     else if (fit == "DVDTMax") return m_ChDVDTMaxChi2;
-    else if (fit == "DVDTCFD") return m_ChDVDTCFDChi2;
-    else if (fit == "CFDToT") return m_ChCFDToTChi2;
     else if (fit == "TrigToT") return m_ChTriggToTChi2;
     else if (fit == "SigFFT") return m_ChSignalFFTChi2;
     else if (fit == "NoiseFFT") return m_ChNoiseFFTChi2;
-    else if (fit == "CFDTime") return m_ChCFDTimeChi2.at(i);
+    else if (fit == "CFDTime" && (i >=0 && i <= 19)) return m_ChCFDTimeChi2.at(i);
+    else if (fit == "CFDToT" && (i >= 0 && i <= 19)) return m_ChCFDToTChi2.at(i);
+    else if (fit == "DVDTCFD"  && (i >= 0 && i <= 19)) return m_ChDVDTCFDChi2.at(i);
     else {
           std::cout << __FUNCTION__ << " ERROR : Please use one of the appropriate options: " << std::endl
                     << " \t \t " << " MaxVolt \tMinIndx \tMinVotl  \tStrindx\tEndIndx\tMaxIndx" << std::endl
                     << " \t \t " << " NoisErrt\tNoise   \tPedestl  \tPdslErr\tMaxTime\tMinTime" << std::endl
                     << " \t \t " << " Charget \tRiseTime\tTriggTime\tDVDTMax\tDVDTCFD\tCFDToT" << std::endl
-                    << " \t \t " << " TrigToTt\tSigFFT  \tNoiseFFT \tCFDTime" << std::endl;
+                    << " \t \t " << " TrigToTt\tSigFFT  \tNoiseFFT \tCFDTime" << std::endl
+                    << " \t \t " << " or set appropriate bin for CFD calculations" << std::endl;
           return -99.;
          }
 
@@ -343,18 +429,19 @@ TH1D* DUTChannel::GetFit(std::string fit, int i)
     else if (fit == "RiseTime") return (TH1D*)m_ChFitRiseTimeFt->Clone();
     else if (fit == "TriggTime") return (TH1D*)m_ChTriggTimeFt->Clone();
     else if (fit == "DVDTMax") return (TH1D*)m_ChDVDTMaxFt->Clone();
-    else if (fit == "DVDTCFD") return (TH1D*)m_ChDVDTCFDFt->Clone();
-    else if (fit == "CFDToT") return (TH1D*)m_ChCFDToTFt->Clone();
     else if (fit == "TrigToT") return (TH1D*)m_ChTriggToTFt->Clone();
     else if (fit == "SigFFT") return (TH1D*)m_ChSignalFFTFt->Clone();
     else if (fit == "NoiseFFT") return (TH1D*)m_ChNoiseFFTFt->Clone();
     else if (fit == "CFDTime") return (TH1D*)(m_ChCFDTimeFt.at(i))->Clone();
+    else if (fit == "DVDTCFD") return (TH1D*)(m_ChDVDTCFDFt.at(i))->Clone();
+    else if (fit == "CFDToT") return (TH1D*)(m_ChCFDToTFt.at(i))->Clone();
     else {
           std::cout << __FUNCTION__ << " ERROR : Please use one of the appropriate options: " << std::endl
                     << " \t " << " MaxVolt\tMinIndx\tMinVotl\tStrindx\tEndIndx\tEndIndx" << std::endl
                     << " \t " << " NoisErrt\tNoise\tPedestl\tPdslErr\tMaxTime\tMinTime" << std::endl
                     << " \t " << " Charget\tRiseTime\tTriggTime\tDVDTMax\tDVDTCFD\tCFDToT" << std::endl
-                    << " \t " << " TrigToTt\tSigFFT\tNoiseFFT\tCFDTime" << std::endl;
+                    << " \t " << " TrigToTt\tSigFFT\tNoiseFFT\tCFDTime" << std::endl
+                    << " \t " << " or set appropriate bin for CFD calculations" << std::endl;
           return NULL;
          }
 
@@ -455,41 +542,46 @@ std::pair <double, double> DUTChannel::GetChRiseTime(int methode)
  return GetChValue(methode, m_ChMeanRiseTime, 0.0, m_ChFitRiseTime);
 }
 // --------------------------------------------------------------------------------------------------------------
-std::pair <double, double> DUTChannel::GetChJitNdVdT(int methode)
-{
- return GetChValue(methode, m_ChMeanJitterNdVdT, 0.0, m_ChFitJitNdVdT);
-}
-// --------------------------------------------------------------------------------------------------------------
 std::pair <double, double> DUTChannel::GetChJitRiseSNR(int methode)
 {
  return GetChValue(methode, m_ChMeanJitterRiseSNR, 0.0, m_ChFitJitRiseSNR);
 }
 // --------------------------------------------------------------------------------------------------------------
-std::vector<std::pair <double, double>> DUTChannel::GetChCFDTime(int methode)
+std::vector<std::pair <double, double>> DUTChannel::GetChCFDMag(int methode, std::string mag)
 {
   std::vector<std::pair <double, double>> func;
   func.clear();
   if (methode == 1)
      {
-      if (m_ChMeanCFDTime.size() == 0)
+      std::vector<double>* cfdmag;
+      if (mag == "DVDTCFD") cfdmag = &m_ChMeanDVDTCFD;
+      else if (mag == "CFDToT") cfdmag = &m_ChMeanCFDToT;
+      else if (mag == "JitterNdVdT") cfdmag = &m_ChMeanJitterNdVdT;
+      else if (mag == "CFDTime") cfdmag = &m_ChMeanCFDTime;
+      if (cfdmag->size() == 0)
          {
           int err = updateChProperties();
-          if (err != 0) std::cout << __FUNCTION__ << " ERROR: Failed to calculate channel CFD!" << std::endl;
-          else for (unsigned int h = 0; h < m_ChMeanCFDTime.size(); h++) func.push_back(std::make_pair(m_ChMeanCFDTime.at(h), -1));
+          if (err != 0) std::cout << __FUNCTION__ << " ERROR: Failed to calculate mean channel " << mag << "!" << std::endl;
+          else for (unsigned int h = 0; h < cfdmag->size(); h++) func.push_back(std::make_pair(cfdmag->at(h), -1));
          }
-      else for (unsigned int h = 0; h < m_ChMeanCFDTime.size(); h++) func.push_back(std::make_pair(m_ChMeanCFDTime.at(h), -1));
+      else for (unsigned int h = 0; h < cfdmag->size(); h++) func.push_back(std::make_pair(cfdmag->at(h), -1));
      }
   else if (methode == 2)
           {
-           if (m_FitChCFDTime.size() == 0)
+           std::vector<std::pair <double, double>>* Fitcfdmag;
+           if (mag == "DVDTCFD") Fitcfdmag = &m_FitChDVDTCFD;
+           else if (mag == "CFDToT") Fitcfdmag = &m_FitChCFDToT;
+           else if (mag == "JitterNdVdT") Fitcfdmag = &m_FitChJitNdVdT;
+           else if (mag == "CFDTime") Fitcfdmag = &m_FitChCFDTime;
+           if (Fitcfdmag->size() == 0)
               {
                int err = updateChProperties();
-               if (err != 0 || err!= -3) std::cout << __FUNCTION__ << " ERROR: Failed to calculate channel CFD!" << std::endl;
-               else func = m_FitChCFDTime;
+               if (err != 0 || err != -3) std::cout << __FUNCTION__ << " ERROR: Failed to calculate Fit channel " << mag << "!" << std::endl;
+               else func = *Fitcfdmag;
               }
-           else func = m_FitChCFDTime;
+           else func = *Fitcfdmag;
           }
-  else std::cout << __FUNCTION__ << " ERROR: Invalid methode for CFD computation, returning empty vector" << std::endl;
+  else std::cout << __FUNCTION__ << " ERROR: Invalid methode for " << mag << " computation, returning empty vector" << std::endl;
   return func;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -501,16 +593,6 @@ std::pair <double, double> DUTChannel::GetChTriggTime(int methode)
 std::pair <double, double> DUTChannel::GetChDVDTMax(int methode)
 {
  return GetChValue(methode, m_ChMeanDVDTMax, 0.0, m_ChFitDVDTMax);
-}
-// --------------------------------------------------------------------------------------------------------------
-std::pair <double, double> DUTChannel::GetChDVDTCFD(int methode)
-{
- return GetChValue(methode, m_ChMeanDVDTCFD, 0.0, m_ChFitDVDTCFD);
-}
-// --------------------------------------------------------------------------------------------------------------
-std::pair <double, double> DUTChannel::GetChCFDToT(int methode)
-{
- return GetChValue(methode, m_ChMeanCFDToT, 0.0, m_ChFitCFDToT);
 }
 // --------------------------------------------------------------------------------------------------------------
 std::pair <double, double> DUTChannel::GetChTriggToT(int methode)
@@ -547,7 +629,6 @@ int DUTChannel::GetEvntQuantInt(std::vector<int>* ChQuant)
 {
     if (ChQuant->size() != 0) return ChQuant->back();
     else return -99;
-
 }
 // --------------------------------------------------------------------------------------------------------------
 int DUTChannel::GetEvntQuantBool(std::vector<bool>* ChQuant)
@@ -563,6 +644,11 @@ double DUTChannel::GetEvntQuantDouble(std::vector<double>* ChQuant)
     else return -99.;
 }
 // --------------------------------------------------------------------------------------------------------------
+double DUTChannel::GetChCap()
+{
+    return m_ChCap;
+}
+// --------------------------------------------------------------------------------------------------------------
 void DUTChannel::ChannelInit(LGADBase *tBase)
 {
     m_instrument = tBase->LGADBase::GetInstrument();
@@ -571,6 +657,9 @@ void DUTChannel::ChannelInit(LGADBase *tBase)
     m_TransFileName = tBase->LGADBase::GetTransFileName();
     m_fitopt = tBase->LGADBase::GetFitMethode();
     m_WaveShape = tBase->LGADBase::GetWaveShape();
+    m_WaveShape = tBase->LGADBase::GetWaveShape();
+    m_TrnsCorr = tBase->LGADBase::GetDoTrnsCorr();
+    if (m_TrnsCorr) m_TrsHists = tBase->LGADBase::GetTransHistos();
 
     // Constants
     SetChAmpGain(10);
@@ -583,6 +672,7 @@ void DUTChannel::ChannelInit(LGADBase *tBase)
     m_ChNoPulses = 0;
     m_amp = MinCircuits;
     m_board = SingleCh;
+    m_ChCap = 2;
 
     // Outwards variables for Mean pulse
     m_ChMeanPolarity = -99;
@@ -599,17 +689,17 @@ void DUTChannel::ChannelInit(LGADBase *tBase)
     m_chMeanMaxErr = -99;
     m_ChMeanCharge = -99;
     m_ChMeanRiseTime = -99;
-    m_ChMeanJitterNdVdT = -99;
     m_ChMeanJitterRiseSNR = -99;
     m_ChMeanTriggTime = -99;
     m_ChMeanDVDTMax = -99;
-    m_ChMeanDVDTCFD = -99;
-    m_ChMeanCFDToT = -99;
     m_ChMeanTriggToT = -99;
     m_ChMeanSignalFFT = -99;
     m_ChMeanNoiseFFT = -99;
     m_ChMeanSoN = std::make_pair(-99, -99);
-    m_ChMeanCFDTime.clear();
+    m_ChMeanCFDTime.resize(19, -99);
+    m_ChMeanJitterNdVdT.resize(19, -99);
+    m_ChMeanDVDTCFD.resize(19, -99);
+    m_ChMeanCFDToT.resize(19, -99);
 
     m_ChFitPedestalSlope = std::make_pair(-99, -99);
     m_ChFitNoiseSlope = std::make_pair(-99, -99);
@@ -630,13 +720,13 @@ void DUTChannel::ChannelInit(LGADBase *tBase)
     m_ChFitMinTime = std::make_pair(-99, -99);
     m_ChFitCharge = std::make_pair(-99, -99);
     m_ChFitRiseTime = std::make_pair(-99, -99);
-    m_ChFitJitNdVdT = std::make_pair(-99, -99);
     m_ChFitJitRiseSNR = std::make_pair(-99, -99);
+    m_FitChDVDTCFD.clear();
+    m_FitChCFDToT.clear();
     m_FitChCFDTime.clear();
+    m_FitChJitNdVdT.resize(19, std::make_pair(-99, -99));
     m_ChFitTriggTime = std::make_pair(-99, -99);
     m_ChFitDVDTMax = std::make_pair(-99, -99);
-    m_ChFitDVDTCFD = std::make_pair(-99, -99);
-    m_ChFitCFDToT = std::make_pair(-99, -99);
     m_ChFitTriggToT = std::make_pair(-99, -99);
     m_ChFitSignalFFT = std::make_pair(-99, -99);
     m_ChFitNoiseFFT = std::make_pair(-99, -99);
@@ -663,10 +753,21 @@ void DUTChannel::ChannelInit(LGADBase *tBase)
     m_ChPedestalErr.clear();
     m_ChCharge.clear();
     m_ChRiseTime.clear();
-    m_ChJitNdVdT.clear();
     m_ChJitRiseSNR.clear();
     m_ChHalfPts.clear();
-
+    for (unsigned int i = 0; i < 19; i++) 
+        {
+         (m_ChCFDTime[i]).clear(); 
+         (m_ChDVDTCFD[i]).clear();
+         (m_ChCFDToT[i]).clear();
+         (m_ChJitNdVdT[i]).clear();
+        }
+    m_ChTriggTime.clear();
+    m_ChDVDTMax.clear();
+    m_ChTriggToT.clear();
+    m_ChSignalFFT.clear();
+    m_ChNoiseFFT.clear();
+    m_ChComplete.clear();
     m_MeanChPlFt.clear();
     m_MeanChPlFtChi2.clear();
     m_MeanChPulse.clear();
@@ -674,6 +775,10 @@ void DUTChannel::ChannelInit(LGADBase *tBase)
     // Fits and Chi2 values
     m_ChCFDTimeChi2.clear();
     m_ChCFDTimeChi2.resize(19, -99);
+    m_ChDVDTCFDChi2.clear();
+    m_ChDVDTCFDChi2.resize(19, -99);
+    m_ChCFDToTChi2.clear();
+    m_ChCFDToTChi2.resize(19, -99);
     m_ChFitMaxIndxChi2 = -99;
     m_ChFitMaxVoltChi2 = -99;
     m_ChFitMinIndxChi2 = -99;
@@ -689,8 +794,6 @@ void DUTChannel::ChannelInit(LGADBase *tBase)
     m_ChChargeChi2 = -99;
     m_ChFitRiseTimeChi2 = -99;
     m_ChDVDTMaxChi2 = -99;
-    m_ChDVDTCFDChi2 = -99;
-    m_ChCFDToTChi2 = -99;
     m_ChTriggToTChi2 = -99;
     m_ChSignalFFTChi2 = -99;
     m_ChNoiseFFTChi2 = -99;
@@ -698,10 +801,12 @@ void DUTChannel::ChannelInit(LGADBase *tBase)
 
     m_ChCFDTimeFt.clear();
     m_ChCFDTimeFt.resize(19, NULL);
+    m_ChDVDTCFDFt.clear();
+    m_ChDVDTCFDFt.resize(19, NULL);
+    m_ChCFDToTFt.clear();
+    m_ChCFDToTFt.resize(19, NULL);
     m_ChTriggTimeFt = NULL;
     m_ChDVDTMaxFt = NULL;
-    m_ChDVDTCFDFt = NULL;
-    m_ChCFDToTFt = NULL;
     m_ChTriggToTFt = NULL;
     m_ChSignalFFTFt = NULL;
     m_ChNoiseFFTFt = NULL;
@@ -719,16 +824,6 @@ void DUTChannel::ChannelInit(LGADBase *tBase)
     m_ChMinTimeFt = NULL;
     m_ChChargeFt = NULL;
     m_ChFitRiseTimeFt = NULL;
-
-    for (unsigned int i = 0; i < 19; i++) (m_ChCFDTime[i]).clear(); 
-    m_ChTriggTime.clear();
-    m_ChDVDTMax.clear();
-    m_ChDVDTCFD.clear();
-    m_ChCFDToT.clear();
-    m_ChTriggToT.clear();
-    m_ChSignalFFT.clear();
-    m_ChNoiseFFT.clear();
-    m_ChComplete.clear();
 
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -793,12 +888,15 @@ bool DUTChannel::AppendWaveform(WaveForm* k)
                     if (k->WaveForm::GetCFDTime() != -1)
                        {
                         m_ChVAdjCFD = k->WaveForm::GetTimeAdjVolt();
-                        m_ChJitNdVdT.push_back(k->WaveForm::GetJitterNdVdT());
+                        for (unsigned int i = 0; i < 19; i++) 
+                            {
+                             (m_ChDVDTCFD[i]).push_back(k->WaveForm::GetdVdTCFD(0.05*(i + 1)));
+                             (m_ChJitNdVdT[i]).push_back(k->WaveForm::GetJitterNdVdT(0.05*(i + 1)));
+                            }
                         m_ChTriggTime.push_back(k->WaveForm::GetTriggTime());
-                        m_ChDVDTCFD.push_back(k->WaveForm::GetdVdTCFD());
                         if (k->WaveForm::GetCFDToT() > 0.0)
                            {
-                            m_ChCFDToT.push_back(k->WaveForm::GetCFDToT());
+                            for (unsigned int i = 0; i < 19; i++) (m_ChCFDToT[i]).push_back(k->WaveForm::GetCFDToT(0.05*(i + 1)));
                             if (k->WaveForm::GetTriggToT() > 0)
                                {
                                 m_ChTriggToT.push_back(k->WaveForm::GetTriggToT());
@@ -855,7 +953,7 @@ bool DUTChannel::AppendWaveform(WaveForm* k)
              }
        }
     else {
-          if (m_ChBase->GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: No pulses for this channel[" 
+          if (m_ChBase->GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Waveform empty for channel[" 
                                        << m_channelID << "] -> will not append properties!" << std::endl;
           return false;
          }
@@ -892,11 +990,11 @@ bool DUTChannel::FillDefault(int k)
     if (k < 5)
        {
         m_ChVAdjCFD = std::vector<double>();
-        m_ChJitNdVdT.push_back(-99);
         m_ChTriggTime.push_back(-99);
-        m_ChDVDTCFD.push_back(-99);
+        for (unsigned int l = 0; l < 19; l++) (m_ChDVDTCFD[l]).push_back(-99);
+        for (unsigned int l = 0; l < 19; l++) (m_ChJitNdVdT[l]).push_back(-99);
        }
-    if (k < 6) m_ChCFDToT.push_back(-99);
+    if (k < 6) for (unsigned int l = 0; l < 19; l++) (m_ChCFDToT[l]).push_back(-99);
     m_ChTriggToT.push_back(-99);
 
     return true;
@@ -977,8 +1075,7 @@ int DUTChannel::CalculateShape(TTree* wavetree)
         m_ChWaveform->WaveForm::SetVoltage(&meanvolt);
         m_ChWaveform->WaveForm::SetSnRate(m_ChRate);
         m_ChWaveform->WaveForm::Calculate();
-        // Save mean pulse quantites, Individual pulses already cleaned and noise substracted
-        // no point in saving adjasted voltages and pedestal from here!!
+        // Save mean pulse quantites, Individual pulses already cleaned and noise substracted no point in saving adjasted voltages and pedestal from here!!
         m_ChMeanPolarity = m_ChWaveform->WaveForm::GetPolarity();
         m_ChMeanMaxIndx = m_ChWaveform->WaveForm::GetMaxIndx();
         m_ChMeanMax = m_ChWaveform->WaveForm::GetMax();
@@ -997,14 +1094,17 @@ int DUTChannel::CalculateShape(TTree* wavetree)
                 m_ChMeanMinTime = m_ChWaveform->WaveForm::GetMinTime();
                 m_ChMeanCharge = m_ChWaveform->WaveForm::GetCharge();
                 m_ChMeanRiseTime = m_ChWaveform->WaveForm::GetRiseTime();
-                m_ChMeanJitterNdVdT = m_ChWaveform->WaveForm::GetJitterNdVdT();
                 m_ChMeanJitterRiseSNR = m_ChWaveform->WaveForm::GetJitterRiseSNR();
                 m_ChMeanSoN = calculateSoN(m_ChMeanNoise, m_ChMeanNoiseErr, m_ChMeanMax, m_chMeanMaxErr);
-                for (unsigned int i = 1; i < 20; i++) m_ChMeanCFDTime.push_back(m_ChWaveform->WaveForm::GetCFDTime(0.05 * i));
+                for (unsigned int i = 1; i < 20; i++) 
+                    {
+                     m_ChMeanCFDTime.at(i-1) = m_ChWaveform->WaveForm::GetCFDTime(0.05 * i);
+                     m_ChMeanJitterNdVdT.at(i-1) = m_ChWaveform->WaveForm::GetJitterNdVdT(0.05 * i);
+                     m_ChMeanDVDTCFD.at(i-1) = m_ChWaveform->WaveForm::GetdVdTCFD(0.05 * i);
+                     m_ChMeanCFDToT.at(i-1) = m_ChWaveform->WaveForm::GetCFDToT(0.05 * i);
+                    }
                 m_ChMeanTriggTime = m_ChWaveform->WaveForm::GetTriggTime();
                 m_ChMeanDVDTMax = m_ChWaveform->WaveForm::GetdVdTMax();
-                m_ChMeanDVDTCFD = m_ChWaveform->WaveForm::GetdVdTCFD();
-                m_ChMeanCFDToT = m_ChWaveform->WaveForm::GetCFDToT();
                 m_ChMeanTriggToT = m_ChWaveform->WaveForm::GetTriggToT();
                 m_ChMeanSignalFFT = m_ChWaveform->WaveForm::GetSignalFFT();
                 m_ChMeanNoiseFFT = m_ChWaveform->WaveForm::GetNoiseFFT();
@@ -1052,7 +1152,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
                                 << m_ChFitMaxIndx.second << ", Chi2: " << m_ChFitMaxIndxChi2 << std::endl;
   if (m_ChFitMaxIndxChi2 != -1) 
      {
-      m_ChFitMaxIndxFt->SetNameTitle(Form("Or_MaxIndx%02u", m_channelID), Form("Or_MaxIndx%02u", m_channelID));
+      m_ChFitMaxIndxFt->SetNameTitle(Form("Ch_MaxIndx%02u", m_channelID), Form("Max Index, Channel %02u", m_channelID));
       m_ChFitMaxIndxFt->SetDirectory(nullptr); // detach histo from open directory
      }
   m_ChFitMaxVolt = CalculateMeanGLandau(&m_ChMaxVolt, &m_ChComplete, m_ChFitMaxVoltFt, m_ChFitMaxVoltChi2, 2, m_fitopt, true);
@@ -1060,7 +1160,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
                                 << m_ChFitMaxVolt.second << ", Chi2: " << m_ChFitMaxVoltChi2 << std::endl;
   if (m_ChFitMaxVoltChi2 != -1) 
      {
-      m_ChFitMaxVoltFt->SetNameTitle(Form("Or_MaxVolt%02u", m_channelID), Form("Or_MaxVolt%02u", m_channelID));
+      m_ChFitMaxVoltFt->SetNameTitle(Form("Ch_MaxVolt%02u", m_channelID), Form("Max Voltage, Channel %02u", m_channelID));
       m_ChFitMaxVoltFt->SetDirectory(nullptr); // detach histo from open directory
      }
   m_ChFitMinIndx = CalculateMeanG(&ChMinIndx, &m_ChComplete, m_ChFitMinIndxFt, m_ChFitMinIndxChi2, 2, m_fitopt, true);
@@ -1068,7 +1168,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
                                 << m_ChFitMinIndx.second << ", Chi2: " << m_ChFitMinIndxChi2 << std::endl;
   if (m_ChFitMinIndxChi2 != -1) 
      {
-      m_ChFitMinIndxFt->SetNameTitle(Form("Or_MinIndx%02u", m_channelID), Form("Or_MinIndx%02u", m_channelID));
+      m_ChFitMinIndxFt->SetNameTitle(Form("Ch_MinIndx%02u", m_channelID), Form("Min Index, Channel %02u", m_channelID));
       m_ChFitMinIndxFt->SetDirectory(nullptr); // detach histo from open directory
       }
   m_ChFitMinVolt = CalculateMeanG(&m_ChMinVolt, &m_ChComplete, m_ChFitMinVoltFt, m_ChFitMinVoltChi2, 2, m_fitopt, true);
@@ -1076,7 +1176,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
                                 << m_ChFitMinVolt.second << ", Chi2: " << m_ChFitMinVoltChi2 << std::endl;
   if (m_ChFitMinVoltChi2 != -1) 
      {
-      m_ChFitMinVoltFt->SetNameTitle(Form("Or_MinVolt%02u", m_channelID), Form("Or_MinVolt%02u", m_channelID));
+      m_ChFitMinVoltFt->SetNameTitle(Form("Ch_MinVolt%02u", m_channelID), Form("Min Voltage, Channel %02u", m_channelID));
       m_ChFitMinVoltFt->SetDirectory(nullptr); // detach histo from open directory
      }
   m_ChFitStrIndx = CalculateMeanG(&ChStrIndx, &m_ChComplete, m_ChFitStrIndxFt, m_ChFitStrIndxChi2, 2, m_fitopt, true);
@@ -1084,7 +1184,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
                                 << m_ChFitStrIndx.second << ", Chi2: " << m_ChFitStrIndxChi2 << std::endl;
   if (m_ChFitStrIndxChi2 != -1) 
      {
-      m_ChFitStrIndxFt->SetNameTitle(Form("Or_StrIndx%02u", m_channelID), Form("Or_StrIndx%02u", m_channelID));
+      m_ChFitStrIndxFt->SetNameTitle(Form("Ch_StrIndx%02u", m_channelID), Form("Signal Sart Index, Channel %02u", m_channelID));
       m_ChFitStrIndxFt->SetDirectory(nullptr); // detach histo from open directory
      }
   m_ChFitEndIndx = CalculateMeanG(&ChEndIndx, &m_ChComplete, m_ChFitEndIndxFt, m_ChFitEndIndxChi2, 2, m_fitopt, true);
@@ -1092,7 +1192,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
                                 << m_ChFitEndIndx.second << ", Chi2: " << m_ChFitEndIndxChi2 << std::endl;
   if (m_ChFitEndIndxChi2 != -1) 
      {
-      m_ChFitEndIndxFt->SetNameTitle(Form("Or_EndIndx%02u", m_channelID), Form("Or_EndIndx%02u", m_channelID));
+      m_ChFitEndIndxFt->SetNameTitle(Form("Ch_EndIndx%02u", m_channelID), Form("Signal End Index, Channel %02u", m_channelID));
       m_ChFitEndIndxFt->SetDirectory(nullptr); // detach histo from open directory
      }
 
@@ -1102,17 +1202,17 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
   m_ChFitNoiseSlope = CalculateMeanLinear(&m_ChNoise, &m_ChIsInWindow, &m_ChNoiseErr);
   if (fabs(m_ChFitNoiseSlope.first) < 0.1)
      {
-      std::cout << __FUNCTION__ << " INFO : Noise slope negligable ("<< fabs(m_ChFitNoiseSlope.first) <<"), applying Gaussian fit" << std::endl;
+      std::cout << __FUNCTION__ << " INFO : Noise slope negligeable ("<< fabs(m_ChFitNoiseSlope.first) <<"), applying Gaussian fit" << std::endl;
       m_ChFitNoiseErr = CalculateMeanG(&m_ChNoiseErr, &m_ChComplete, m_ChNoiseErrFt, m_ChNoiseErrChi2, 1, m_fitopt, false);
       if (m_ChNoiseErrChi2 != -1) 
          {
-          m_ChNoiseErrFt->SetNameTitle(Form("Or_NoiseErr%02u", m_channelID), Form("Or_NoiseErr%02u", m_channelID));
+          m_ChNoiseErrFt->SetNameTitle(Form("Ch_NoiseErr%02u", m_channelID), Form("Noise Uncertainty, Channel %02u", m_channelID));
           m_ChNoiseErrFt->SetDirectory(nullptr); // detach histo from open directory
          }
       m_ChFitNoise = CalculateMeanG(&m_ChNoise, &m_ChComplete, m_ChNoiseFt, m_ChNoiseChi2, 1, m_fitopt, false);
       if (m_ChNoiseChi2 != -1) 
          {
-          m_ChNoiseFt->SetNameTitle(Form("Or_Noise%02u", m_channelID), Form("Or_Noise%02u", m_channelID));
+          m_ChNoiseFt->SetNameTitle(Form("Ch_Noise%02u", m_channelID), Form("Noise, Channel %02u", m_channelID));
           m_ChNoiseFt->SetDirectory(nullptr); // detach histo from open directory
          }
      }
@@ -1122,13 +1222,13 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
         m_ChFitNoiseErr = CalculateMeanGLinear(&m_ChNoiseErr, &m_ChComplete, m_ChNoiseErrFt, m_ChNoiseErrChi2, 1, m_fitopt, false);
         if (m_ChNoiseErrChi2 != -1) 
            {
-            m_ChNoiseErrFt->SetNameTitle(Form("Or_NoiseErr%02u", m_channelID), Form("Or_NoiseErr%02u", m_channelID));
+            m_ChNoiseErrFt->SetNameTitle(Form("Ch_NoiseErr%02u", m_channelID), Form("Noise Uncertainty, Channel %02u", m_channelID));
             m_ChNoiseErrFt->SetDirectory(nullptr); // detach histo from open directory
            }
         m_ChFitNoise = CalculateMeanGLinear(&m_ChNoise, &m_ChComplete, m_ChNoiseFt, m_ChNoiseChi2, 1, m_fitopt, false);
         if (m_ChNoiseChi2 != -1) 
            {
-            m_ChNoiseFt->SetNameTitle(Form("Or_Noise%02u", m_channelID), Form("Or_Noise%02u", m_channelID));
+            m_ChNoiseFt->SetNameTitle(Form("Ch_Noise%02u", m_channelID), Form("Noise, Channel %02u", m_channelID));
             m_ChNoiseFt->SetDirectory(nullptr); // detach histo from open directory
            }
        }
@@ -1140,13 +1240,13 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
       m_ChFitPedestal = CalculateMeanG(&m_ChPedestal, &m_ChComplete, m_ChPedestalFt, m_ChPedestalChi2, 1, m_fitopt, false);
       if (m_ChPedestalChi2 != -1) 
          {
-          m_ChPedestalFt->SetNameTitle(Form("Or_Pedest%02u", m_channelID), Form("Or_Pedest%02u", m_channelID));
+          m_ChPedestalFt->SetNameTitle(Form("Ch_Pedest%02u", m_channelID), Form("Pedestal, Channel %02u", m_channelID));
           m_ChPedestalFt->SetDirectory(nullptr); // detach histo from open directory
          }
       m_ChFitPedestalErr = CalculateMeanG(&m_ChPedestalErr, &m_ChComplete, m_ChPedestalErFt, m_ChPedestalErChi2, 1, m_fitopt, false);
       if (m_ChPedestalErChi2 != -1) 
          {
-          m_ChPedestalErFt->SetNameTitle(Form("Or_PedestErr%02u", m_channelID), Form("Or_PedestErr%02u", m_channelID));
+          m_ChPedestalErFt->SetNameTitle(Form("Ch_PedestErr%02u", m_channelID), Form("Pedestal Uncertainty, Channel %02u", m_channelID));
           m_ChPedestalErFt->SetDirectory(nullptr); // detach histo from open directory
          }
      }
@@ -1156,13 +1256,13 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
         m_ChFitPedestal = CalculateMeanGLinear(&m_ChPedestal, &m_ChComplete, m_ChPedestalFt, m_ChPedestalChi2, 1, m_fitopt, false);
         if (m_ChPedestalChi2 != -1) 
            {
-            m_ChPedestalFt->SetNameTitle(Form("Or_Pedest%02u", m_channelID), Form("Or_Pedest%02u", m_channelID));
+            m_ChPedestalFt->SetNameTitle(Form("Ch_Pedest%02u", m_channelID), Form("Pedestal, Channel %02u", m_channelID));
             m_ChPedestalFt->SetDirectory(nullptr); // detach histo from open directory
            }
         m_ChFitPedestalErr = CalculateMeanGLinear(&m_ChPedestalErr, &m_ChComplete, m_ChPedestalErFt, m_ChPedestalErChi2, 1, m_fitopt, false);
         if (m_ChPedestalErChi2 != -1) 
            {
-            m_ChPedestalErFt->SetNameTitle(Form("Or_PedestErr%02u", m_channelID), Form("Or_PedestErr%02u", m_channelID));
+            m_ChPedestalErFt->SetNameTitle(Form("Ch_PedestErr%02u", m_channelID), Form("Pedestal Uncertainty, Channel %02u", m_channelID));
             m_ChPedestalErFt->SetDirectory(nullptr); // detach histo from open directory
            }
        }
@@ -1172,7 +1272,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
                                 << m_ChFitMaxTime.second << ", Chi2: " << m_ChMaxTimeChi2 << std::endl;
   if (m_ChMaxTimeChi2 != -1) 
      {
-      m_ChMaxTimeFt->SetNameTitle(Form("Or_MaxTime%02u", m_channelID), Form("Or_MaxTime%02u", m_channelID));
+      m_ChMaxTimeFt->SetNameTitle(Form("Ch_MaxTime%02u", m_channelID), Form("Max Time, Channel %02u", m_channelID));
       m_ChMaxTimeFt->SetDirectory(nullptr); // detach histo from open directory
      }
   m_ChFitMinTime = CalculateMeanG(&m_ChMinTime, &m_ChComplete, m_ChMinTimeFt, m_ChMinTimeChi2, 2, m_fitopt, true);
@@ -1180,7 +1280,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
                                 << m_ChFitMinTime.second << ", Chi2: " << m_ChMinTimeChi2 << std::endl;
   if (m_ChMinTimeChi2 != -1) 
      {
-      m_ChMinTimeFt->SetNameTitle(Form("Or_MinTime%02u", m_channelID), Form("Or_MinTime%02u", m_channelID));
+      m_ChMinTimeFt->SetNameTitle(Form("Ch_MinTime%02u", m_channelID), Form("Min Time, Channel %02u", m_channelID));
       m_ChMinTimeFt->SetDirectory(nullptr); // detach histo from open directory
      }
   m_ChFitCharge = CalculateMeanGLandau(&m_ChCharge, &m_ChComplete, m_ChChargeFt, m_ChChargeChi2, 2, m_fitopt, false);
@@ -1188,7 +1288,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
                                 << m_ChFitCharge.second << ", Chi2: " << m_ChChargeChi2 << std::endl;
   if (m_ChChargeChi2 != -1) 
      {
-      m_ChChargeFt->SetNameTitle(Form("Or_Charge%02u", m_channelID), Form("Or_Charge%02u", m_channelID));
+      m_ChChargeFt->SetNameTitle(Form("Ch_Charge%02u", m_channelID), Form("Collected Cahrge, Cahnnel %02u", m_channelID));
       m_ChChargeFt->SetDirectory(nullptr); // detach histo from open directory
      }
   m_ChFitRiseTime = CalculateMeanG(&m_ChRiseTime, &m_ChComplete, m_ChFitRiseTimeFt, m_ChFitRiseTimeChi2, 2, m_fitopt, false);
@@ -1196,7 +1296,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
                                 << m_ChFitRiseTime.second << ", Chi2: " << m_ChFitRiseTimeChi2 << std::endl;
   if (m_ChFitRiseTimeChi2 != -1) 
      {
-      m_ChFitRiseTimeFt->SetNameTitle(Form("Or_RiseT%02u", m_channelID), Form("Or_RiseT%02u", m_channelID));
+      m_ChFitRiseTimeFt->SetNameTitle(Form("Ch_RiseT%02u", m_channelID), Form("Rise Time (10%%-90%%), Channel %02u", m_channelID));
       m_ChFitRiseTimeFt->SetDirectory(nullptr); // detach histo from open directory
      }
 
@@ -1204,15 +1304,37 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
   for (unsigned int i = 0; i < 19; i++) 
       {
        m_ChBase->LGADBase::ProgressBar(i, 19);
-       m_FitChCFDTime.push_back(CalculateMeanG(&m_ChCFDTime[i], &m_ChComplete, m_ChCFDTimeFt[i], m_ChCFDTimeChi2[i], 2, m_fitopt, false));
-       if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit CFD time at " << (i + 1) * 5 << "%: "
+       m_FitChCFDTime.push_back(CalculateMeanG(&m_ChCFDTime[i], &m_ChComplete, m_ChCFDTimeFt[i], m_ChCFDTimeChi2[i], 2, m_fitopt));
+       if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit CFD Time at " << (i + 1) * 5 << "%: "
                                      << m_FitChCFDTime[i].first << " +/- " << m_FitChCFDTime[i].second
                                      << ", Chi2: " << m_ChCFDTimeChi2[i] << std::endl;
        if (m_ChCFDTimeChi2[i] != -1) 
           {
-           m_ChCFDTimeFt[i]->SetNameTitle(Form("Or_CFDT%02u%02u", m_channelID, i), Form("Or_CFDT%02u%02u", m_channelID, i));
+           m_ChCFDTimeFt[i]->SetNameTitle(Form("Ch_CFDT%02u%02u", m_channelID, i), Form("CFD Time at %02u%% CFD, Channel %02u", 5+5*i, m_channelID));
            m_ChCFDTimeFt[i]->SetDirectory(nullptr); // detach histo from open directory
           }
+       m_FitChDVDTCFD.push_back(CalculateMeanGLandau(&m_ChDVDTCFD[i], &m_ChComplete, m_ChDVDTCFDFt[i], m_ChDVDTCFDChi2[i], 3, m_fitopt));
+       if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit dV/dT at " << (i + 1) * 5 << "%: "
+                                << m_FitChDVDTCFD[i].first << " +/- " << m_FitChDVDTCFD[i].second 
+                                << ", Chi2: " << m_ChDVDTCFDChi2[i] << std::endl;
+       if (m_ChDVDTCFDChi2[i] != -1)
+          {
+           m_ChDVDTCFDFt[i]->SetNameTitle(Form("Ch_DVDTCFD%02u%02u", m_channelID, i), Form("#partialV/#partialT at %02u%% CFD, Channel %02u", 5+5*i, m_channelID));
+           m_ChDVDTCFDFt[i]->SetDirectory(nullptr); // detach histo from open directory
+          }
+       m_FitChCFDToT.push_back(CalculateMeanG(&m_ChCFDToT[i], &m_ChComplete, m_ChCFDToTFt[i], m_ChCFDToTChi2[i], 4, m_fitopt));
+       if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit CFD Time over Threshold at " << (i + 1) * 5 << "%: "
+                                << m_FitChCFDToT[i].first << " +/- " << m_FitChCFDToT[i].second 
+                                << ", Chi2: " << m_ChCFDToTChi2[i] << std::endl;
+       if (m_ChCFDToTChi2[i] != -1)
+          {
+           m_ChCFDToTFt[i]->SetNameTitle(Form("Ch_CFDToT%02u%02u", m_channelID, i), Form("ToT at %02u%% CFD, Channel %02u", 5+5*i, m_channelID));
+           m_ChCFDToTFt[i]->SetDirectory(nullptr); // detach histo from open directory
+          }
+       m_FitChJitNdVdT[i].first = (m_ChFitNoise.first) / (m_FitChDVDTCFD[i].first);
+       m_FitChJitNdVdT[i].second = sqrt(pow(m_ChFitNoise.second / m_FitChDVDTCFD[i].first, 2) + pow((m_ChFitNoise.first / pow(m_FitChDVDTCFD[i].first, 2))*m_FitChDVDTCFD[i].second, 2));
+       if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit Jitter (from #partialV/#partialt) at " << (i + 1) * 5 << "%: "
+                                << m_FitChJitNdVdT[i].first << " +/- " << m_FitChJitNdVdT[i].second << std::endl;
       }
 
   m_ChFitTriggTime = CalculateMeanG(&m_ChTriggTime, &m_ChComplete, m_ChTriggTimeFt, m_ChTriggTimeChi2, 3, m_fitopt, false);
@@ -1220,7 +1342,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
                                 << m_ChFitTriggTime.second << ", Chi2: " << m_ChTriggTimeChi2 << std::endl;
   if (m_ChTriggTimeChi2 != -1) 
      {
-      m_ChTriggTimeFt->SetNameTitle(Form("Or_TriggT%02u", m_channelID), Form("Or_TriggT%02u", m_channelID));
+      m_ChTriggTimeFt->SetNameTitle(Form("Ch_TriggT%02u", m_channelID), Form("Trigger Time, Channel %02u", m_channelID));
       m_ChTriggTimeFt->SetDirectory(nullptr); // detach histo from open directory
      }
   m_ChFitDVDTMax = CalculateMeanGLandau(&m_ChDVDTMax, &m_ChComplete, m_ChDVDTMaxFt, m_ChDVDTMaxChi2, 2, m_fitopt, false);
@@ -1228,31 +1350,15 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
                                 << m_ChFitDVDTMax.second << ", Chi2: " << m_ChDVDTMaxChi2 << std::endl;
   if (m_ChDVDTMaxChi2 != -1) 
      {
-      m_ChDVDTMaxFt->SetNameTitle(Form("Or_DVDTMax%02u", m_channelID), Form("Or_DVDTMax%02u", m_channelID));
+      m_ChDVDTMaxFt->SetNameTitle(Form("Ch_DVDTMax%02u", m_channelID), Form("Max #partialV/#partialt, Channel %02u", m_channelID));
       m_ChDVDTMaxFt->SetDirectory(nullptr); // detach histo from open directory
-     }
-  m_ChFitDVDTCFD = CalculateMeanGLandau(&m_ChDVDTCFD, &m_ChComplete, m_ChDVDTCFDFt, m_ChDVDTCFDChi2, 3, m_fitopt, false);
-  if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit dV/dT at CFD value: " << m_ChFitDVDTCFD.first << " +/- "
-                                << m_ChFitDVDTCFD.second << ", Chi2: " << m_ChDVDTCFDChi2 << std::endl;
-  if (m_ChDVDTCFDChi2 != -1) 
-     {
-      m_ChDVDTCFDFt->SetNameTitle(Form("Or_DVDTCFD%02u", m_channelID), Form("Or_DVDTCFD%02u", m_channelID));
-      m_ChDVDTCFDFt->SetDirectory(nullptr); // detach histo from open directory
-     }
-  m_ChFitCFDToT = CalculateMeanG(&m_ChCFDToT, &m_ChComplete, m_ChCFDToTFt, m_ChCFDToTChi2, 4, m_fitopt);
-  if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit CFD Time over Threshold: " << m_ChFitCFDToT.first << " +/- "
-                                << m_ChFitCFDToT.second << ", Chi2: " << m_ChCFDToTChi2 << std::endl;
-  if (m_ChCFDToTChi2 != -1) 
-     {
-      m_ChCFDToTFt->SetNameTitle(Form("Or_CFDToT%02u", m_channelID), Form("Or_CFDToT%02u", m_channelID));
-      m_ChCFDToTFt->SetDirectory(nullptr); // detach histo from open directory
      }
   m_ChFitTriggToT = CalculateMeanGLandau(&m_ChTriggToT, &m_ChComplete, m_ChTriggToTFt, m_ChTriggToTChi2, 5, m_fitopt, false);
   if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit Trigger Time over Threshold: " << m_ChFitTriggToT.first << " +/- "
                                 << m_ChFitTriggToT.second << ", Chi2: " << m_ChTriggToTChi2 << std::endl;
   if (m_ChTriggToTChi2 != -1) 
      {
-      m_ChTriggToTFt->SetNameTitle(Form("Or_TriggToT%02u", m_channelID), Form("Or_TriggToT%02u", m_channelID));
+      m_ChTriggToTFt->SetNameTitle(Form("Ch_TriggToT%02u", m_channelID), Form("Trigger ToT, Channel %02u", m_channelID));
       m_ChTriggToTFt->SetDirectory(nullptr); // detach histo from open directory
      }
 
@@ -1262,7 +1368,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
                                 << m_ChFitSignalFFT.second << ", Chi2: " << m_ChSignalFFTChi2 << std::endl;
   if (m_ChSignalFFTChi2 != -1) 
      {
-      m_ChSignalFFTFt->SetNameTitle(Form("Or_SignalFFT%02u", m_channelID), Form("Or_SignalFFT%02u", m_channelID));
+      m_ChSignalFFTFt->SetNameTitle(Form("Ch_SignalFFT%02u", m_channelID), Form("Signal FFT, Channel %02u", m_channelID));
       m_ChSignalFFTFt->SetDirectory(nullptr); // detach histo from open directory
      }
   m_ChFitNoiseFFT = CalculateMeanG(&m_ChNoiseFFT, &m_ChComplete, m_ChNoiseFFTFt, m_ChNoiseFFTChi2, 2, m_fitopt + "VarBin", true);
@@ -1270,10 +1376,9 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
                                 << m_ChFitNoiseFFT.second << ", Chi2: " << m_ChNoiseFFTChi2 << std::endl;
   if (m_ChNoiseFFTChi2 != -1) 
      {
-      m_ChNoiseFFTFt->SetNameTitle(Form("Or_NoiseFFT%02u", m_channelID), Form("Or_NoiseFFT%02u", m_channelID));
+      m_ChNoiseFFTFt->SetNameTitle(Form("Ch_NoiseFFT%02u", m_channelID), Form("Noise FFT, Channel %02u", m_channelID));
       m_ChNoiseFFTFt->SetDirectory(nullptr); // detach histo from open directory
      }
-  // m_ChBase->SetVerbose(0);
 
   // Binary magnitudes estimation with baysian uncertenties
   m_ChFitIsSignal.first = m_ChBase->LGADBase::Mean(&m_ChIsSignal);
@@ -1299,10 +1404,6 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
                                 << m_ChFitSoN.second << ", Chi2: " << m_ChNoiseFFTChi2 << std::endl;
 
   // Jitter calculation
-  m_ChFitJitNdVdT.first = (m_ChFitNoise.first)/(m_ChFitDVDTCFD.first);
-  m_ChFitJitNdVdT.second = sqrt(pow(m_ChFitNoise.second/m_ChFitDVDTCFD.first, 2) + pow((m_ChFitNoise.first/pow(m_ChFitDVDTCFD.first, 2))*m_ChFitDVDTCFD.second, 2));
-  if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit Jitter (from dV/dt): " << m_ChFitJitNdVdT.first << " +/- "
-                                << m_ChFitJitNdVdT.second << std::endl;
   m_ChFitJitRiseSNR.first = (m_ChFitRiseTime.first)*(m_ChFitMaxVolt.first) / (m_ChFitNoise.first);
   m_ChFitJitRiseSNR.second = sqrt(pow(m_ChFitRiseTime.second*m_ChFitNoise.first / m_ChFitMaxVolt.first, 2) +
                                   pow(m_ChFitRiseTime.first*m_ChFitNoise.second / m_ChFitMaxVolt.first, 2) + 
@@ -1311,12 +1412,11 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
                                 << m_ChFitJitRiseSNR.second << std::endl;
 
   if (m_ChBase->GetVerbosity() >= 1) ChDump();
-
   return back;
 }
 // --------------------------------------------------------------------------------------------------------------
 std::pair <double, double> DUTChannel::CalculateMeanGLandau(std::vector<double>* vec, std::vector<int>* signal, TH1D* &hitHist, double &fitChi2, int level,
-                                                           std::string fitopt, bool dicrt)
+                                                            std::string fitopt, bool discrt)
 {
     std::pair <double, double> VoltMPV = std::make_pair( -99, -99 );
     std::pair <double, double>  VoltSigma = std::make_pair( -99, -99 );
@@ -1326,23 +1426,23 @@ std::pair <double, double> DUTChannel::CalculateMeanGLandau(std::vector<double>*
     if (as == 0) std::cout << __FUNCTION__ << " EROOR : Cannot perform Gaussian x Landau fit on empty vector!!" << std::endl;
     else {
           volt.reserve(as);
-          for (unsigned int k = 0; k < as; k++) if (signal->at(k) > level) volt.push_back(vec->at(k));
+          for (unsigned int k = 0; k < as; k++) if (signal->at(k) > level && vec->at(k) != -1.) volt.push_back(vec->at(k));
           if (fitopt == "RooFit") qual = m_ChBase->LGADBase::RooConvFit(&volt, VoltMPV, VoltSigma, "LanXGau");
-          else if (fitopt == "rootInt") qual = m_ChBase->LGADBase::IterativeFit(&volt, VoltMPV, VoltSigma, hitHist, fitChi2, "LandauXGaussInt", std::make_pair(-1, -1), dicrt);
-          else if (fitopt == "rootVarBin") qual = m_ChBase->LGADBase::IterativeFit(&volt, VoltMPV, VoltSigma, hitHist, fitChi2, "LandauXGaussVarBin", std::make_pair(-1, -1), dicrt);
-          else if (fitopt == "rootIntVarBin") qual = m_ChBase->LGADBase::IterativeFit(&volt, VoltMPV, VoltSigma, hitHist, fitChi2, "LandauXGaussIntVarBin", std::make_pair(-1, -1), dicrt);
-          else if (fitopt == "root") qual = m_ChBase->LGADBase::IterativeFit(&volt, VoltMPV, VoltSigma, hitHist, fitChi2, "LandauXGauss", std::make_pair(-1, -1), dicrt);
+          else if (fitopt == "rootInt") qual = m_ChBase->LGADBase::IterativeFit(&volt, VoltMPV, VoltSigma, hitHist, fitChi2, "LandauXGaussInt", std::make_pair(-1, -1), discrt);
+          else if (fitopt == "rootVarBin") qual = m_ChBase->LGADBase::IterativeFit(&volt, VoltMPV, VoltSigma, hitHist, fitChi2, "LandauXGaussVarBin", std::make_pair(-1, -1), discrt);
+          else if (fitopt == "rootIntVarBin") qual = m_ChBase->LGADBase::IterativeFit(&volt, VoltMPV, VoltSigma, hitHist, fitChi2, "LandauXGaussIntVarBin", std::make_pair(-1, -1), discrt);
+          else if (fitopt == "root") qual = m_ChBase->LGADBase::IterativeFit(&volt, VoltMPV, VoltSigma, hitHist, fitChi2, "LandauXGauss", std::make_pair(-1, -1), discrt);
           if (qual == 0) VoltMPV.second = VoltSigma.first;
           else {
                 std::cout << __FUNCTION__ << " WARNING : Cannot perform Gaussian x Landau fit, reventing to Gaussian!!" << std::endl;
-                VoltMPV = CalculateMeanG(vec, signal, hitHist, fitChi2, level, fitopt, dicrt);
+                VoltMPV = CalculateMeanG(vec, signal, hitHist, fitChi2, level, fitopt, discrt);
                }
          }
     return VoltMPV;
 }    
 // --------------------------------------------------------------------------------------------------------------
 std::pair <double, double> DUTChannel::CalculateMeanG(std::vector<double>* vec, std::vector<int>* signal, TH1D* &hitHist, double &fitChi2, int level, 
-                                                     std::string fitopt, bool dicrt)
+                                                     std::string fitopt, bool discrt)
 {
     std::pair <double, double> mean = std::make_pair(-99, -99 );
     std::pair <double, double> sigma = std::make_pair( -99, -99 );
@@ -1353,15 +1453,15 @@ std::pair <double, double> DUTChannel::CalculateMeanG(std::vector<double>* vec, 
     else {
           real.reserve(evnt);
           for (unsigned int k = 0; k < evnt; k++) if (signal->at(k) > level && vec->at(k) != -1.) real.push_back(vec->at(k));
-          if (fitopt == "rootInt") qual = m_ChBase->LGADBase::IterativeFit(&real, mean, sigma, hitHist, fitChi2, "GaussInt", std::make_pair(-1, -1), dicrt);
-          else if (fitopt == "rootVarBin") qual = m_ChBase->LGADBase::IterativeFit(&real, mean, sigma, hitHist, fitChi2, "GaussVarBin", std::make_pair(-1, -1), dicrt);
-          else if (fitopt == "rootIntVarBin") qual = m_ChBase->LGADBase::IterativeFit(&real, mean, sigma, hitHist, fitChi2, "GaussIntVarBin", std::make_pair(-1, -1), dicrt);
-          else if (fitopt == "root") qual = m_ChBase->LGADBase::IterativeFit(&real, mean, sigma, hitHist, fitChi2, "Gauss", std::make_pair(-1, -1), dicrt);
+          if (fitopt == "rootInt") qual = m_ChBase->LGADBase::IterativeFit(&real, mean, sigma, hitHist, fitChi2, "GaussInt", std::make_pair(-1, -1), discrt);
+          else if (fitopt == "rootVarBin") qual = m_ChBase->LGADBase::IterativeFit(&real, mean, sigma, hitHist, fitChi2, "GaussVarBin", std::make_pair(-1, -1), discrt);
+          else if (fitopt == "rootIntVarBin") qual = m_ChBase->LGADBase::IterativeFit(&real, mean, sigma, hitHist, fitChi2, "GaussIntVarBin", std::make_pair(-1, -1), discrt);
+          else if (fitopt == "root") qual = m_ChBase->LGADBase::IterativeFit(&real, mean, sigma, hitHist, fitChi2, "Gauss", std::make_pair(-1, -1), discrt);
           if (qual == 0) mean.second = sigma.first;
           else {
                 mean.first = m_ChBase->LGADBase::Mean(&real);
                 mean.second = m_ChBase->LGADBase::Stdev(&real);
-                std::cout << __FUNCTION__ << " WARNING: Gaussian fit failed, reverting to mean and std!" << std::endl;
+                std::cout << __FUNCTION__ << " WARNING: Gaussian fit failed, reverted to mean and std!" << std::endl;
                }
          }
     return mean;
@@ -1401,7 +1501,7 @@ std::pair <double, double> DUTChannel::CalculateMeanLinear(std::vector<double>* 
 }
 // --------------------------------------------------------------------------------------------------------------
 std::pair <double, double> DUTChannel::CalculateMeanGLinear(std::vector<double>* vec, std::vector<int>* signal, TH1D* &hitHist, double &fitChi2,
-                                                           int level, std::string fitopt, bool dicrt)
+                                                           int level, std::string fitopt, bool discrt)
 {
     std::pair <double, double> mean = std::make_pair(-99, -99);
     std::pair <double, double> sigma = std::make_pair(-99, -99);
@@ -1410,12 +1510,12 @@ std::pair <double, double> DUTChannel::CalculateMeanGLinear(std::vector<double>*
     if (evnt == 0) std::cout << __FUNCTION__ << " EROOR : Cannot perform Linear fit on empty vector!!" << std::endl;
     else {
           real.reserve(evnt);
-          for (unsigned int k = 0; k < evnt; k++) if (signal->at(k) > level) real.push_back(vec->at(k));
+          for (unsigned int k = 0; k < evnt; k++) if (signal->at(k) > level && vec->at(k) != -1.) real.push_back(vec->at(k));
           int res = m_ChBase->LGADBase::RooConvFit(&real, mean, sigma, "LinXGau") == 0;
           if (res != 0) 
              {
               std::cout << __FUNCTION__ << " WARNING : Cannot perform Linear x Gaussian fit reventing to Gaussian!!" << std::endl;
-              mean = CalculateMeanG(vec, signal, hitHist, fitChi2, level, fitopt, dicrt);
+              mean = CalculateMeanG(vec, signal, hitHist, fitChi2, level, fitopt, discrt);
              }
         }
     return mean;
@@ -1448,6 +1548,8 @@ int DUTChannel::ChDump()
       return 1;
      }
 
+  unsigned int h = (unsigned int)(m_ChFraction/0.05);
+
   std::cout << "\t Events: " << m_ChPol.size() << " - events with pulses: " << m_ChNoPulses << " and polarity: " << m_ChMeanPolarity << std::endl 
             << "\t Pulse Shape max index            : " << m_ChMeanMaxIndx << ", max index from gausisan fit: " << m_ChFitMaxIndx.first << " +/- " << m_ChFitMaxIndx.second << std::endl 
             << "\t Pulse Shape amplitude            : " << m_ChMeanMax << " +/- " << m_chMeanMaxErr << ", MPV amplitude from gauss x Landau fit: " << m_ChFitMaxVolt.first << " +/- " << m_ChFitMaxVolt.second << std::endl 
@@ -1460,15 +1562,15 @@ int DUTChannel::ChDump()
             << "\t Pulse Shape max time             : " << m_ChMeanMaxTime << ", max time from gausisan fit: " << m_ChFitMaxTime.first << " +/- " << m_ChFitMaxTime.second << std::endl 
             << "\t Pulse Shape min time             : " << m_ChMeanMinTime << ", min time from gausisan fit: " << m_ChFitMinTime.first << " +/- " << m_ChFitMinTime.second << std::endl 
             << "\t Pulse Shape collected charge     : " << m_ChMeanCharge << ", collected charge MPV from Lamdau x Gaussian fit: " << m_ChFitCharge.first << " +/- " << m_ChFitCharge.second << std::endl;
-  std::cout << "\t Pulse Shape rise time            : " << m_ChMeanRiseTime << ", rise time from Gaussian fit: " << m_ChFitRiseTime.first << " +/- " << m_ChFitRiseTime.second << std::endl 
-            << "\t Pulse Shape jitter [RMS/(dV/dT)] : " << m_ChMeanJitterNdVdT << ", jitter [RMS/(dV/dT)] derived from Gaussian fit values: " << m_ChFitJitNdVdT.first << " +/- " << m_ChFitJitNdVdT.second << std::endl 
-            << "\t Pulse Shape jitter [Rise/SNR]    : " << m_ChMeanJitterRiseSNR << ", jitter [Rise/SNR] derived from Gaussian fit values: " << m_ChFitJitRiseSNR.first << " +/- " << m_ChFitJitRiseSNR.second << std::endl 
-            << "\t Pulse Shape Trigger ToA          : " << m_ChMeanTriggTime << ", Trigger ToA from Gaussian fit: " << m_ChFitTriggTime.first << " +/- " << m_ChFitTriggTime.second << std::endl 
-            << "\t Pulse Shape max dV/dT            : " << m_ChMeanDVDTMax << ", max dV/dT from Gaussian fit: " << m_ChFitDVDTMax.first << " +/- " << m_ChFitDVDTMax.second << std::endl 
-            << "\t Pulse Shape CFD dV/dT            : " << m_ChMeanDVDTCFD << ", CFD dV/dT from Gaussian fit: " << m_ChFitDVDTCFD.first << " +/- " << m_ChFitDVDTCFD.second << std::endl 
-            << "\t Pulse Shape CFD ToT              : " << m_ChMeanCFDToT << ", CFD ToT from Gaussian fit: " << m_ChFitCFDToT.first << " +/- " << m_ChFitCFDToT.second << std::endl 
-            << "\t Pulse Shape Trigger ToT          : " << m_ChMeanTriggToT << ", Trigger ToT from Gaussian fit: " << m_ChFitTriggToT.first << " +/- " << m_ChFitTriggToT.second << std::endl 
-            << "\t Pulse Shape signal FFT           : " << m_ChMeanSignalFFT << ", signal FFT from Gaussian fit: " << m_ChFitSignalFFT.first << " +/- " << m_ChFitSignalFFT.second << std::endl 
+  std::cout << "\t Pulse Shape rise time            : " << m_ChMeanRiseTime << ", rise time from Gaussian fit: " << m_ChFitRiseTime.first << " +/- " << m_ChFitRiseTime.second << std::endl
+            << "\t Pulse Shape jitter [RMS/(dV/dT)] : " << m_ChMeanJitterNdVdT[h] << ", jitter [RMS/(dV/dT)] derived from Gaussian fit values: " << m_FitChJitNdVdT[h].first << " +/- " << m_FitChJitNdVdT[h].second << std::endl
+            << "\t Pulse Shape jitter [Rise/SNR]    : " << m_ChMeanJitterRiseSNR << ", jitter [Rise/SNR] derived from Gaussian fit values: " << m_ChFitJitRiseSNR.first << " +/- " << m_ChFitJitRiseSNR.second << std::endl
+            << "\t Pulse Shape Trigger ToA          : " << m_ChMeanTriggTime << ", Trigger ToA from Gaussian fit: " << m_ChFitTriggTime.first << " +/- " << m_ChFitTriggTime.second << std::endl
+            << "\t Pulse Shape max dV/dT            : " << m_ChMeanDVDTMax << ", max dV/dT from Gaussian fit: " << m_ChFitDVDTMax.first << " +/- " << m_ChFitDVDTMax.second << std::endl
+            << "\t Pulse Shape CFD dV/dT            : " << m_ChMeanDVDTCFD[h] << ", CFD dV/dT from Gaussian fit: " << m_FitChDVDTCFD[h].first << " +/- " << m_FitChDVDTCFD[h].second << std::endl
+            << "\t Pulse Shape CFD ToT              : " << m_ChMeanCFDToT[h] << ", CFD ToT from Gaussian fit: " << m_FitChCFDToT[h].first << " +/- " << m_FitChCFDToT[h].second << std::endl
+            << "\t Pulse Shape Trigger ToT          : " << m_ChMeanTriggToT << ", Trigger ToT from Gaussian fit: " << m_ChFitTriggToT.first << " +/- " << m_ChFitTriggToT.second << std::endl
+            << "\t Pulse Shape signal FFT           : " << m_ChMeanSignalFFT << ", signal FFT from Gaussian fit: " << m_ChFitSignalFFT.first << " +/- " << m_ChFitSignalFFT.second << std::endl
             << "\t Pulse Shape noise FFT            : " << m_ChMeanNoiseFFT << ", noise FFT from Gaussian fit: " << m_ChFitNoiseFFT.first << " +/- " << m_ChFitNoiseFFT.second << std::endl
             << "\t Pulse Shape SNR                  : " << m_ChMeanSoN.first << " +/- " << m_ChMeanSoN.second << ", SNR derived from Gaussian fit values: " << m_ChFitSoN.first << " +/- " << m_ChFitSoN.second << std::endl;
 
