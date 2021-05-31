@@ -21,6 +21,18 @@
 //#if !defined(__CINT__)
 //ClassImp(LGADBase);
 //#endif
+//
+//#if !defined(__CLING__)
+//ClassImp(LGADBase);
+//#endif
+//
+//#ifdef __CINT__
+//#pragma link C++ class LGADBase;
+//#endif
+//
+//#ifdef __ROOTCLING__
+//#pragma link C++ class LGADBase;
+//#endif
 
 LGADBase::LGADBase()
 {
@@ -48,15 +60,10 @@ void LGADBase::SetFitMethode(std::string method)
     }
 }
 // --------------------------------------------------------------------------------------------------------------
-void LGADBase::SetInstrument(unsigned int instr)
+void LGADBase::SetInstrument(AqInstrument instr)
 {
 
-    if (instr == 0) m_instrument = Sampic;
-    else if (instr == 1) m_instrument = LabTXT;
-    else if (instr == 2) m_instrument = InfiniiumScope;
-    else if (instr == 3) m_instrument = TektronixScope;
-    else if (instr == 4) m_instrument = LeCroyWRBin;
-    else if (instr == 5) m_instrument = Unasigned;
+    if (instr == LeCroyWRBin || instr == Unasigned || instr == Sampic || instr == LabTXT || instr == InfiniiumScope || instr == TektronixScope) m_instrument = instr;
     else {
           std::cout << __FUNCTION__ << " ERROR: instrument value " << instr
                     << " not allowed. Allowed values are in ascending order: Sampic, LecroyWP725Zi, TektronixScope, InfiniumScope or Undefined. Falling back to "
@@ -64,7 +71,7 @@ void LGADBase::SetInstrument(unsigned int instr)
          }
 }
 // --------------------------------------------------------------------------------------------------------------
-LGADBase::AqInstrument LGADBase::GetInstrument()
+AqInstrument LGADBase::GetInstrument()
 {
     if (m_instrument == Unasigned) std::cout << __FUNCTION__ << " WARNING: Instrument is not asigned!!" << std::endl;
     return m_instrument;
@@ -78,6 +85,248 @@ void LGADBase::SetTrackComb(bool comb)
 void LGADBase::SetTransFileName(TString filename) 
 {
      m_TransFileName = filename;
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetDUTName(int ChId, std::string Name)
+{
+    if (0 < ChId && ChId > 64)
+       {
+        if (Name.length() != 0 && !(trim(Name, " ")).empty()) m_DUTChsNames.push_back(std::make_pair(ChId, Name));
+        else std::cout << __FUNCTION__ << " WARNING: Cannot set empty name for channel " << ChId << "!" << std::endl;
+       }
+    else std::cout << __FUNCTION__ << " WARNING: Cahnnel ID not supported, 1 - 64 channels allowed." << std::endl;
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetDUTNames(std::vector<std::string> DUTNames)
+{
+    for (unsigned int k = 0; k < DUTNames.size(); k++)
+        {
+         if ((DUTNames.at(k)).length() != 0 && !(trim((DUTNames.at(k)), " ")).empty()) m_DUTChsNames.push_back(std::make_pair(-99, (DUTNames.at(k))));
+         else std::cout << __FUNCTION__ << " WARNING: Cannot set empty name on channel name vector entry " << k << ", ignoring..." << std::endl;
+        }
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetDUTBoard(int ChId, AqBoard Brd)
+{
+    if (0 < ChId && ChId > 64)
+       {
+        if (Brd == SingleCh || Brd == FourCh || Brd == IN2P3 || Brd == KU || Brd == SiPM) m_DUTChsBrd.push_back(std::make_pair(ChId, Brd));
+        else std::cout << __FUNCTION__ << " WARNING: Board type for channel " << ChId << " not supported!" << std::endl;
+       }
+    else std::cout << __FUNCTION__ << " WARNING: Cahnnel ID not supported, 1 - 64 channels allowed." << std::endl;
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetDUTBoards(std::vector<AqBoard> Brds)
+{
+    for (unsigned int k = 0; k < Brds.size(); k++)
+        {
+         if (Brds.at(k) == SingleCh || Brds.at(k) == FourCh || Brds.at(k) == IN2P3 || Brds.at(k) == KU || Brds.at(k) == SiPM) m_DUTChsBrd.push_back(std::make_pair(-99, Brds.at(k)));
+         else std::cout << __FUNCTION__ << " WARNING: Board type on channel board type vector entry " << k << " not supported, ignoring..." << std::endl;
+        }
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetDUTransImp(int ChId, float Transimp)
+{
+    if (0 < ChId && ChId > 64)
+       {
+        if (Transimp > 0) m_DUTChsTrns.push_back(std::make_pair(ChId, Transimp));
+        else std::cout << __FUNCTION__ << " WARNING: Invalid transimpedence value for channel " << ChId << "!" << std::endl;
+       }
+    else std::cout << __FUNCTION__ << " WARNING: Cahnnel ID not supported, 1 - 64 channels allowed." << std::endl;
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetDUTransImps(std::vector<float> Transimps)
+{
+    for (unsigned k = 0; k < Transimps.size(); k++)
+        {
+         if (Transimps.at(k) > 0) m_DUTChsTrns.push_back(std::make_pair(-99, Transimps.at(k)));
+         else std::cout << __FUNCTION__ << " WARNING: Invalid transimpedence value on channel transimpedemce vector entry " << k << ", ignoring..." << std::endl;
+        }
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetDUTSecStage(int ChId, SecStage Amp)
+{
+    if (0 < ChId && ChId > 64)
+       {
+        if (Amp == MinCircuits || Amp == Particulars || Amp == CIVIDEC || Amp == none) m_DUTChsAmp.push_back(std::make_pair(ChId, Amp));
+        else std::cout << __FUNCTION__ << " WARNING: Amplifier type for channel " << ChId << " not supported!" << std::endl;
+       }
+    else std::cout << __FUNCTION__ << " WARNING: Cahnnel ID not supported, 1 - 64 channels allowed." << std::endl;
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetDUTSecStages(std::vector<SecStage> Amps)
+{
+    for (unsigned int k = 0; k < Amps.size(); k++)
+        {
+         if (Amps.at(k) == MinCircuits || Amps.at(k) == Particulars || Amps.at(k) == CIVIDEC || Amps.at(k) == none) m_DUTChsAmp.push_back(std::make_pair(-99, Amps.at(k)));
+         else std::cout << __FUNCTION__ << " WARNING: Invalid amplifier type on channel amplifier type vector entry " << k << ", ignoring..." << std::endl;
+        }
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetDUTAmpGain(int ChId, int gain)
+{
+    if (0 < ChId && ChId > 64)
+       {
+        if (gain > 1) m_DUTChsAmpGn.push_back(std::make_pair(ChId, gain));
+        else std::cout << __FUNCTION__ << " WARNING: Invalid amplifier gain value for channel " << ChId << "!" << std::endl;
+       }
+    else std::cout << __FUNCTION__ << " WARNING: Cahnnel ID not supported, 1 - 64 channels allowed." << std::endl;
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetDUTAmpGains(std::vector<int> Gains)
+{
+    for (unsigned int k = 0; k < Gains.size(); k++)
+        {
+         if (Gains.at(k) > 1) m_DUTChsAmpGn.push_back(std::make_pair(-99, Gains.at(k)));
+         else std::cout << __FUNCTION__ << " WARNING: Invalid amplifier gain value on channel gain vector entry " << k << ", ignoring..." << std::endl;
+        }
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetDUTrigg(int ChId, float trigg)
+{
+    if (0 < ChId && ChId > 64)
+       {
+        if (trigg != 0) m_DUTChsTrigg.push_back(std::make_pair(ChId, trigg));
+        else std::cout << __FUNCTION__ << " WARNING: Invalid trigger voltage value for channel " << ChId << "!" << std::endl;
+       }
+    else std::cout << __FUNCTION__ << " WARNING: Cahnnel ID not supported, 1 - 64 channels allowed." << std::endl;
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetDUTriggs(std::vector<float> Triggs)
+{
+    for (unsigned int k = 0; k < Triggs.size(); k++)
+        {
+         if (Triggs.at(k) != 0) m_DUTChsTrigg.push_back(std::make_pair(-99, Triggs.at(k)));
+         else std::cout << __FUNCTION__ << " WARNING: Invalid trigger voltage value on channel trigger vector entry " << k << ", ignoring..." << std::endl;
+        }
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetDUTFract(int ChId, float frac)
+{
+    if (0 < ChId && ChId > 64)
+       {
+        if (frac >= 0.5 && frac <=0.95) m_DUTChsFrc.push_back(std::make_pair(ChId, frac));
+        else std::cout << __FUNCTION__ << " WARNING: Invalid CFD fraction value for channel " << ChId << "!" << std::endl;
+       }
+    else std::cout << __FUNCTION__ << " WARNING: Cahnnel ID not supported, 1 - 64 channels allowed." << std::endl;
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetDUTFracts(std::vector<float> Fracs)
+{
+    for (unsigned int k = 0; k < Fracs.size(); k++)
+        {
+         if (Fracs.at(k) >= 0.5 && Fracs.at(k) <=0.95) m_DUTChsFrc.push_back(std::make_pair(-99, Fracs.at(k)));
+         else std::cout << __FUNCTION__ << " WARNING: Invalid CFD fraction value on channel CFD vector entry " << k << ", ignoring..." << std::endl;
+        }
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetDUTCap(int ChId, double cap)
+{
+    if (0 < ChId && ChId > 64)
+       {
+        if (cap > 0) m_DUTChsCaps.push_back(std::make_pair(ChId, cap));
+        else std::cout << __FUNCTION__ << " WARNING: Invalid capacitance value for channel " << ChId << "!" << std::endl;
+       }
+    else std::cout << __FUNCTION__ << " WARNING: Cahnnel ID not supported, 1 - 64 channels allowed." << std::endl;
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetDUTCaps(std::vector<double> Caps)
+{
+    for (unsigned int k = 0; k < Caps.size(); k++)
+        {
+         if (Caps.at(k) > 0) m_DUTChsCaps.push_back(std::make_pair(-99, Caps.at(k)));
+         else std::cout << __FUNCTION__ << " WARNING: Invalid capacitance value on channel capacitance vector entry " << k << ", ignoring..." << std::endl;
+        }
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetChDMgt(int ChId1, int ChId2, double DMgt, int Qt)
+{
+    if (0 < ChId1 && ChId1 > 64)
+       {
+        if (ChId2 > ChId1 && ChId2 > 64)
+           {
+            if (DMgt > 0) 
+               {
+                if (Qt == 0) m_ChsDTs.push_back(std::make_pair(std::make_pair(ChId1, ChId2), DMgt));
+                else if (Qt == 1) m_ChsDCs.push_back(std::make_pair(std::make_pair(ChId1, ChId2), DMgt));
+               }
+            else {
+                  std::cout << __FUNCTION__ << " WARNING: Invalid"; 
+                  if (Qt == 0) std::cout << " time difference";
+                  else if (Qt ==1) std::cout << " charge difference";
+                  std::cout << " value between channels " << ChId1 << " and " << ChId2 << "!" << std::endl;
+                 }
+           }
+        else std::cout << __FUNCTION__ << " WARNING: Cahnnel ID2 needs to be grater thand ChId1 and between 2-64!" << std::endl;
+       }
+    else std::cout << __FUNCTION__ << " WARNING: Cahnnel ID not supported, 1 - 64 channels allowed." << std::endl;
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADBase::SetChDMgts(std::vector<double> DMgt, int Qt)
+{
+    for (unsigned int k = 0; k < DMgt.size(); k++)
+        {
+         if (DMgt.at(k) > 0) 
+            {
+             if (Qt == 0) m_ChsDTs.push_back(std::make_pair(std::make_pair(-99, -99), DMgt.at(k)));
+             if (Qt == 1) m_ChsDCs.push_back(std::make_pair(std::make_pair(-99, -99), DMgt.at(k)));
+            }
+         else {
+               if (Qt == 0) std::cout << __FUNCTION__ << " WARNING: Invalid time difference value on channel dT";
+               if (Qt == 1) std::cout << __FUNCTION__ << " WARNING: Invalid cahrge difference value on channel dC";
+               std::cout <<" vector entry " << k << ", ignoring..." << std::endl;
+              }
+        }
+}
+//---------------------------------------------------------------------------------------------------------------
+bool LGADBase::OpenTransFile(TString filename)
+{
+    if (filename = "" || (trim((std::string)filename, " ")).empty())
+       { 
+        std::cout << __FUNCTION__ << " WARNING: No transimpedence file set, ignoring transimpedence correction..." << std::endl;
+        m_TrnsCorr = false; 
+        return false; 
+       }
+    else {
+          TFile *m_TransFile = TFile::Open(filename);
+          if (m_TransFile->IsOpen()) 
+             {
+              // Clone histogeams
+              unsigned int n = 0;
+              TIter nextkey(m_TransFile->GetListOfKeys());
+              TKey *key = 0;
+              TrCrHist info;
+              TObject *obj = key->ReadObj();
+              while ((key = (TKey*)nextkey()))
+                    {
+                     if (obj->IsA()->InheritsFrom(TH2D::Class()))
+                        {
+                         if (obj->GetName() == "hs1_3p" || obj->GetName() == "hs1_4p" || obj->GetName() == "hs2_3p" || obj->GetName() == "hs2_4p") 
+                            {
+                             info.TransHist = (TH2D*)obj->Clone();
+                             info.TransHist->SetDirectory(0);
+                             if (obj->GetName() == "hs1_3p" || obj->GetName() == "hs1_4p") info.Board = SingleCh;
+                             else if (obj->GetName() == "hs2_3p" || obj->GetName() == "hs2_4p") info.Board = FourCh;
+                             if (obj->GetName() == "hs1_3p" || obj->GetName() == "hs2_3p") info.Capacitance = 3;
+                             else if (obj->GetName() == "hs1_4p" || obj->GetName() == "hs2_4p") info.Capacitance = 4;
+                             m_TrsHists.push_back(info);
+                             n++; 
+                            }
+                        }
+                   }
+              if (n > 0) return true;
+              else {
+                    std::cout << __FUNCTION__ << " WARNING: No transimpedence histograms found in " << filename << std::endl;
+                    m_TrnsCorr = false;
+                    return false;
+                   }
+             }
+          else {
+                std::cout << __FUNCTION__ << " WARNING: Failed openning Tansimpedence file: " << filename << std::endl;
+                m_TrnsCorr = false;
+                return false;
+               }
+         }
 }
 // --------------------------------------------------------------------------------------------------------------
 bool LGADBase::GetTrackComb()
@@ -95,7 +344,7 @@ bool LGADBase::GetFEi4Eff()
     return m_fei4Eff;
 }
 // --------------------------------------------------------------------------------------------------------------
-bool LGADBase::SetSRate(double rate, unsigned int ch)
+bool LGADBase::SetSRate(Long64_t rate, unsigned int ch)
 {
     if (ch > m_srate.size())
        { 
@@ -106,7 +355,7 @@ bool LGADBase::SetSRate(double rate, unsigned int ch)
     return true;
 }
 // --------------------------------------------------------------------------------------------------------------
-double LGADBase::GetSRate(unsigned int ch)
+Long64_t LGADBase::GetSRate(unsigned int ch)
 {
     return m_srate.at(ch);
 }
@@ -140,6 +389,16 @@ void LGADBase::Initialize()
     m_ordrt.push_back(0);
     m_npoints.clear();
     m_srate.clear();
+    m_DUTChsBrd.clear();
+    m_DUTChsAmp.clear();
+    m_DUTChsFrc.clear();
+    m_DUTChsTrigg.clear();
+    m_DUTChsTrns.clear();
+    m_DUTChsAmpGn.clear();
+    m_DUTChsNames.clear();
+    m_DUTChsCaps.clear();
+    m_ChsDTs.clear();
+    m_ChsDCs.clear();
     if (m_instrument == TektronixScope)
        {
         m_npoints.push_back(1024);
@@ -174,6 +433,7 @@ void LGADBase::Initialize()
     m_treename = "";
     m_ofdir = "";
     m_ofname = "";
+    if (m_TrnsCorr) OpenTransFile(m_TransFileName);
     if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Initializing sampling rate to default value : " << m_srate.at(0) / 1e6 << "MS/sec and no. of points to : " << m_npoints.at(0) << std::endl;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -181,8 +441,9 @@ void LGADBase::SetStartStopEvnt(int Evnt1, int Evnt2)
 {
     if (Evnt1 >= 0) m_evnt1 = Evnt1;
     else std::cout << __FUNCTION__ << " WARNING: Start event value not coherent, setting to zero!" << std::endl;
-    if (Evnt2 > Evnt1 && Evnt2 > 0)  m_evnt2 = Evnt2;
-    else std::cout << __FUNCTION__ << " WARNING: Stop event value not coherent, setting to zero!" << std::endl;
+    if (Evnt2 > Evnt1 && Evnt2 > 0) m_evnt2 = Evnt2;
+    else if (Evnt2 != 0) { m_evnt2 = 0; std::cout << __FUNCTION__ << " WARNING: Stop event value not coherent, setting to zero!" << std::endl;}
+    else m_evnt2 = 0;
 }
 // --------------------------------------------------------------------------------------------------------------
 std::pair <unsigned int, unsigned int> LGADBase::GetStartStopEvnt()
@@ -231,19 +492,24 @@ int LGADBase::Addoriel(int val)
     return fract;
 }
 // --------------------------------------------------------------------------------------------------------------
-void LGADBase::ProgressBar(Long64_t evt, Long64_t total)
+bool LGADBase::ProgressBar(Long64_t evt, Long64_t total)
 {
-    float prd = float(total) / float(100);
-    if (((remainder((float)evt, prd) <0 && ceil(remainder((float)evt, prd)) == 0) 
-         || (remainder((float)evt, prd) >=0 && floor(remainder((float)evt, prd)) == 0)) && (evt + 1) < total)
+    float prd = (float)total / (float)100;
+    if (((remainder((float)evt, prd) < 0 && ceil(remainder((float)evt, prd)) == 0)) && (evt + 1) < total)
        {
-        std::cout << "<" << std::setfill('=') << std::setw(floor((0.2*((float)evt / prd)))) << "=";
+        std::cout << "<" << std::setfill('=') << std::setw(floor((0.2*((float)evt/prd)))) << "";
         std::cout << std::setfill(' ') << std::setw(20 - floor((0.2*((float)evt / prd))) + 2) << std::right << "> :";
         std::cout << std::left << round((float)evt / prd) << "%" << ", Processed entries: " << evt + 1 << " / " << total << "\r" << std::setfill(' ');
+        return false;
        }
-    else if ((evt + 1) == total) std::cout << "<" << std::setfill('=') << std::setw(19) << "=" << std::setfill(' ') 
-                                           << "> :" << 100 << "%" << ", Processed entries: "  << evt+1 << " / " 
-                                           << total << "\r" << std::setfill(' ') << std::endl;
+    else if ((evt + 1) == total) 
+            {
+             std::cout << "<" << std::setfill('=') << std::setw(19) << "=" << std::setfill(' ') 
+                       << "> :" << 100 << "%" << ", Processed entries: "  << evt+1 << " / " 
+                       << total << "\r" << std::setfill(' ') << std::endl;
+             return true;
+            }
+    return false;
 }
 // --------------------------------------------------------------------------------------------------------------
 bool LGADBase::SetRootTree(TFile* f, std::string name)
@@ -287,10 +553,10 @@ std::string LGADBase::trim(const std::string str, const std::string whitespace)
     return str.substr(strBegin, strRange);
 }
 // --------------------------------------------------------------------------------------------------------------
-// Function to remove characters and/or spaces from the totality, the beginning and end of the string.
+// Function to remove characters and/or spaces from the totality, beginning and end of the string.
 std::string LGADBase::reduce(const std::string str, const std::string fill, const std::string whitespace)
 {
-    std::string result = trim(str, whitespace); // trim first
+    std::string result = LGADBase::trim(str, whitespace); // trim first
                                                 // Replace sub ranges
     int beginSpace = result.find_first_of(whitespace);
     while ((int)std::string::npos != beginSpace)
@@ -410,22 +676,20 @@ std::vector<std::string> LGADBase::ListFileNames(const char* path, const char* e
     return filenames;
 }
 // --------------------------------------------------------------------------------------------------------------
-bool LGADBase::SetScale(std::vector<unsigned int> channel, unsigned int nchan, std::vector<double>* scale)
+bool LGADBase::SetScale(std::vector<unsigned int> channel, unsigned int nchan, std::vector<float>* scale)
 {
     // Input scales for the diferent channels
     for (unsigned int c = 0; c < nchan; c++)
         { 
-         //scale->at(c) = -1;
-         //scaleset: std::cout << "Please enter vertical scale for channel " << channel.at(c) << " in mV/DiV : ";
-         //std::cin >> scale->at(c);
-         if (c == 0) scale->at(c) = 20;
-         else if (c == 1) scale->at(c) = 100;
-         //if (scale->at(c) != 5 && scale->at(c) != 10 && scale->at(c) != 20 && scale->at(c) != 50 && scale->at(c) != 100
-         //    && scale->at(c) != 200 && scale->at(c) != 300 && scale->at(c) != 500 && scale->at(c) != 1000)
-         //   {
-         //    std::cout << __FUNCTION__ << " ERROR: Incorect scale, please try again!" << std::endl;
-         //    goto scaleset;
-         //   }
+         scale->at(c) = -1;
+         scaleset: std::cout << "Please enter vertical scale for channel " << channel.at(c) << " in mV/DiV : ";
+         std::cin >> scale->at(c);
+         if (scale->at(c) != 5 && scale->at(c) != 10 && scale->at(c) != 20 && scale->at(c) != 50 && scale->at(c) != 100
+             && scale->at(c) != 200 && scale->at(c) != 300 && scale->at(c) != 500 && scale->at(c) != 1000)
+            {
+             std::cout << __FUNCTION__ << " ERROR: Incorect scale, please try again!" << std::endl;
+             goto scaleset;
+            }
         }
     return true;
 }
@@ -518,36 +782,48 @@ template <typename V, typename T> double LGADBase::BayesianErr(V *w, T value)
 {
     double events = w->size();
     double pass = 0;
-    for (unsigned int k = 0; k < events; k++) if ((w->at(k)) == value) pass++;
-    if ( > 0 ) return sqrt((((pass + 1)*(pass + 2))/((events + 2)*(events + 3))) - (pow(pass+1, 2)/pow(events+2, 2)));
+    for (unsigned int k = 0; k < events; k++) if ((w->at(k)) >= value) pass++;
+    if (events > 0) return sqrt((((pass + 1)*(pass + 2)) / ((events + 2)*(events + 3))) - (pow(pass + 1, 2) / pow(events + 2, 2)));
     else {
           std::cout << __FUNCTION__ << " ERROR: Trying to calculate baysian uncertenty of empty distribution!" << std::endl;
           return 99.;
          }
 }
 // --------------------------------------------------------------------------------------------------------------
-template <typename V> double LGADBase::CalcMeadian(V *vec)
+template <typename V> double LGADBase::CalcMeadian(V *vec, int start, int stop)
 {
-    size_t size = vec->size();
-    if (size == 0) return -1;  // Undefined, realy.
+    if (stop <= 0 || stop > (int)(vec->size()) || stop <= start) stop = vec->size();
+    if (start < 0 || start >= (int)(vec->size())) start = 0;
+
+    V wmod;
+    for (int ga = start; ga < stop; ga++) wmod.push_back(vec->at(ga));
+    size_t size = wmod.size();
+    if (size == 0)
+       {
+        std::cout << __FUNCTION__ << " ERROR: Trying to calculate median of empty vector!" << std::endl;
+        return -1;  // Undefined, realy.
+       }
     else {
-          sort(vec->begin(), vec->end());
-          if (size % 2 == 0) return (vec->at((size / 2) - 1) + vec->at(size / 2)) / 2;
-          else return vec->at(ceil((float)size / 2));
+          sort(wmod.begin(), wmod.end());
+          if (size % 2 == 0) return (wmod.at((size / 2) - 1) + wmod.at(size / 2)) / 2;
+          else return wmod.at(ceil((float)size / 2));
          }
 }
 // --------------------------------------------------------------------------------------------------------------
-template <typename V> V LGADBase::OutlierReject(V *w, unsigned int order, unsigned int elem, int start, int stop)
+template <typename V> V LGADBase::OutlierReject(V *w, unsigned int order, float elem, int start, int stop)
 {
     if (stop <= 0 || stop > (int)(w->size()) || stop <= start) stop = w->size();
     if (start < 0 || start >= (int)(w->size())) start = 0;
 
     V wmod;
-    for (int ga = start; ga < stop - 1; ga++) wmod.push_back(w->at(ga));
+    for (int ga = start; ga < stop; ga++) wmod.push_back(w->at(ga));
     sort(wmod.begin(), wmod.end());
     double mnt = 0.0;
-    for (unsigned int i = 1; i < (elem+1); i++)  mnt += wmod.at((wmod.size() / 2) + i) + wmod.at((wmod.size() / 2) - i);
-    mnt = mnt/elem;
+    int rd = ceil(((float)(wmod.size()*elem))/2);
+    // if (m_verbose == 2) std::cout << __FUNCTION__ << ": " << wmod.size() << " " << elem << " " << rd << std::endl; 
+    for (unsigned int i = 0; i < rd; i++) mnt += (wmod.at(ceil(((float)wmod.size()/2)+i)) + wmod.at(floor(((float)wmod.size()/2)-i)))/2;
+    mnt = mnt/((float)rd);
+    // if (m_verbose == 2) std::cout << __FUNCTION__ << ": " << mnt << std::endl;
     for (unsigned int de = 0; de < wmod.size(); de++)
         {
          if (wmod.at(de) !=0)
@@ -609,12 +885,12 @@ template double LGADBase::Stdev<vector<float> >(std::vector<float> *, int, int, 
 template double LGADBase::Stdev<vector<double> >(std::vector<double> *, int, int, double);
 template double LGADBase::BayesianErr<vector<int>, int>(std::vector<int> *, int);
 template double LGADBase::BayesianErr<vector<bool>, bool>(std::vector<bool> *, bool);
-template double LGADBase::CalcMeadian<vector<int> >(std::vector<int> *);
-template double LGADBase::CalcMeadian<vector<float> >(std::vector<float> *);
-template double LGADBase::CalcMeadian<vector<double> >(std::vector<double> *);
-template vector<int> LGADBase::OutlierReject<vector<int> >(std::vector<int> *, unsigned int, unsigned int, int, int);
-template vector<float> LGADBase::OutlierReject<vector<float> >(std::vector<float> *, unsigned int, unsigned int, int, int);
-template vector<double> LGADBase::OutlierReject<vector<double> >(std::vector<double> *, unsigned int, unsigned int, int, int);
+template double LGADBase::CalcMeadian<vector<int> >(std::vector<int> *, int, int);
+template double LGADBase::CalcMeadian<vector<float> >(std::vector<float> *, int, int);
+template double LGADBase::CalcMeadian<vector<double> >(std::vector<double> *, int, int);
+template vector<int> LGADBase::OutlierReject<vector<int> >(std::vector<int> *, unsigned int, float, int, int);
+template vector<float> LGADBase::OutlierReject<vector<float> >(std::vector<float> *, unsigned int, float, int, int);
+template vector<double> LGADBase::OutlierReject<vector<double> >(std::vector<double> *, unsigned int, float, int, int);
 template int LGADBase::CalResolution<int, vector<int> >(std::vector<int> *, unsigned int, int, int);
 template float LGADBase::CalResolution<float, vector<float> >(std::vector<float> *, unsigned int, int, int);
 template double LGADBase::CalResolution<double, vector<double> >(std::vector<double> *, unsigned int, int, int);
