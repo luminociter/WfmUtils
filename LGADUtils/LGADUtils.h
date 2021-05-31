@@ -22,11 +22,11 @@ public:
 
    void SetTrackComb(bool comb);
    void SetFEi4Eff(bool FEi4Eff);
-   bool SetSRate(double rate, unsigned int ch);
+   bool SetSRate(Long64_t rate, unsigned int ch);
    bool SetNPoints(unsigned int points, unsigned int ch);
    void Initialize();
    void SetFitMethode(std::string method);
-   void SetInstrument(unsigned int instr);
+   void SetInstrument(AqInstrument instr);
    void SetStartStopEvnt(int Evnt1 = 0, int Evnt2 = 0);
    bool ConvertData();
    void SetTreeName(std::string treename);
@@ -37,6 +37,28 @@ public:
    void SetWaveShape(bool shape = false);
    void SetDoTrnsCorr(bool TrnsCorr = false);
    void SetTransFileName(TString filename = "");
+
+   void SetDUTName(int ChId, std::string Name);
+   void SetDUTNames(std::vector<std::string> DUTNames);
+   void SetDUTBoard(int ChId, AqBoard Brd);
+   void SetDUTBoards(std::vector<AqBoard> Brds);
+   void SetDUTransImp(int ChId, float Transimp);
+   void SetDUTransImps(std::vector<float> Transimps);
+   void SetDUTSecStage(int ChId, SecStage Amp);
+   void SetDUTSecStages(std::vector<SecStage> Amps);
+   void SetDUTAmpGain(int ChId, int gain);
+   void SetDUTAmpGains(std::vector<int> Gains);
+   void SetDUTrigg(int ChId, float trigg);
+   void SetDUTriggs(std::vector<float> Triggs);
+   void SetDUTFract(int ChId, float frac);
+   void SetDUTFracts(std::vector<float> Fracs);
+   void SetDUTFract(int ChId, double cap);
+   void SetDUTFracts(std::vector<double> Caps);
+   void SetChDT(int ChId1, int ChId2, double DT);
+   void SetChDTs(std::vector<double> DTs);
+   void SetChDCh(int ChId1, int ChId2, double DCh);
+   void SetChDChs(std::vector<double> DChs);
+
    bool Analyse(Long64_t nprocess = 0, std::string tree = "");
    std::string GetTreeName() { return LGADBase::GetTreeName(); };
 
@@ -46,6 +68,7 @@ private:
    TChain *m_chain;
    LGADBase *m_Base;
 
+   // ClassDef(LGADUtls, 1);
 };
 
 #endif
