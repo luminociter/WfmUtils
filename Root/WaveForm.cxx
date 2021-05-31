@@ -12,6 +12,18 @@
 //#if !defined(__CINT__)
 //ClassImp(WaveForm);
 //#endif
+//
+//#if !defined(__CLING__)
+//ClassImp(WaveForm);
+//#endif
+//
+//#ifdef __CINT__
+//#pragma link C++ class WaveForm;
+//#endif
+//
+//#ifdef __ROOTCLING__
+//#pragma link C++ class WaveForm;
+//#endif
 
 // Default Empty constructor
 WaveForm::WaveForm()
@@ -97,14 +109,14 @@ WaveForm::~WaveForm()
 {
     delete m_WvBase;
     if (m_fitchi2 != -99 && m_fitchi2 != -1) delete m_noiseFit;
+    if (m_trnsHist)  delete m_trnsHist;
 }
 // --------------------------------------------------------------------------------------------------------------
 void WaveForm::InitializeWaveForm(LGADBase* tBase, int level)
 {
      m_instrument = tBase->LGADBase::GetInstrument();
      m_TrackComb = tBase->LGADBase::GetTrackComb();
-     m_TransFile = tBase->LGADBase::GetTransFile();
-     m_TransFileName = tBase->LGADBase::GetTransFileName();
+     m_TrnsCorr = tBase->LGADBase::GetDoTrnsCorr();
      m_fitopt = tBase->LGADBase::GetFitMethode();
      m_WaveShape = tBase->LGADBase::GetWaveShape();
 
@@ -159,7 +171,7 @@ void WaveForm::InitializeWaveForm(LGADBase* tBase, int level)
      m_signalFFT = -99;
      m_noiseFFT = -99;
      m_NoiseFtQl = -99;
-    if (m_fitchi2 != -99 && m_fitchi2 != -1) delete m_noiseFit;
+     if (m_fitchi2 != -99 && m_fitchi2 != -1) delete m_noiseFit;
      m_noiseFit = NULL;
 
      // Used values in the code
@@ -171,6 +183,7 @@ void WaveForm::InitializeWaveForm(LGADBase* tBase, int level)
          m_ampgain = 10;
          m_SnRate = -99;
          m_waveId = -99;
+         m_trnsHist = NULL;
         }
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -227,8 +240,8 @@ bool WaveForm::Calculate()
     if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Using range for noise from " << noisepts.first << " to " << noisepts.second << std::endl;
     std::pair <double, double> baseline (-1., -1.);
     std::pair <double, double> noise_rms (-1., -1.);
-    if (m_fitopt == "rootInt") m_NoiseFtQl = m_WvBase->LGADBase::IterativeFit(m_voltage, baseline, noise_rms, m_noiseFit, m_fitchi2, "GaussInt", noisepts, true);
-    else m_NoiseFtQl = m_WvBase->LGADBase::IterativeFit(m_voltage, baseline, noise_rms, m_noiseFit, m_fitchi2, "Gauss", noisepts, true);
+    if (m_fitopt == "rootInt") m_NoiseFtQl = m_WvBase->LGADBase::IterativeFit(m_voltage, baseline, noise_rms, m_noiseFit, m_fitchi2, "GaussInt", noisepts, false);
+    else m_NoiseFtQl = m_WvBase->LGADBase::IterativeFit(m_voltage, baseline, noise_rms, m_noiseFit, m_fitchi2, "Gauss", noisepts, false);
     if (m_fitchi2 != -1) 
        {
         m_noiseFit->SetNameTitle(Form("Or_WavNoise%02u", m_waveId), Form("Or_WavNoise%02u", m_waveId));
@@ -288,8 +301,8 @@ bool WaveForm::Calculate()
     if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Signal FFT: " << m_signalFFT << std::endl;
     m_noiseFFT = LGADBase::FFT(&m_voltageAdj, m_SnRate, noisepts.first, noisepts.second);
     if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Noise FFT: " << m_noiseFFT << std::endl;
-    if (m_signalFFT != -99 && m_WvBase->LGADBase::GetDoTrnsCorr()) m_transimp = GetTransimpFromFile(m_signalFFT);
-    m_charge = CollectedCharge(&m_voltageAdj, m_SnRate, m_transimp, m_ampgain, m_StrIndx, m_EndIndx);
+    if (m_signalFFT != -99 && m_WvBase->LGADBase::GetDoTrnsCorr()) m_charge = CollectedCharge(&m_voltageAdj, m_SnRate, GetTrsFromHisto(m_signalFFT, m_trnsHist), m_ampgain, m_StrIndx, m_EndIndx);
+    else m_charge = CollectedCharge(&m_voltageAdj, m_SnRate, m_transimp, m_ampgain, m_StrIndx, m_EndIndx);
     if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Collected Charge: " << m_charge << std::endl;
     m_jitter1 = m_noise / m_dVdTCFD;
     if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Jitter from Noise/dVdT: " << m_charge << std::endl;
@@ -328,7 +341,7 @@ void WaveForm::SetPolarity(unsigned int pol)
     else if (pol == 1) m_pol = neg;
     else if (pol == 2) m_pol = undef;
     else {
-          std::cout << __FUNCTION__ << " WARNING: Polarity has none of the accepted values, setting it to undefined!" << std::endl;
+          std::cout << __FUNCTION__ << " WARNING: Polarity has none of the accepted values, setting to undefined!" << std::endl;
           m_pol = undef;
          }
 }
@@ -374,7 +387,7 @@ std::vector<double>* WaveForm::FillTime(std::vector<double>* voltage, Long64_t s
        time = &m_intime;
       }
    else { 
-         if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " WARNING: Rate set but no voltage vector found. Cannot establsh time vector, remember to do it before calculations!" 
+         if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " WARNING: Rate set but no voltage vector found. Cannot establish time vector, remember to do it before calculations!" 
                                                                << std::endl;
         }
    return time;
@@ -472,47 +485,56 @@ bool WaveForm::GetIsSignal()
 bool WaveForm::GetIsInWidow()
 {
     return m_IsInWindow;
-}// --------------------------------------------------------------------------------------------------------------
+}
+// --------------------------------------------------------------------------------------------------------------
 float WaveForm::GetTransimp()
 {
     return m_transimp;
 }
 // --------------------------------------------------------------------------------------------------------------
-float WaveForm::GetTransimpFromFile(double signalFFT)
+TH2D* WaveForm::GetTrnsHist()
 {
-    m_TransFile->cd();
-	/*
-	if (m_debug) std::cout << "Name of the jet Energy Rescale File: " << m_rescalefile.c_str() << std::endl;
-	TFile *file = TFile::Open(m_rescalefile.c_str());
-	TH2F *h2d = (TH2F*)file->Get("h_dpt_bj");
-	TH1F *hcorX = (TH1F*)h2d->ProjectionX();
-	int hcor_xbins = hcorX->GetNbinsX() + 1;
-	hcorX->Reset();
-	for (int i = 1; i<hcor_xbins; i++)
-	{
-	TH1D* htp = h2d->ProjectionY("_pfy", i, i);
-	if (htp->Integral("width")>0)
-	{
-	double m, dm;
-	double mx = htp->GetMean();
-	double rms = htp->GetRMS();
-	double rmin = mx - 3 * rms;
-	double rmax = mx + 3 * rms;
-	TF1* mygau = new TF1("mygau", "gaus", rmin, rmax);
-	htp->Fit(mygau, "S R Q N");
-	m = mygau->GetParameter(1);
-	dm = mygau->GetParError(1);
-	hcorX->SetBinContent(i, m);
-	hcorX->SetBinError(i, dm);
-	}
-	}
-	m_pol_JES = new TF1("mypol", "pol2", 20, 250);
-	hcorX->Fit(m_pol_JES, "S R Q N");
-	hcorX->SetDirectory(0);
-	file->Close();
-	*/
-    // Code to get the histogram from the file and the transimpedence value
-    return m_transimp;
+    if (m_trnsHist) return m_trnsHist;
+    else {
+          std::cout << __FUNCTION__ << " WARNING: Transimpedence Histogram not set!" << std::endl;
+          m_WvBase->LGADBase::SetDoTrnsCorr(false);
+          return nullptr;
+         }
+}
+// --------------------------------------------------------------------------------------------------------------
+void WaveForm::SetTrnsHist(TH2D* hist)
+{
+    m_trnsHist = hist;
+    m_trnsHist->SetDirectory(nullptr);
+}
+// --------------------------------------------------------------------------------------------------------------
+float WaveForm::GetTrsFromHisto(double signalFFT, TH2D* transhist)
+{
+    float transimp = -99.;
+
+    for (unsigned int k = 0; k <= m_trnsHist->GetNbinsX(); k++)
+        { 
+         if (signalFFT >= (transhist->GetXaxis()->GetBinLowEdge(k)) && signalFFT < (transhist->GetXaxis()->GetBinUpEdge(k)))
+            {
+             for (unsigned int j = 0 ; j <= m_trnsHist->GetNbinsY(); j++) 
+                 {
+                  if (m_trnsHist->GetBinContent(k, j) != 0) 
+                     {
+                      transimp = m_trnsHist->GetBinContent(k, j);
+                      break;
+                     }
+                  else continue;
+                 }
+             break;
+            }
+         else continue;
+        }
+
+    if (transimp!= -99) return transimp;
+    else {
+          std::cout << __FUNCTION__ << " WARNING: Transimpedence value not found in provided histogram!" << std::endl;
+          return m_transimp;
+         }
 }
 // --------------------------------------------------------------------------------------------------------------
 float WaveForm::GetAmpGain()
@@ -540,7 +562,7 @@ std::vector<double> WaveForm::GetTimeAdjVolt(float fraction)
     else if (fraction == -99) return m_vAdjCFD;
     else if (fraction > 0 && fraction < 1) return PulseTimeVoltAdj(m_time, &m_voltageAdj, fraction);
     else {
-          if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Ubacceptable CFD Value, using 20%..." << std::endl;
+          if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Ubacceptable CFD Value, using " << GetCFDfraction() << " ..." << std::endl;
           return m_vAdjCFD;
          }
 }
@@ -674,7 +696,7 @@ double WaveForm::GetCFDTime(float fraction)
         if (fraction == -99) return m_CFDTime;
         else if (fraction > 0 && fraction < 1 ) return CFDTimeLinear(&m_voltageAdj, m_time, fraction);
         else {
-              std::cout << __FUNCTION__ << " WARNING: Unacceptable CFD value, using 20%..." << std::endl;
+              std::cout << __FUNCTION__ << " WARNING: Unacceptable CFD value, using " << GetCFDfraction() << " ..." << std::endl;
               return m_CFDTime;
              }
        }
@@ -689,7 +711,7 @@ double WaveForm::GetTriggTime(float trigg)
         if (trigg == -99) return m_TriggTime;
         else if (trigg <= 0) return FirstTimeForVoltage(&m_voltageAdj, m_time, trigg);
         else {
-              std::cout << __FUNCTION__ << " WARNING: Unacceptable values for trigger, using standard 50 mV" << std::endl;
+              std::cout << __FUNCTION__ << " WARNING: Unacceptable values for trigger, using " << GetTrigg() << " ..." << std::endl;
               return m_TriggTime;
             }
        }
@@ -709,10 +731,10 @@ double WaveForm::GetdVdTCFD(float fraction, int ndif)
     if (m_dVdTCFD != -99) 
        {
         if (fraction == -99 && ndif == 0) return m_dVdTCFD;
-        else if (fraction < 1 && fraction < 0 && ndif >= 0) return dVdTCFDLinear(&m_voltageAdj, m_SnRate, fraction, ndif);
+        else if (fraction < 1 && fraction > 0 && ndif >= 0) return dVdTCFDLinear(&m_voltageAdj, m_SnRate, fraction, ndif);
         else {
-              std::cout << __FUNCTION__ << " WARNING: Unacceptable values for CFD and number of integration points"
-                                        << ", using standard 20% and single point integration" << std::endl;
+              std::cout << __FUNCTION__ << " WARNING: Unacceptable values for CFD and/or number of integration points"
+                                        << ", using standard " << GetCFDfraction() << " and single point integration" << std::endl;
               return m_dVdTCFD;
             }
        }
@@ -725,9 +747,9 @@ double WaveForm::GetCFDToT(float fraction)
     if (m_CFDToT != -99)
        {
         if (fraction == -99) return m_CFDToT;
-        else if (fraction < 1 && fraction < 0) return CFDToTLinear(&m_voltageAdj, m_time, fraction);
+        else if (fraction < 1 && fraction > 0) return CFDToTLinear(&m_voltageAdj, m_time, fraction);
         else {
-              std::cout << __FUNCTION__ << " WARNING: Unacceptable value for CFD, using standard 20%" << std::endl;
+              std::cout << __FUNCTION__ << " WARNING: Unacceptable value for CFD, using standard value " << GetCFDfraction() << std::endl;
               return m_CFDToT;
             }
        }
@@ -742,7 +764,7 @@ double WaveForm::GetTriggToT(float trigg)
         if (trigg == -99) return m_TriggToT;
         else if (trigg <= 0) return TriggToTLinear(&m_voltageAdj, m_time, trigg);
         else {
-              std::cout << __FUNCTION__ << " WARNING: Unacceptable trigger value, using standard 50mV" << std::endl;
+              std::cout << __FUNCTION__ << " WARNING: Unacceptable trigger value, using standard value " << GetTrigg() << " V" << std::endl;
               return m_TriggToT;
             }
        }
@@ -764,9 +786,17 @@ double WaveForm::GetNoiseFFT()
     return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
-double WaveForm::GetJitterNdVdT()
+double WaveForm::GetJitterNdVdT(float fraction, int ndif)
 {
-    if (m_jitter1 != -99) return m_jitter1;
+    if (m_jitter1 != -99)
+       {
+        if (fraction == -99) return m_jitter1;
+        else if (fraction < 1 && fraction > 0) return GetNoise() / GetdVdTCFD(fraction, ndif);
+        else {
+              std::cout << __FUNCTION__ << " WARNING: Unacceptable value for CFD fraction, using standard value: " << GetCFDfraction() << std::endl;
+              return m_jitter1;
+             }
+       }
     else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Jitter [noise/dVdt] calculation not performed!!" << std::endl;
     return -1.;
 }
@@ -843,7 +873,7 @@ WaveForm::polarity WaveForm::FindPolarity(std::vector<double> *w)
                      else if (secordr.at(h) < 0) { maxvolt.push_back(w->at(h+3)); maxindx.push_back(h+3); }
                     }
                 }
-            if (maxvolt.size() !=0 && minvolt.size()!=0)
+            if (maxvolt.size() != 0 && minvolt.size() != 0)
                {
                 m_maxavg = m_WvBase->LGADBase::Mean(&maxvolt);
                 m_minavg = m_WvBase->LGADBase::Mean(&minvolt);
@@ -851,7 +881,7 @@ WaveForm::polarity WaveForm::FindPolarity(std::vector<double> *w)
                 double minstdev = m_WvBase->LGADBase::Stdev(&minvolt, -1, -1, m_minavg);
                 // caculate extremum distances
                 double minextr = fabs(*std::min_element(minvolt.begin(), minvolt.end()) - m_minavg);
-                double maxextr = fabs(*std::max_element(maxvolt.begin(), maxvolt.end()) - maxstdev);
+                double maxextr = fabs(*std::max_element(maxvolt.begin(), maxvolt.end()) - m_maxavg);
                 // Combine extremum std, extremum limit values and base position to determine polarity
                 if (maxstdev >= minstdev && maxextr > minextr) pol = pos;
                 else if (maxstdev <= minstdev && maxextr < minextr) pol = neg;
@@ -891,12 +921,12 @@ int WaveForm::VoltMaxIndx(std::vector<double> *w, bool adj, bool poldef)
     return ind_max;
 }
 // --------------------------------------------------------------------------------------------------------------
-// Returna the voltage value of the maxima
+// Return the voltage value of the maxima
 double WaveForm::VoltMax(std::vector<double> *w, bool adj, bool poldef)
 {
     if (m_maxIndx == -99) m_maxIndx = VoltMaxIndx(w, adj, false);
     if (m_maxIndx != -1) return w->at(m_maxIndx);
-    else return 0;
+    else return -1;
 }
 // --------------------------------------------------------------------------------------------------------------
 // Returna the uncertenty of the maximum voltage
@@ -953,7 +983,7 @@ double WaveForm::VoltMin(std::vector<double> *w, bool adj, bool poldef)
 {
     if (m_minIndx == -99) m_minIndx = VoltMinIndx(w, adj, poldef);
     if (m_minIndx !=-1) return w->at(m_minIndx);
-    else return 0;
+    else return -1;
 }
 // --------------------------------------------------------------------------------------------------------------
 // Returns the time when the pulse minima is observed
@@ -1063,7 +1093,7 @@ bool WaveForm::VoltSatur(std::vector<double> *w, bool poldef)
       }
    else if (indexvect.size() > 2) satur = true;
 
-    return satur;
+   return satur;
 }
 // --------------------------------------------------------------------------------------------------------------
 // Function to find if pulse is within window. 
