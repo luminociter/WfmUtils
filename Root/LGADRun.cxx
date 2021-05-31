@@ -12,6 +12,18 @@
 //#if !defined(__CINT__)
 //ClassImp(LGADRun);
 //#endif
+//
+//#if !defined(__CLING__)
+//ClassImp(LGADRun);
+//#endif
+//
+//#ifdef __CINT__
+//#pragma link C++ class LGADRun;
+//#endif
+//
+//#ifdef __ROOTCLING__
+//#pragma link C++ class LGADRun;
+//#endif
 
 LGADRun::LGADRun(TTree*)
 {
@@ -39,6 +51,48 @@ LGADRun::~LGADRun()
 {
     delete m_RunBase;
     for (unsigned int gh = 0; gh < m_RunDUTCh.size(); gh++) delete m_RunDUTCh.at(gh);
+}
+//------------------------------------------------------------------------------
+bool LGADRun::SetChDQunats(std::vector<double> dQunat, std::vector<std::pair<std::pair<int, int>, double>> DQs)
+{
+    if (m_nchan == 0)
+       {
+        std::cout << __FUNCTION__ << " WARNING: No channels found!" << std::endl;
+        return false;
+       }
+    else { 
+          dQunat.clear();
+          bool found = false;
+          for (unsigned int k = 0; k < m_nchan; k++)
+              {
+               for (unsigned g = k + 1; g < m_nchan; g++)
+                   {
+                    found = false;
+                    for (unsigned gh = 0; gh < DQs.size(); gh++)
+                         {
+                          if (((DQs.at(gh)).first).first == m_channels.at(k) && ((DQs.at(gh)).first).second == m_channels.at(g))
+                             {
+                              found = true;
+                              dQunat.push_back((DQs.at(gh)).second);
+                              break;
+                             }
+                         }
+                    if (!found) dQunat.push_back(-99);
+                   }
+              }
+          for (unsigned int hrt = 0; hrt < DQs.size(); hrt++)
+              {
+               if (((DQs.at(hrt)).first).first == -99 && ((DQs.at(hrt)).first).second == -99)
+                  {
+                   for (unsigned int kr = 0; kr < dQunat.size(); kr++)
+                       {
+                        if (dQunat.at(kr) = -99) dQunat.at(kr) = (DQs.at(hrt)).second;
+                       }
+                  }
+              }
+          for (unsigned int kp = 0; kp < dQunat.size(); kp++) if (dQunat.at(kp) = -99) dQunat.at(kp) = -1;
+          return true;
+         }
 }
 //------------------------------------------------------------------------------
 void LGADRun::Begin(TTree*)
@@ -90,7 +144,12 @@ Bool_t LGADRun::Notify()
 
   // should only be called once, not every time a new file is opened
   // Needs to be called AFTER selector has been initialised (not before Notify)
-  if (m_init < 2) FirstInit();
+  if (m_init < 2) 
+     {
+      FirstInit();
+      if ((m_RunBase->GetChDTs()).size() > 0) SetChDQunats(m_dTMax, m_RunBase->GetChDTs());
+      if ((m_RunBase->GetChDCs()).size() > 0) SetChDQunats(m_dCMax, m_RunBase->GetChDCs());
+     }
 
   std::cout << setfill('-') << setw(89) << "-" << std::endl << setfill(' ');
   return kTRUE;
@@ -106,7 +165,11 @@ Bool_t LGADRun::Process(Long64_t entry)
         m_evnt1 = m_RunBase->LGADBase::GetStartStopEvnt().first;
         m_evnt2 = m_RunBase->LGADBase::GetStartStopEvnt().second;
         // outside of paramterts
-        if (m_evnt2 == 0 || m_evnt2 <= m_evnt1 || m_evnt2 > (m_event + EvnNo)) m_evnt2 = m_event + EvnNo;
+        if (m_evnt2 == 0 || m_evnt2 <= m_evnt1 || m_evnt2 > (m_event + EvnNo)) 
+           {
+            if (m_RunBase->GetInstrument() == Sampic) m_evnt2 = (m_event + EvnNo)*m_nchan;
+            else m_evnt2 = m_event + EvnNo;
+           }
         else if (m_evnt2 <= EvnNo && (m_evnt2 - m_evnt1) <= m_event && m_evnt1 < m_evnt2) { m_evnt2 += EvnNo; m_evnt1 += EvnNo; }
         else if (m_evnt2 > EvnNo && m_evnt1 < EvnNo && (m_evnt2 - EvnNo) < m_event && m_evnt1 < m_evnt2) m_evnt1 += EvnNo;
        }
@@ -117,7 +180,8 @@ Bool_t LGADRun::Process(Long64_t entry)
 
     if (m_RunBase->LGADBase::GetVerbosity() >= 2) 
        {
-        std::cout << __FUNCTION__ << " INFO: Number of active channels: " << m_nchan << ", instrument: " << m_instrument << std::endl;
+        std::cout << "-------------------------------------------------------------------" << std::endl;
+        std::cout << __FUNCTION__ << " INFO: Number of active channels: " << m_nchan << ", instrument: " << m_instrument << ", event: " << entry << std::endl;
         std::cout << __FUNCTION__ << " INFO: Channels: ";
         for (unsigned int k = 0; k < m_nchan; k++) std::cout << m_channels.at(k) << " ";
         std::cout << std::endl;
@@ -183,24 +247,24 @@ Bool_t LGADRun::Process(Long64_t entry)
          m_EvNoiseErr.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntNoiseErr();
          m_EvPedestErr.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntPedestErr();
          m_EvRiseT.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntRiseT();
-         m_EvJitNdVdT.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntJitNdVdT();
          m_EvJitRiseSNR.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntJitRiseSNR();
          m_EvTriggTime.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntTriggTime();
          m_EvDVDTMax.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntDVDTMax();
-         m_EvDVDTCFD.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntDVDTCFD();
-         m_EvCFDToT.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntCFDToT();
          m_EvTriggToT.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntTriggToT();
          m_EvSignalFFT.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntSignalFFT();
          m_EvNoiseFFT.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntNoiseFFT();
          m_EvComplete.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntComplete();
          m_EvVAdjCFD.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntVAdjCFD();
-         if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Got event variables: " << ich << "/" << m_nchan << "!" << std::endl;
+         if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Got event variables: " << ich+1 << "/" << m_nchan << "!" << std::endl;
 
          for (unsigned int bin = 0; bin < 19; bin++)
              { 
               (m_EvCFDTime.at(ich)).at(bin) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntCFDTime(bin);
+              (m_EvDVDTCFD.at(ich)).at(bin) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntDVDTCFD(bin);
+              (m_EvCFDToT.at(ich)).at(bin) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntCFDToT(bin);
+              (m_EvJitNdVdT.at(ich)).at(bin) = m_RunDUTCh.at(ich)->DUTChannel::GetEvntJitNdVdT(bin);
              }
-         if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Got CFD points: " << ich << "/" << m_nchan << "!" << std::endl;
+         if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Got CFD points: " << ich+1 << "/" << m_nchan << "!" << std::endl;
 
          // Write ntuple branches
          b_EvPol.at(ich)->Fill();
@@ -236,6 +300,37 @@ Bool_t LGADRun::Process(Long64_t entry)
          if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Written all brancehs: " << ich << "/" << m_nchan << "!" << std::endl;
         }
 
+    bool dTCutPass = false;
+    bool dChCutPass = false;
+    for (unsigned int ic1 = 0; ic1 < m_nchan; ic1++)
+        {
+         for (unsigned int ic2 = ic1+1; ic2 < m_nchan; ic2++)
+             {
+              double dCh = fabs(m_EvCharge.at(ic1) - m_EvCharge.at(ic2));
+              for (unsigned int bin1 = 0; bin1 < 19; bin1++)
+                  {
+                   for (unsigned int bin2 = 0; bin2 < 19; bin2++)
+                      {
+                       dTCutPass = false;
+                       dChCutPass = false;
+                       // populate the time difference vectors
+                       if ((m_EvCFDTime.at(ic1)).at(bin1) != -1 && (m_EvCFDTime.at(ic2)).at(bin2) != -1
+                            && (m_EvCFDTime.at(ic1)).at(bin1) != -99 && (m_EvCFDTime.at(ic2)).at(bin2) != -99)
+                          {
+                           double dT = fabs((m_EvCFDTime.at(ic1)).at(bin1) - (m_EvCFDTime.at(ic2)).at(bin2));
+                           if (m_dTMax.size() == 0) dTCutPass = true;
+                           else if (m_dTMax.at((ic1*(ic2-1))/2) != -1 && fabs(dT) < m_dTMax.at((ic1*(ic2-1))/2)) dTCutPass = true;
+                           else if (m_dTMax.at((ic1*(ic2-1))/2) == -1) dTCutPass = true;
+                           if (m_dCMax.size() == 0) dChCutPass = true;
+                           else if (m_dCMax.at((ic1*(ic2-1))/2) != -1 && fabs(dCh) < m_dCMax.at((ic1*(ic2-1))/2)) dChCutPass = true;
+                           else if (m_dCMax.at((ic1*(ic2-1))/2) == -1)  dChCutPass = true;
+                           if (dTCutPass && dChCutPass) ((m_EvTmDiff.at((ic1*(ic2-1))/2)).at(bin1*19+bin2)).push_back(dT);
+                          }
+                      }
+                  }
+             }
+        }
+
     return kTRUE;
 }
 //------------------------------------------------------------------------------
@@ -248,13 +343,18 @@ void LGADRun::SlaveTerminate()
 
     // Tree for Channel propertied form Fits
     TTree *ChFitParam = new TTree("ChFitParam", "Channel parameters form fits");
-    TTree *ChShapeParam = NULL;
+    TTree *ChShapeParam = nullptr;
     ChFitParam->SetAutoFlush(10000); // Set autoflush to 30 MB
 
     TList *histoslist = new TList();
+    std::vector<TList *> ChHist;
+    std::vector<TList *> CFDTimeHist;
+    std::vector<TList *> CFDToTHist;
+    std::vector<TList *> CFDdVdTHist;
+    std::vector<TList *> TimeDiff;
 
     int chName = 0;
-    // Cahbnel properties from respective fits
+    // Channel properties from respective fits
     std::pair <double, double> ChFitMxVlt;
     std::pair <double, double> ChFitMinVlt;
     std::pair <int, int> ChFitMxIndx;
@@ -274,18 +374,19 @@ void LGADRun::SlaveTerminate()
     std::pair <double, double> ChFitMinTime;
     std::pair <double, double> ChFitCharge;
     std::pair <double, double> ChFitRiseT;
-    std::pair <double, double> ChFitJitNdVdT;
     std::pair <double, double> ChFitJitRiseSNR;
     std::vector<std::pair <double, double>> ChFitCFDTime;
+    std::vector<std::pair <double, double>> ChFitDVDTCFD;
+    std::vector<std::pair <double, double>> ChFitCFDToT;
+    std::vector<std::pair <double, double>> ChFitJitNdVdT;
     std::pair <double, double> ChFitTriggTime;
     std::pair <double, double> ChFitDVDTMax;
-    std::pair <double, double> ChFitDVDTCFD;
-    std::pair <double, double> ChFitCFDToT;
     std::pair <double, double> ChFitTriggToT;
     std::pair <double, double> ChFitSignalFFT;
     std::pair <double, double> ChFitNoiseFFT;
     std::pair <double, double> ChFitComplete;
     std::pair <double, double> ChFitSoNR;
+    std::vector<std::vector<std::pair<double, double>>> TmDiffFitQts;
 
     // Chi2 of the Fits for channel properties
     double MaxIndxFtChi2;
@@ -304,12 +405,13 @@ void LGADRun::SlaveTerminate()
     double RiseTimeFtChi2;
     double TriggTimeFtChi2;
     double DVDTMaxFtChi2;
-    double DVDTCFDFtChi2;
-    double CFDToTFtChi2;
     double TriggToTFtChi2;
     double SignalFFTFtChi2;
     double NoiseFFTFtChi2;
     std::vector<double> CFDTimeFtChi2;
+    std::vector<double> DVDTCFDFtChi2;
+    std::vector<double> CFDToTFtChi2;
+    std::vector<std::vector<double>> TmDiffChi2;
 
     ChFitParam->Branch("chName", &chName, "chName/i");
 
@@ -351,19 +453,17 @@ void LGADRun::SlaveTerminate()
     ChFitParam->Branch("ChFitChargeErr", &ChFitCharge.second, "ChFitCharge.second/D");
     ChFitParam->Branch("ChFitRiseT", &ChFitRiseT.first, "ChFitRiseT.first/D");
     ChFitParam->Branch("ChFitRiseTErr", &ChFitRiseT.second, "ChFitRiseT.second/D");
-    ChFitParam->Branch("ChFitJitNdVdT", &ChFitJitNdVdT.first, "ChFitJitNdVdT.first/D");
-    ChFitParam->Branch("ChFitJitNdVdTErr", &ChFitJitNdVdT.second, "ChFitJitNdVdT.second/D");
     ChFitParam->Branch("ChFitJitRiseSNR", &ChFitJitRiseSNR.first, "ChFitJitRiseSNR.first/D");
     ChFitParam->Branch("ChFitJitRiseSNRErr", &ChFitJitRiseSNR.second, "ChFitJitRiseSNR.second/D");
     ChFitParam->Branch("ChFitCFDTime", &ChFitCFDTime);
+    ChFitParam->Branch("ChFitDVDTCFD", &ChFitDVDTCFD);
+    ChFitParam->Branch("ChFitCFDToT", &ChFitCFDToT);
+    ChFitParam->Branch("ChFitJitNdVdT", &ChFitJitNdVdT);
+    ChFitParam->Branch("TmDiffFitQts", &TmDiffFitQts);
     ChFitParam->Branch("ChFitTriggTime", &ChFitTriggTime.first, "ChFitTriggTime.first/D");
     ChFitParam->Branch("ChFitTriggTimeErr", &ChFitTriggTime.second, "ChFitTriggTime.second/D");
     ChFitParam->Branch("ChFitDVDTMax", &ChFitDVDTMax.first, "ChFitDVDTMax.first/D");
     ChFitParam->Branch("ChFitDVDTMaxErr", &ChFitDVDTMax.second, "ChFitDVDTMax.second/D");
-    ChFitParam->Branch("ChFitDVDTCFD", &ChFitDVDTCFD.first, "ChFitDVDTCFD.first/D");
-    ChFitParam->Branch("ChFitDVDTCFDErr", &ChFitDVDTCFD.second, "ChFitDVDTCFD.second/D");
-    ChFitParam->Branch("ChFitCFDToT", &ChFitCFDToT.first, "ChFitCFDToT.first/D");
-    ChFitParam->Branch("ChFitCFDToTErr", &ChFitCFDToT.second, "ChFitCFDToT.second/D");
     ChFitParam->Branch("ChFitTriggToT", &ChFitTriggToT.first, "ChFitTriggToT.first/D");
     ChFitParam->Branch("ChFitTriggToTErr", &ChFitTriggToT.second, "ChFitTriggToT.second/D");
     ChFitParam->Branch("ChFitSignalFFT", &ChFitSignalFFT.first, "ChFitSignalFFT.first/D");
@@ -391,14 +491,15 @@ void LGADRun::SlaveTerminate()
     ChFitParam->Branch("RiseTimeFtChi2", &RiseTimeFtChi2, "RiseTimeFtChi2/D");
     ChFitParam->Branch("TriggTimeFtChi2", &TriggTimeFtChi2, "TriggTimeFtChi2/D");
     ChFitParam->Branch("DVDTMaxFtChi2", &DVDTMaxFtChi2, "DVDTMaxFtChi2/D");
-    ChFitParam->Branch("DVDTCFDFtChi2", &DVDTCFDFtChi2, "DVDTCFDFtChi2/D");
-    ChFitParam->Branch("CFDToTFtChi2", &CFDToTFtChi2, "CFDToTFtChi2/D");
     ChFitParam->Branch("TriggToTFtChi2", &TriggToTFtChi2, "TriggToTFtChi2/D");
     ChFitParam->Branch("SignalFFTFtChi2", &SignalFFTFtChi2, "SignalFFTFtChi2/D");
     ChFitParam->Branch("NoiseFFTFtChi2", &NoiseFFTFtChi2, "NoiseFFTFtChi2/D");
     ChFitParam->Branch("CFDTimeFtChi2", &CFDTimeFtChi2);
+    ChFitParam->Branch("DVDTCFDFtChi2", &DVDTCFDFtChi2);
+    ChFitParam->Branch("CFDToTFtChi2", &CFDToTFtChi2);
+    ChFitParam->Branch("TmDiffChi2", &TmDiffChi2);
 
-    // Channel properties from respective fits
+    // Channel Shape properties
     int ChShapePolarity;
     int ChShapeMaxIndx;
     double ChShapeMax;
@@ -411,17 +512,17 @@ void LGADRun::SlaveTerminate()
     std::pair <double, double> ChShapeNoise;
     double ChShapeCharge;
     double ChShapeRiseTime;
-    double ChShapeJitNdVdT;
     double ChShapeJitRiseSNR;
     double ChShapeTriggTime;
     double ChShapeDVDTMax;
-    double ChShapeDVDTCFD;
-    double ChShapeCFDToT;
     double ChShapeTriggToT;
     double ChShapeSignalFFT;
     double ChShapeNoiseFFT;
     std::pair <double, double> ChShapeSoN;
     std::vector<double> ChShapeCFDTime;
+    std::vector<double> ChShapeDVDTCFD;
+    std::vector<double> ChShapeCFDToT;
+    std::vector<double> ChShapeJitNdVdT;
     std::vector<std::pair <double, double>> ChMeanVolt;
 
     if (m_WaveShape)
@@ -443,18 +544,18 @@ void LGADRun::SlaveTerminate()
         ChShapeParam->Branch("ChShapeNoiseErr", &ChShapeNoise.second, "ChShapeNoise.second/D");
         ChShapeParam->Branch("ChShapeCharge", &ChShapeCharge, "ChShapeCharge/D");
         ChShapeParam->Branch("ChShapeRiseTime", &ChShapeRiseTime, "ChShapeRiseTime/D");
-        ChShapeParam->Branch("ChShapeJitNdVdT", &ChShapeJitNdVdT, "ChShapeJitNdVdT/D");
         ChShapeParam->Branch("ChShapeJitRiseSNR", &ChShapeJitRiseSNR, "ChShapeJitRiseSNR/D");
         ChShapeParam->Branch("ChShapeTriggTime", &ChShapeTriggTime, "ChShapeTriggTime/D");
         ChShapeParam->Branch("ChShapeDVDTMax", &ChShapeDVDTMax, "ChShapeDVDTMax/D");
-        ChShapeParam->Branch("ChShapeDVDTCFD", &ChShapeDVDTCFD, "ChShapeDVDTCFD/D");
-        ChShapeParam->Branch("ChShapeCFDToT", &ChShapeCFDToT, "ChShapeCFDToT/D");
         ChShapeParam->Branch("ChShapeTriggToT", &ChShapeTriggToT, "ChShapeTriggToT/D");
         ChShapeParam->Branch("ChShapeSignalFFT", &ChShapeSignalFFT, "ChShapeSignalFFT/D");
         ChShapeParam->Branch("ChShapeNoiseFFT", &ChShapeNoiseFFT, "ChShapeNoiseFFT/D");
         ChShapeParam->Branch("ChShapeSoN", &ChShapeSoN.first, "ChShapeSoN.first/D");
         ChShapeParam->Branch("ChShapeSoNUnc", &ChShapeSoN.second, "ChShapeSoN.second/D");
         ChShapeParam->Branch("ChShapeCFDTime", &ChShapeCFDTime);
+        ChShapeParam->Branch("ChShapeDVDTCFD", &ChShapeDVDTCFD);
+        ChShapeParam->Branch("ChShapeCFDToT", &ChShapeCFDToT);
+        ChShapeParam->Branch("ChShapeJitNdVdT", &ChShapeJitNdVdT);
         ChShapeParam->Branch("ChMeanVolt", &ChMeanVolt);
        }
 
@@ -463,6 +564,12 @@ void LGADRun::SlaveTerminate()
          std::cout << __FUNCTION__ << " INFO: Updating Channel " << ich + 1 << " of " << m_nchan << " designated: " << m_channels.at(ich) << std::endl;
          m_RunDUTCh.at(ich)->DUTChannel::updateChProperties(m_WaveShape, m_tree);
          if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: After channel update: " << ich + 1 << "/" << m_nchan << std::endl;
+
+         ChHist.push_back(new TList());
+         CFDTimeHist.push_back(new TList());
+         CFDToTHist.push_back(new TList());
+         CFDdVdTHist.push_back(new TList());
+         for (unsigned int d = ich + 1; d < m_nchan; d++) TimeDiff.push_back(new TList());
 
          chName = m_channels.at(ich);
 
@@ -486,19 +593,33 @@ void LGADRun::SlaveTerminate()
          ChFitMinTime = std::make_pair(-99, -99);
          ChFitCharge = std::make_pair(-99, -99);
          ChFitRiseT = std::make_pair(-99, -99);
-         ChFitJitNdVdT = std::make_pair(-99, -99);
          ChFitJitRiseSNR = std::make_pair(-99, -99);
          ChFitCFDTime.clear();
          ChFitCFDTime.reserve(19);
+         ChFitDVDTCFD.clear();
+         ChFitDVDTCFD.reserve(19);
+         ChFitCFDToT.clear();
+         ChFitCFDToT.reserve(19);
+         ChFitJitNdVdT.clear();
+         ChFitJitNdVdT.reserve(19);
          ChFitTriggTime = std::make_pair(-99, -99);
          ChFitDVDTMax = std::make_pair(-99, -99);
-         ChFitDVDTCFD = std::make_pair(-99, -99);
-         ChFitCFDToT = std::make_pair(-99, -99);
          ChFitTriggToT = std::make_pair(-99, -99);
          ChFitSignalFFT = std::make_pair(-99, -99);
          ChFitNoiseFFT = std::make_pair(-99, -99);
          ChFitComplete = std::make_pair(-99, -99);
          ChFitSoNR = std::make_pair(-99, -99);
+
+         int iter = (m_nchan-(ich+1));
+         TmDiffChi2.clear();
+         TmDiffFitQts.clear();
+         TmDiffChi2.resize(iter);
+         TmDiffFitQts.resize(iter);
+         for (unsigned int k = 0; k < iter; k++)
+             {
+              (TmDiffChi2.at(k)).resize(19*19, -99.0);
+              (TmDiffFitQts.at(k)).resize(19*19, std::make_pair(-99, -99));
+             }
 
          MaxIndxFtChi2 = -99.;
          MinIndxFtChi2 = -99.;
@@ -516,12 +637,12 @@ void LGADRun::SlaveTerminate()
          RiseTimeFtChi2 = -99.;
          TriggTimeFtChi2 = -99.;
          DVDTMaxFtChi2 = -99.;
-         DVDTCFDFtChi2 = -99.;
-         CFDToTFtChi2 = -99.;
          TriggToTFtChi2 = -99.;
          SignalFFTFtChi2 = -99.;
          NoiseFFTFtChi2 = -99.;
          CFDTimeFtChi2.resize(19, -99);
+         DVDTCFDFtChi2.resize(19, -99);
+         CFDToTFtChi2.resize(19, -99);
 
          if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Iinitialized fit variables for channel: " << ich +1 << "/" << m_nchan << std::endl;
 
@@ -544,13 +665,13 @@ void LGADRun::SlaveTerminate()
          ChFitMinTime = m_RunDUTCh.at(ich)->DUTChannel::GetChMinTime(2);
          ChFitCharge = m_RunDUTCh.at(ich)->DUTChannel::GetChCharge(2);
          ChFitRiseT = m_RunDUTCh.at(ich)->DUTChannel::GetChRiseTime(2);
-         ChFitJitNdVdT = m_RunDUTCh.at(ich)->DUTChannel::GetChJitNdVdT(2);
          ChFitJitRiseSNR = m_RunDUTCh.at(ich)->DUTChannel::GetChJitRiseSNR(2);
-         ChFitCFDTime = m_RunDUTCh.at(ich)->DUTChannel::GetChCFDTime(2);
+         ChFitCFDTime = m_RunDUTCh.at(ich)->DUTChannel::GetChCFDMag(2, "CFDTime");
+         ChFitDVDTCFD = m_RunDUTCh.at(ich)->DUTChannel::GetChCFDMag(2, "DVDTCFD");
+         ChFitCFDToT = m_RunDUTCh.at(ich)->DUTChannel::GetChCFDMag(2, "CFDToT");
+         ChFitJitNdVdT = m_RunDUTCh.at(ich)->DUTChannel::GetChCFDMag(2, "JitterNdVdT");
          ChFitTriggTime = m_RunDUTCh.at(ich)->DUTChannel::GetChTriggTime(2);
          ChFitDVDTMax = m_RunDUTCh.at(ich)->DUTChannel::GetChDVDTMax(2);
-         ChFitDVDTCFD = m_RunDUTCh.at(ich)->DUTChannel::GetChDVDTCFD(2);
-         ChFitCFDToT = m_RunDUTCh.at(ich)->DUTChannel::GetChCFDToT(2);
          ChFitTriggToT = m_RunDUTCh.at(ich)->DUTChannel::GetChTriggToT(2);
          ChFitSignalFFT = m_RunDUTCh.at(ich)->DUTChannel::GetChSignalFFT(2);
          ChFitNoiseFFT = m_RunDUTCh.at(ich)->DUTChannel::GetChNoiseFFT(2);
@@ -564,162 +685,225 @@ void LGADRun::SlaveTerminate()
             {
              h_MaxIndxFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("MaxIndx");
              h_MaxIndxFt.at(ich)->SetName(Form("MaxIndx%02u", m_channels.at(ich)));
-             histoslist->Add(h_MaxIndxFt.at(ich));
+             ChHist.at(ich)->Add(h_MaxIndxFt.at(ich));
             }
          MinIndxFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("MinIndx");
          if (MinIndxFtChi2 != -99 && MinIndxFtChi2 != -1)
             {
              h_MinIndxFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("MinIndx");
              h_MinIndxFt.at(ich)->SetName(Form("MinIndx%02u", m_channels.at(ich)));
-             histoslist->Add(h_MinIndxFt.at(ich));
+             ChHist.at(ich)->Add(h_MinIndxFt.at(ich));
             }
          MaxVoltFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("MaxVolt");
          if (MaxVoltFtChi2 != -99 && MaxVoltFtChi2 != -1)
             {
              h_MaxVoltFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("MaxVolt");
              h_MaxVoltFt.at(ich)->SetName(Form("MaxVolt%02u", m_channels.at(ich)));
-             histoslist->Add(h_MaxVoltFt.at(ich));
+             ChHist.at(ich)->Add(h_MaxVoltFt.at(ich));
             }
          MinVoltFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("MinVotl");
          if (MinVoltFtChi2 != -99 && MinVoltFtChi2 != -1)
             {
              h_MinVoltFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("MinVotl");
              h_MinVoltFt.at(ich)->SetName(Form("MinVotl%02u", m_channels.at(ich)));
-             histoslist->Add(h_MinVoltFt.at(ich));
+             ChHist.at(ich)->Add(h_MinVoltFt.at(ich));
             }
          StrIndxFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("Strindx");
          if (StrIndxFtChi2 != -99 && StrIndxFtChi2 != -1)
             {
              h_StrIndxFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("Strindx");
              h_StrIndxFt.at(ich)->SetName(Form("Strindx%02u", m_channels.at(ich)));
-             histoslist->Add(h_StrIndxFt.at(ich));
+             ChHist.at(ich)->Add(h_StrIndxFt.at(ich));
             }
          EndIndxFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("EndIndx");
          if (EndIndxFtChi2 != -99 && EndIndxFtChi2 != -1)
             {
              h_EndIndxFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("EndIndx");
              h_EndIndxFt.at(ich)->SetName(Form("EndIndx%02u", m_channels.at(ich)));
-             histoslist->Add(h_EndIndxFt.at(ich));
+             ChHist.at(ich)->Add(h_EndIndxFt.at(ich));
             }
          NoiseFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("Noise");
          if (NoiseFtChi2 != -99 && NoiseFtChi2 != -1)
             {
              h_NoiseFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("Noise");
              h_NoiseFt.at(ich)->SetName(Form("Noise%02u", m_channels.at(ich)));
-             histoslist->Add(h_NoiseFt.at(ich));
+             ChHist.at(ich)->Add(h_NoiseFt.at(ich));
             }
          NoiseErrFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("NoisErr");
          if (NoiseErrFtChi2 != -99 && NoiseErrFtChi2 != -1)
             {
              h_NoiseErrFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("NoisErr");
              h_NoiseErrFt.at(ich)->SetName(Form("NoisErr%02u", m_channels.at(ich)));
-             histoslist->Add(h_NoiseErrFt.at(ich));
+             ChHist.at(ich)->Add(h_NoiseErrFt.at(ich));
             }
          PedestFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("Pedestl");
          if (PedestFtChi2 != -99 && PedestFtChi2 != -1)
             {
              h_PedestFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("Pedestl");
              h_PedestFt.at(ich)->SetName(Form("Pedestl%02u", m_channels.at(ich)));
-             histoslist->Add(h_PedestFt.at(ich));
+             ChHist.at(ich)->Add(h_PedestFt.at(ich));
             }
          PedestErrFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("PdslErr");
          if (PedestErrFtChi2 != -99 && PedestErrFtChi2 != -1)
             {
              h_NPedestErrFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("PdslErr");
              h_NPedestErrFt.at(ich)->SetName(Form("PdslErr%02u", m_channels.at(ich)));
-             histoslist->Add(h_NPedestErrFt.at(ich));
+             ChHist.at(ich)->Add(h_NPedestErrFt.at(ich));
             }
          MaxTimeFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("MaxTime");
          if (MaxTimeFtChi2 != -99 && MaxTimeFtChi2 != -1)
             {
              h_MaxTimeFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("MaxTime");
              h_MaxTimeFt.at(ich)->SetName(Form("MaxTime%02u", m_channels.at(ich)));
-             histoslist->Add(h_MaxTimeFt.at(ich));
+             ChHist.at(ich)->Add(h_MaxTimeFt.at(ich));
             }
          MinTimeFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("MinTime");
          if (MinTimeFtChi2 != -99 && MinTimeFtChi2 != -1)
             {
              h_MinTimeFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("MinTime");
              h_MinTimeFt.at(ich)->SetName(Form("MinTime%02u", m_channels.at(ich)));
-             histoslist->Add(h_MinTimeFt.at(ich));
+             ChHist.at(ich)->Add(h_MinTimeFt.at(ich));
             }
          ChargeFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("Charge");
          if (ChargeFtChi2 != -99 && ChargeFtChi2 != -1)
             {
              h_ChargeFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("Charge");
              h_ChargeFt.at(ich)->SetName(Form("Charge%02u", m_channels.at(ich)));
-             histoslist->Add(h_ChargeFt.at(ich));
+             ChHist.at(ich)->Add(h_ChargeFt.at(ich));
             }
          RiseTimeFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("RiseTime");
          if (RiseTimeFtChi2 != -99 && RiseTimeFtChi2 != -1)
             {
              h_RiseTimeFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("RiseTime");
              h_RiseTimeFt.at(ich)->SetName(Form("RiseTime%02u", m_channels.at(ich)));
-             histoslist->Add(h_RiseTimeFt.at(ich));
+             ChHist.at(ich)->Add(h_RiseTimeFt.at(ich));
             }
          TriggTimeFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("TriggTime");
          if (TriggTimeFtChi2 != -99 && TriggTimeFtChi2 != -1)
             {
              h_TriggTimeFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("TriggTime");
              h_TriggTimeFt.at(ich)->SetName(Form("TriggTime%02u", m_channels.at(ich)));
-             histoslist->Add(h_TriggTimeFt.at(ich));
+             ChHist.at(ich)->Add(h_TriggTimeFt.at(ich));
             }
          DVDTMaxFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("DVDTMax");
          if (DVDTMaxFtChi2 != -99 && DVDTMaxFtChi2 != -1)
             {
              h_DVDTMaxFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("DVDTMax");
              h_DVDTMaxFt.at(ich)->SetName(Form("DVDTMax%02u", m_channels.at(ich)));
-             histoslist->Add(h_DVDTMaxFt.at(ich));
-            }
-         DVDTCFDFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("DVDTCFD");
-         if (DVDTCFDFtChi2 != -99 && DVDTCFDFtChi2 != -1)
-            {
-             h_DVDTCFDFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("DVDTCFD");
-             h_DVDTCFDFt.at(ich)->SetName(Form("DVDTCFD%02u", m_channels.at(ich)));
-             histoslist->Add(h_DVDTCFDFt.at(ich));
-            }
-         CFDToTFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("CFDToT");
-         if (CFDToTFtChi2 != -99 && CFDToTFtChi2 != -1)
-            {
-             h_CFDToTFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("CFDToT");
-             h_CFDToTFt.at(ich)->SetName(Form("CFDToT%02u", m_channels.at(ich)));
-             histoslist->Add(h_CFDToTFt.at(ich));
+             ChHist.at(ich)->Add(h_DVDTMaxFt.at(ich));
             }
          TriggToTFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("TrigToT");
          if (TriggToTFtChi2 != -99 && TriggToTFtChi2 != -1)
             {
              h_TriggToTFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("TrigToT");
              h_TriggToTFt.at(ich)->SetName(Form("TrigToT%02u", m_channels.at(ich)));
-             histoslist->Add(h_TriggToTFt.at(ich));
+             ChHist.at(ich)->Add(h_TriggToTFt.at(ich));
             }
          SignalFFTFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("SigFFT");
          if (SignalFFTFtChi2 != -99 && SignalFFTFtChi2 != -1)
             {
              h_SignalFFTFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("SigFFT");
              h_SignalFFTFt.at(ich)->SetName(Form("SigFFT%02u", m_channels.at(ich)));
-             histoslist->Add(h_SignalFFTFt.at(ich));
+             ChHist.at(ich)->Add(h_SignalFFTFt.at(ich));
             }
          NoiseFFTFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("NoiseFFT");
          if (NoiseFFTFtChi2 != -99 && NoiseFFTFtChi2 != -1)
             {
              h_NoiseFFTFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("NoiseFFT");
              h_NoiseFFTFt.at(ich)->SetName(Form("NoiseFFT%02u", m_channels.at(ich)));
-             histoslist->Add(h_NoiseFFTFt.at(ich));
+             ChHist.at(ich)->Add(h_NoiseFFTFt.at(ich));
             }
 
          for (unsigned int h = 0; h < 19; h++)
              {
-              char title[12];
+              char title[20];
               CFDTimeFtChi2.at(h) = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("CFDTime", h);
               if (CFDTimeFtChi2.at(h) != -99 && CFDTimeFtChi2.at(h) != -1)
                  {
                   sprintf(title, "CFDTime%02u-%02u%%", m_channels.at(ich), (h*5+5));
                   (h_CFDTimeFt.at(ich)).at(h) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("CFDTime", h);
                   (h_CFDTimeFt.at(ich)).at(h)->SetName((const char*)title);
-                  histoslist->Add((h_CFDTimeFt.at(ich)).at(h));
+                  CFDTimeHist.at(ich)->Add((h_CFDTimeFt.at(ich)).at(h));
+                 }
+              DVDTCFDFtChi2.at(h) = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("DVDTCFD", h);
+              if (DVDTCFDFtChi2.at(h) != -99 && DVDTCFDFtChi2.at(h) != -1)
+                 {
+                  memset(title, '0', sizeof(title));
+                  sprintf(title, "DVDTCFD%02u-%02u%%", m_channels.at(ich), (h * 5 + 5));
+                  (h_DVDTCFDFt.at(ich)).at(h) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("DVDTCFD", h);
+                  (h_DVDTCFDFt.at(ich)).at(h)->SetName((const char*)title);
+                  CFDdVdTHist.at(ich)->Add((h_DVDTCFDFt.at(ich)).at(h));
+                }
+              CFDToTFtChi2.at(h) = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("CFDToT", h);
+              if (CFDToTFtChi2.at(h) != -99 && CFDToTFtChi2.at(h) != -1)
+                 {
+                  memset(title, '0', sizeof(title));
+                  sprintf(title, "CFDToT%02u-%02u%%", m_channels.at(ich), (h * 5 + 5));
+                  (h_CFDToTFt.at(ich)).at(h) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("CFDToT", h);
+                  (h_CFDToTFt.at(ich)).at(h)->SetName((const char*)title);
+                  CFDToTHist.at(ich)->Add((h_CFDToTFt.at(ich)).at(h));
                  }
              }
          if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Recovered fits for channel: " << ich + 1 << "/" << m_nchan << std::endl;
+         
+         unsigned int a = 0;
+         unsigned int b = 0;
+         // Lets create the Time difference histos and polupate the time difference sigmas histo
+         for (int ich2 = ich + 1; ich2 < m_nchan; ich2++)
+             {
+              a = ((float)(ich*(ich2 - 1)))/2;
+              std::pair <double, double> mean;
+              std::pair <double, double> sigma;
+              int qual;
+              char title[20];
+              h_TmSigmas.at(a) = new TH2D(Form("h_TimeMap%02u-%02u", m_channels.at(ich), m_channels.at(ich2)), 
+                                          Form("CFD Map, Channels %02u-%02u", m_channels.at(ich), m_channels.at(ich2)),
+                                          19, 0.025, 0.975, 19, 0.025, 0.975); // initialize the 2D sigmas histos
+              for (int bin1 = 0; bin1 < 19; bin1++)
+                  {
+                   for (int bin2 = 0; bin2 < 19; bin2++)
+                       {
+                        qual = -99;
+                        mean = std::make_pair(-99, -99);
+                        sigma = std::make_pair(-99, -99);
+                        b = bin1*19+bin2;
+                        if (m_RunBase->LGADBase::GetFitMethode() == "rootInt")
+                           {
+                            qual = m_RunBase->LGADBase::IterativeFit(&(m_EvTmDiff.at(a)).at(b), mean, sigma, 
+                                                                    (h_TmDiffCFD.at(a)).at(b), 
+                                                                    (TmDiffChi2.at(a)).at(b), 
+                                                                    "GaussInt", std::make_pair(-1, -1), false);
+                            }
+                        else if (m_RunBase->LGADBase::GetFitMethode() == "root" || m_RunBase->LGADBase::GetFitMethode() == "RooFit")
+                                {
+                                 qual = m_RunBase->LGADBase::IterativeFit(&(m_EvTmDiff.at(a)).at(b), mean, sigma, 
+                                                                          (h_TmDiffCFD.at(a)).at(b), 
+                                                                          (TmDiffChi2.at(a)).at(b), 
+                                                                          "Gauss", std::make_pair(-1, -1), false);
+                                }
+                        if (qual == 0) mean.second = sigma.first;
+                        else {
+                              mean.first = m_RunBase->LGADBase::Mean(&(m_EvTmDiff.at(a)).at(b));
+                              mean.second = m_RunBase->LGADBase::Stdev(&(m_EvTmDiff.at(a)).at(b));
+                              std::cout << __FUNCTION__ << " WARNING: Gaussian fit failed, reverting to mean and std for CFD map between channels " 
+                                                        << m_channels.at(ich) << "-" << m_channels.at(ich2) << " and bins " 
+                                                        << bin1 * 5 + 5 <<"% - "<< bin2 * 5 + 5 << "%!" << std::endl;
+                             }
+                        (TmDiffFitQts.at(a)).at(b) = mean;
+                        if ((TmDiffChi2.at(a)).at(b) != -99 && (TmDiffChi2.at(a)).at(b) != -1)
+                           {
+                            memset(title, '0', sizeof(title));
+                            sprintf(title, "TmDiffCFD%02u%%-%02u%%CH%02u-%02u", bin1*5+5, bin2*5+5, m_channels.at(ich), m_channels.at(ich2));
+                            (h_TmDiffCFD.at(a)).at(b)->SetName((const char*)title);
+                            (h_TmDiffCFD.at(a)).at(b)->SetTitle(Form("#Deltat Channel %02u (%02u%% CFD) - Channel %02u (%02u%% CFD)", m_channels.at(ich), bin1*5+5, m_channels.at(ich2), bin2*5+5));
+                            TimeDiff.at(a)->Add((h_TmDiffCFD.at(a)).at(b));
+                            h_TmSigmas.at(a)->SetBinContent(bin1 + 1, bin2 + 1, ((TmDiffFitQts.at(a)).at(b)).second);
+                           }
+                        else h_TmSigmas.at(a)->SetBinContent(bin1 + 1, bin2 + 1, 0.0);
+                       }
+                  }
+              histoslist->Add(h_TmSigmas.at(a));
+             }
 
          ChFitParam->Fill();
 
@@ -738,18 +922,21 @@ void LGADRun::SlaveTerminate()
              ChShapeNoise = std::make_pair(-99, -99);
              ChShapeCharge = -99.;
              ChShapeRiseTime = -99.;
-             ChShapeJitNdVdT = -99.;
              ChShapeJitRiseSNR = -99.;
              ChShapeTriggTime = -99.;
              ChShapeDVDTMax = -99.;
-             ChShapeDVDTCFD = -99.;
-             ChShapeCFDToT = -99.;
              ChShapeTriggToT = -99.;
              ChShapeSignalFFT = -99.;
              ChShapeNoiseFFT = -99.;
              ChShapeSoN = std::make_pair(-99, -99);
              ChShapeCFDTime.clear();
              ChShapeCFDTime.reserve(19);
+             ChShapeDVDTCFD.clear();
+             ChShapeDVDTCFD.reserve(19);
+             ChShapeCFDToT.clear();
+             ChShapeCFDToT.reserve(19);
+             ChShapeJitNdVdT.clear();
+             ChShapeJitNdVdT.reserve(19);
              ChMeanVolt.clear();
              if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Initialized waveshape variables for channel: " << ich + 1 << "/" << m_nchan << std::endl;
 
@@ -765,30 +952,66 @@ void LGADRun::SlaveTerminate()
              ChShapeNoise = m_RunDUTCh.at(ich)->DUTChannel::GetChNoise(1);
              ChShapeCharge = (m_RunDUTCh.at(ich)->DUTChannel::GetChCharge(1)).first;
              ChShapeRiseTime = (m_RunDUTCh.at(ich)->DUTChannel::GetChRiseTime(1)).first;
-             ChShapeJitNdVdT = (m_RunDUTCh.at(ich)->DUTChannel::GetChJitNdVdT(1)).first;
              ChShapeJitRiseSNR = (m_RunDUTCh.at(ich)->DUTChannel::GetChJitRiseSNR(1)).first;
              ChShapeTriggTime = (m_RunDUTCh.at(ich)->DUTChannel::GetChTriggTime(1)).first;
              ChShapeDVDTMax = (m_RunDUTCh.at(ich)->DUTChannel::GetChDVDTMax(1)).first;
-             ChShapeDVDTCFD = (m_RunDUTCh.at(ich)->DUTChannel::GetChDVDTCFD(1)).first;
-             ChShapeCFDToT = (m_RunDUTCh.at(ich)->DUTChannel::GetChCFDToT(1)).first;
              ChShapeTriggToT = (m_RunDUTCh.at(ich)->DUTChannel::GetChTriggToT(1)).first;
              ChShapeSignalFFT = (m_RunDUTCh.at(ich)->DUTChannel::GetChSignalFFT(1)).first;
              ChShapeNoiseFFT = (m_RunDUTCh.at(ich)->DUTChannel::GetChNoiseFFT(1)).first;
              ChShapeSoN = m_RunDUTCh.at(ich)->DUTChannel::GetChSoNR(1);
-             std::vector<std::pair <double, double>> CFDTimeTmp = m_RunDUTCh.at(ich)->DUTChannel::GetChCFDTime(1);
-             for (unsigned int k = 0; k < CFDTimeTmp.size(); k++) ChShapeCFDTime.push_back((CFDTimeTmp.at(k)).first);
+             std::vector<std::pair <double, double>> CFDTimeTmp = m_RunDUTCh.at(ich)->DUTChannel::GetChCFDMag(1, "CFDTime");
+             std::vector<std::pair <double, double>> DVDTCFDTmp = m_RunDUTCh.at(ich)->DUTChannel::GetChCFDMag(1, "DVDTCFD");
+             std::vector<std::pair <double, double>> CFDToTTmp = m_RunDUTCh.at(ich)->DUTChannel::GetChCFDMag(1, "CFDToT");
+             std::vector<std::pair <double, double>> JitterNdVdTTmp = m_RunDUTCh.at(ich)->DUTChannel::GetChCFDMag(1, "JitterNdVdT");
+             for (unsigned int k = 0; k < CFDTimeTmp.size(); k++) 
+                 {
+                  ChShapeCFDTime.push_back((CFDTimeTmp.at(k)).first);
+                  ChShapeDVDTCFD.push_back((DVDTCFDTmp.at(k)).first);
+                  ChShapeCFDToT.push_back((CFDToTTmp.at(k)).first);
+                  ChShapeJitNdVdT.push_back((JitterNdVdTTmp.at(k)).first);
+                 }
              ChMeanVolt = m_RunDUTCh.at(ich)->DUTChannel::GetMeanChPulse();
              if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Recovered waveshape variables for channel: " 
                                                                       << ich +1 << "/" << m_nchan << std::endl;
-
              ChShapeParam->Fill();
             }
 
          if (m_RunBase->LGADBase::GetVerbosity() == 0) m_RunDUTCh.at(ich)->DUTChannel::ChDump();
+
+         // Create folder for each channel and write corresponding histos
+         m_ofile->mkdir(Form("ChHistos%02u", m_channels.at(ich)));
+         m_ofile->cd(Form("ChHistos%02u", m_channels.at(ich)));
+         ChHist.at(ich)->Write();
+
+         m_ofile->mkdir(Form("ChHistos%02u/CFDTimeHists%02u", m_channels.at(ich), m_channels.at(ich)));
+         m_ofile->cd(Form("ChHistos%02u/CFDTimeHists%02u", m_channels.at(ich), m_channels.at(ich)));
+         CFDTimeHist.at(ich)->Write();
+         m_ofile->mkdir(Form("ChHistos%02u/CFDToTHists%02u", m_channels.at(ich), m_channels.at(ich)));
+         m_ofile->cd(Form("ChHistos%02u/CFDToTHists%02u", m_channels.at(ich), m_channels.at(ich)));
+         CFDToTHist.at(ich)->Write();
+         m_ofile->mkdir(Form("ChHistos%02u/CFDdVdTHists%02u", m_channels.at(ich), m_channels.at(ich)));
+         m_ofile->cd(Form("ChHistos%02u/CFDdVdTHists%02u", m_channels.at(ich), m_channels.at(ich)));
+         CFDdVdTHist.at(ich)->Write();
+         for (unsigned int gp = ich + 1; gp < m_nchan; gp++) 
+             {
+              m_ofile->mkdir(Form("ChHistos%02u/TimeDiff%02u-%02u", m_channels.at(ich), m_channels.at(ich), m_channels.at(gp)));
+              m_ofile->cd(Form("ChHistos%02u/TimeDiff%02u-%02u", m_channels.at(ich), m_channels.at(ich), m_channels.at(gp)));
+              TimeDiff.at(((float)(ich*(gp-1)))/2)->Write();
+             }
+         m_ofile->cd();
         }
 
     ChFitParam->Write();
     histoslist->Write();
+    // deleting the histogram lists, deletion happens from end to start
+    for (unsigned int a = m_nchan-1; a == 0; a--)
+        {
+         delete CFDdVdTHist.at(a);
+         delete CFDToTHist.at(a);
+         delete CFDTimeHist.at(a);
+         delete ChHist.at(a);
+         for (unsigned int gp = m_nchan - 1; gp == a+1; gp--) delete TimeDiff.at(((float)(a*(gp-1)))/2);
+        }
     delete histoslist;
     delete ChFitParam;
     if (m_WaveShape) 
@@ -812,13 +1035,151 @@ void LGADRun::Terminate()
 //------------------------------------------------------------------------------
 void LGADRun::FirstInit()
 {
-
   // Create new DUT channels
-  if (m_channels.size() != 0)
-     { 
-      m_RunDUTCh.resize(m_nchan, NULL);
-      for (unsigned int a = 0; a < m_nchan; a++) m_RunDUTCh.at(a) = new DUTChannel(m_channels.at(a), m_RunBase);
-     }
+  m_RunDUTCh.resize(m_nchan, nullptr);
+  std::vector<bool> foundPr[8];
+  for (unsigned int h = 0; h < 8; h++) foundPr[h].resize(m_nchan, false);
+  int sizes[8];
+  sizes[0] = (m_RunBase->LGADBase::GetDUTNames()).size();
+  sizes[1] = (m_RunBase->LGADBase::GetDUTBoards()).size();
+  sizes[2] = (m_RunBase->LGADBase::GetDUTransImps()).size();
+  sizes[3] = (m_RunBase->LGADBase::GetDUTSecStages()).size();
+  sizes[4] = (m_RunBase->LGADBase::GetDUTAmpGains()).size();
+  sizes[5] = (m_RunBase->LGADBase::GetDUTriggs()).size();
+  sizes[6] = (m_RunBase->LGADBase::GetDUTFracts()).size();
+  sizes[7] = (m_RunBase->LGADBase::GetDUTCaps()).size();
+  for (unsigned int a = 0; a < m_nchan; a++)
+      {
+       m_RunDUTCh.at(a) = new DUTChannel(m_channels.at(a), m_RunBase);
+       for (unsigned int u = 0; u < 8; u++)
+           {
+            for (unsigned int w = 0; w < sizes[u]; w++) 
+                {
+                 if (u == 0)
+                    {
+                     if (m_channels.at(a) == ((m_RunBase->LGADBase::GetDUTNames()).at(w)).first) 
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetChName(((m_RunBase->LGADBase::GetDUTNames()).at(w)).second);
+                         (foundPr[u]).at(a) = true;
+                        }
+                    }
+                 if (u == 1)
+                    {
+                     if (m_channels.at(a) == ((m_RunBase->LGADBase::GetDUTBoards()).at(w)).first)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetChBoard(((m_RunBase->LGADBase::GetDUTBoards()).at(w)).second);
+                         (foundPr[u]).at(a) = true;
+                        }
+                    }
+                 if (u == 2)
+                    {
+                     if (m_channels.at(a) == ((m_RunBase->LGADBase::GetDUTransImps()).at(w)).first)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetChTransImp(((m_RunBase->LGADBase::GetDUTransImps()).at(w)).second);
+                         (foundPr[u]).at(a) = true;
+                        }
+                    }
+                 if (u == 3)
+                    {
+                     if (m_channels.at(a) == ((m_RunBase->LGADBase::GetDUTSecStages()).at(w)).first)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetSecStage(((m_RunBase->LGADBase::GetDUTSecStages()).at(w)).second);
+                         (foundPr[u]).at(a) = true;
+                        }
+                    }
+                 if (u == 4)
+                    {
+                     if (m_channels.at(a) == ((m_RunBase->LGADBase::GetDUTAmpGains()).at(w)).first)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetChAmpGain(((m_RunBase->LGADBase::GetDUTAmpGains()).at(w)).second);
+                         (foundPr[u]).at(a) = true;
+                        }
+                    }
+                 if (u == 5)
+                    {
+                     if (m_channels.at(a) == ((m_RunBase->LGADBase::GetDUTriggs()).at(w)).first)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetChTrigg(((m_RunBase->LGADBase::GetDUTriggs()).at(w)).second);
+                         (foundPr[u]).at(a) = true;
+                        }
+                    }
+                 if (u == 6)
+                    {
+                     if (m_channels.at(a) == ((m_RunBase->LGADBase::GetDUTFracts()).at(w)).first)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetChFract(((m_RunBase->LGADBase::GetDUTFracts()).at(w)).second);
+                         (foundPr[u]).at(a) = true;
+                        }
+                    }
+                 if (u == 7)
+                    {
+                     if (m_channels.at(a) == ((m_RunBase->LGADBase::GetDUTCaps()).at(w)).first)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetChCap(((m_RunBase->LGADBase::GetDUTCaps()).at(w)).second);
+                         (foundPr[u]).at(a) = true;
+                        }
+                    }
+                } 
+            }
+      }
+
+  if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Intialized Channel ID properties for " << m_nchan << " channels" << std::endl;
+
+  std::vector<unsigned int> skip[8];
+  // Fill the properties of the channel without index
+  for (unsigned int a = 0; a < m_nchan; a++)
+      {
+       for (unsigned int u = 0; u < 8; u++)
+           {
+            if (!(foundPr[u]).at(a))
+               {
+                for (unsigned int w = 0; w < sizes[u]; w++)
+                    {
+                     for (unsigned int tc = 0; tc < (skip[u]).size(); tc++) if (w == (skip[u]).at(tc)) continue;
+                     if (u == 0 && ((m_RunBase->LGADBase::GetDUTNames()).at(w)).first == -99)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetChName(((m_RunBase->LGADBase::GetDUTNames()).at(w)).second);
+                         (skip[u]).push_back(w);
+                        }
+                     if (u == 1 && ((m_RunBase->LGADBase::GetDUTBoards()).at(w)).first == -99)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetChBoard(((m_RunBase->LGADBase::GetDUTBoards()).at(w)).second);
+                         (skip[u]).push_back(w);
+                        }
+                     if (u == 2 && ((m_RunBase->LGADBase::GetDUTransImps()).at(w)).first == -99)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetChTransImp(((m_RunBase->LGADBase::GetDUTransImps()).at(w)).second);
+                         (skip[u]).push_back(w);
+                        }
+                     if (u == 3 && ((m_RunBase->LGADBase::GetDUTSecStages()).at(w)).first == -99)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetSecStage(((m_RunBase->LGADBase::GetDUTSecStages()).at(w)).second);
+                         (skip[u]).push_back(w);
+                        }
+                     if (u == 4 && ((m_RunBase->LGADBase::GetDUTAmpGains()).at(w)).first == -99)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetChAmpGain(((m_RunBase->LGADBase::GetDUTAmpGains()).at(w)).second);
+                         (skip[u]).push_back(w);
+                        }
+                     if (u == 5 && ((m_RunBase->LGADBase::GetDUTriggs()).at(w)).first == -99)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetChTrigg(((m_RunBase->LGADBase::GetDUTriggs()).at(w)).second);
+                         (skip[u]).push_back(w);
+                        }
+                     if (u == 6 && ((m_RunBase->LGADBase::GetDUTFracts()).at(w)).first == -99)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetChFract(((m_RunBase->LGADBase::GetDUTFracts()).at(w)).second);
+                         (skip[u]).push_back(w);
+                        }
+                     if (u == 7 && ((m_RunBase->LGADBase::GetDUTCaps()).at(w)).first == -99)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetChCap(((m_RunBase->LGADBase::GetDUTCaps()).at(w)).second);
+                         (skip[u]).push_back(w);
+                        }
+                    }
+               }
+           }
+      }
 
   VarInit();
 
@@ -909,32 +1270,36 @@ void LGADRun::FirstInit()
   h_NoiseFFTFt.clear();
   h_CFDTimeFt.clear();
 
-  h_MaxIndxFt.resize(m_nchan, NULL);
-  h_MinIndxFt.resize(m_nchan, NULL);
-  h_MaxVoltFt.resize(m_nchan, NULL);
-  h_MinVoltFt.resize(m_nchan, NULL);
-  h_StrIndxFt.resize(m_nchan, NULL);
-  h_EndIndxFt.resize(m_nchan, NULL);
-  h_NoiseFt.resize(m_nchan, NULL);
-  h_NoiseErrFt.resize(m_nchan, NULL);
-  h_PedestFt.resize(m_nchan, NULL);
-  h_NPedestErrFt.resize(m_nchan, NULL);
-  h_MaxTimeFt.resize(m_nchan, NULL);
-  h_MinTimeFt.resize(m_nchan, NULL);
-  h_ChargeFt.resize(m_nchan, NULL);
-  h_RiseTimeFt.resize(m_nchan, NULL);
-  h_TriggTimeFt.resize(m_nchan, NULL);
-  h_DVDTMaxFt.resize(m_nchan, NULL);
-  h_DVDTCFDFt.resize(m_nchan, NULL);
-  h_CFDToTFt.resize(m_nchan, NULL);
-  h_TriggToTFt.resize(m_nchan, NULL);
-  h_SignalFFTFt.resize(m_nchan, NULL);
-  h_NoiseFFTFt.resize(m_nchan, NULL);
+  h_MaxIndxFt.resize(m_nchan, nullptr);
+  h_MinIndxFt.resize(m_nchan, nullptr);
+  h_MaxVoltFt.resize(m_nchan, nullptr);
+  h_MinVoltFt.resize(m_nchan, nullptr);
+  h_StrIndxFt.resize(m_nchan, nullptr);
+  h_EndIndxFt.resize(m_nchan, nullptr);
+  h_NoiseFt.resize(m_nchan, nullptr);
+  h_NoiseErrFt.resize(m_nchan, nullptr);
+  h_PedestFt.resize(m_nchan, nullptr);
+  h_NPedestErrFt.resize(m_nchan, nullptr);
+  h_MaxTimeFt.resize(m_nchan, nullptr);
+  h_MinTimeFt.resize(m_nchan, nullptr);
+  h_ChargeFt.resize(m_nchan, nullptr);
+  h_RiseTimeFt.resize(m_nchan, nullptr);
+  h_TriggTimeFt.resize(m_nchan, nullptr);
+  h_DVDTMaxFt.resize(m_nchan, nullptr);
+  h_TriggToTFt.resize(m_nchan, nullptr);
+  h_SignalFFTFt.resize(m_nchan, nullptr);
+  h_NoiseFFTFt.resize(m_nchan, nullptr);
   h_CFDTimeFt.resize(m_nchan);
+  h_DVDTCFDFt.resize(m_nchan);
+  h_CFDToTFt.resize(m_nchan);
   for (unsigned int s = 0; s < m_nchan; s++)
       {
        (h_CFDTimeFt.at(s)).clear();
-       (h_CFDTimeFt.at(s)).resize(19, NULL);
+       (h_CFDTimeFt.at(s)).resize(19, nullptr);
+       (h_DVDTCFDFt.at(s)).clear();
+       (h_DVDTCFDFt.at(s)).resize(19, nullptr);
+       (h_CFDToTFt.at(s)).clear();
+       (h_CFDToTFt.at(s)).resize(19, nullptr);
       }
 
   m_ofile->ReOpen("UPDATE");
@@ -962,18 +1327,18 @@ void LGADRun::FirstInit()
        b_EvNoiseErr.at(a) = m_tree->Branch(Form("NoiseErr%02u", m_channels.at(a)), &(m_EvNoiseErr.at(a)), "m_EvNoiseErr.at(a)/D");
        b_EvPedestErr.at(a) = m_tree->Branch(Form("PedestErr%02u", m_channels.at(a)), &(m_EvPedestErr.at(a)), "m_EvPedestEr.at(a)/D");
        b_EvRiseT.at(a) = m_tree->Branch(Form("RiseT%02u", m_channels.at(a)), &(m_EvRiseT.at(a)), "m_EvRiseTe.at(a)/D");
-       b_EvJitNdVdT.at(a) = m_tree->Branch(Form("JitNdVdT%02u", m_channels.at(a)), &(m_EvJitNdVdT.at(a)), "m_EvJitNdVdT.at(a)/D");
        b_EvJitRiseSNR.at(a) = m_tree->Branch(Form("JitRiseSNR%02u", m_channels.at(a)), &(m_EvJitRiseSNR.at(a)), "m_EvJitRiseSNR.at(a)/D");
        b_EvTriggTime.at(a) = m_tree->Branch(Form("TriggTime%02u", m_channels.at(a)), &(m_EvTriggTime.at(a)), "m_EvTriggTime.at(a)/D");
        b_EvDVDTMax.at(a) = m_tree->Branch(Form("DVDTMax%02u", m_channels.at(a)), &(m_EvDVDTMax.at(a)), "m_EvDVDTMax.at(a)/D");
-       b_EvDVDTCFD.at(a) = m_tree->Branch(Form("DVDTCFD%02u", m_channels.at(a)), &(m_EvDVDTCFD.at(a)), "m_EvDVDTCFD.at(a)/D");
-       b_EvCFDToT.at(a) = m_tree->Branch(Form("CFDToT%02u", m_channels.at(a)), &(m_EvCFDToT.at(a)), "m_EvCFDToT.at(a)/D");
        b_EvTriggToT.at(a) = m_tree->Branch(Form("TriggToT%02u", m_channels.at(a)), &(m_EvTriggToT.at(a)), "m_EvTriggToT.at(a)/D");
        b_EvSignalFFT.at(a) = m_tree->Branch(Form("SignalFFT%02u", m_channels.at(a)), &(m_EvSignalFFT.at(a)), "m_EvSignalFFT.at(a)/D");
        b_EvNoiseFFT.at(a) = m_tree->Branch(Form("NoiseFFT%02u", m_channels.at(a)), &(m_EvNoiseFFT.at(a)), "m_EvNoiseFFT.at(a)/D");
        b_EvComplete.at(a) = m_tree->Branch(Form("Complete%02u", m_channels.at(a)), &(m_EvComplete.at(a)), "m_EvComplete.at(a)/I");
        b_EvVAdjCFD.at(a) = m_tree->Branch(Form("VAdjCFD%02u", m_channels.at(a)), &(m_EvVAdjCFD.at(a)));
        b_EvCFDTime.at(a) = m_tree->Branch(Form("CFDTime%02u", m_channels.at(a)), &(m_EvCFDTime.at(a)));
+       b_EvDVDTCFD.at(a) = m_tree->Branch(Form("DVDTCFD%02u", m_channels.at(a)), &(m_EvDVDTCFD.at(a)));
+       b_EvCFDToT.at(a) = m_tree->Branch(Form("CFDToT%02u", m_channels.at(a)), &(m_EvCFDToT.at(a)));
+       b_EvJitNdVdT.at(a) = m_tree->Branch(Form("JitNdVdT%02u", m_channels.at(a)), &(m_EvJitNdVdT.at(a)));
       }
 
   m_init++;
@@ -1004,14 +1369,16 @@ void LGADRun::VarInit()
   m_EvJitRiseSNR.clear();
   m_EvTriggTime.clear();
   m_EvDVDTMax.clear();
-  m_EvDVDTCFD.clear();
-  m_EvCFDToT.clear();
   m_EvTriggToT.clear();
   m_EvSignalFFT.clear();
   m_EvNoiseFFT.clear();
   m_EvComplete.clear();
   m_EvCFDTime.clear();
+  m_EvDVDTCFD.clear();
+  m_EvCFDToT.clear();
   m_EvVAdjCFD.clear();
+  m_dTMax.clear();
+  m_dCMax.clear();
 
   // resize vectors to proper size to avoid memory fragmentation
   m_EvPol.resize(m_nchan, -99);
@@ -1032,23 +1399,39 @@ void LGADRun::VarInit()
   m_EvNoiseErr.resize(m_nchan, -99);
   m_EvPedestErr.resize(m_nchan, -99);
   m_EvRiseT.resize(m_nchan, -99);
-  m_EvJitNdVdT.resize(m_nchan, -99);
   m_EvJitRiseSNR.resize(m_nchan, -99);
   m_EvTriggTime.resize(m_nchan, -99);
   m_EvDVDTMax.resize(m_nchan, -99);
-  m_EvDVDTCFD.resize(m_nchan, -99);
-  m_EvCFDToT.resize(m_nchan, -99);
   m_EvTriggToT.resize(m_nchan, -99);
   m_EvSignalFFT.resize(m_nchan, -99);
   m_EvNoiseFFT.resize(m_nchan, -99);
   m_EvComplete.resize(m_nchan, -99);
   m_EvCFDTime.resize(m_nchan);
+  m_EvJitNdVdT.resize(m_nchan);
+  m_EvDVDTCFD.resize(m_nchan);
+  m_EvCFDToT.resize(m_nchan);
   for (unsigned int s = 0; s < m_nchan; s++)
       {
        (m_EvCFDTime.at(s)).clear();
        (m_EvCFDTime.at(s)).resize(19, -99);
+       (m_EvJitNdVdT.at(s)).clear();
+       (m_EvJitNdVdT.at(s)).resize(19, -99);
+       (m_EvDVDTCFD.at(s)).clear();
+       (m_EvDVDTCFD.at(s)).resize(19, -99);
+       (m_EvCFDToT.at(s)).clear();
+       (m_EvCFDToT.at(s)).resize(19, -99);
       }
   m_EvVAdjCFD.resize(m_nchan);
 
+  int combi = (m_nchan*(m_nchan-1))/2;
+  m_EvTmDiff.resize(combi);
+  h_TmDiffCFD.resize(combi);
+  h_TmSigmas.resize(combi);
+  for (unsigned int k = 0; k < combi; k++)
+      {
+       (m_EvTmDiff.at(k)).resize(19*19);
+       (h_TmDiffCFD.at(k)).resize(19*19, nullptr);
+       h_TmSigmas.push_back(nullptr);
+      }
 }
 //------------------------------------------------------------------------------
