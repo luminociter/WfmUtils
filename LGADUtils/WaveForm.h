@@ -42,6 +42,7 @@ public:
     void SetTransimp(float transimp);
     void SetAmpGain(int gain);
     void SetWaveId(int id);
+    void SetTrnsHist(TH2D* hist);
 
     int GetPolarity();
     Long64_t GetSnRate();
@@ -84,10 +85,11 @@ public:
     double GetNoiseFitChi2() { return m_fitchi2; };
     TH1D* GetNoiseFit() { return (TH1D*)m_noiseFit->Clone(); };
     int GetWaveId() { return m_waveId; };
-    double GetJitterNdVdT();
+    double GetJitterNdVdT(float fraction = -99, int ndif = 0);
     double GetJitterRiseSNR();
     double GetSignalFFT();
     double GetNoiseFFT();
+    TH2D* GetTrnsHist();
     LGADBase* GetBase() { return m_WvBase; };
     bool dump();
 
@@ -117,6 +119,7 @@ private:
     double m_pedestalErr;
     double m_fitchi2;
     TH1D* m_noiseFit;
+    TH2D* m_trnsHist;
     int m_NoiseFtQl;
 
     double m_charge;
@@ -125,7 +128,7 @@ private:
     double m_jitter2;
     double m_CFDTime;
     double m_dVdTMax;
-    double m_dVdTCFD;    
+    double m_dVdTCFD;
     double m_TriggTime;
 
     double m_CFDToT;
@@ -174,7 +177,7 @@ private:
     double TriggToTLinear(std::vector<double> *w, std::vector<double> *t, double trig);
     double dVdTMaxLinear(std::vector<double> *w, Long64_t snrate);
     double dVdTCFDLinear(std::vector<double> *w, Long64_t snrate, float fraction, int ndif = 0);
-    float GetTransimpFromFile(double signalFFT);
+    float GetTrsFromHisto(double signalFFT, TH2D* transhist);
         
     int StartIndx(std::vector<double> *w, bool adj = false, bool poldef = true);
     int EndIndx(std::vector<double> *w, bool adj = false, bool poldef = true);
@@ -183,7 +186,7 @@ private:
     double SecondTimeForVoltage(std::vector<double> *w, std::vector<double> *t, double volt);
     std::vector<double>* FillTime(std::vector<double>* voltage, Long64_t snrate);
 
-    // ClassDef(WaveForm, 0);
+    // ClassDef(WaveForm, 1);
 };
 
 #endif
