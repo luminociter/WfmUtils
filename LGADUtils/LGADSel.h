@@ -99,7 +99,7 @@ public :
    virtual void    SlaveTerminate();
    virtual void    Terminate();
 
-   // ClassDef(LGADSel,0);
+   // ClassDef(LGADSel, 1);
 };
 
 #endif
