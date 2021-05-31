@@ -27,6 +27,9 @@
 #ifndef __CINT__
 #include "RooGlobalFunc.h"
 #endif
+#ifdef __ROOTCLING__
+#pragma "RooGlobalFunc.h"
+#endif
 #ifndef ROO_MSG_SERVICE
 #include "RooMsgService.h"
 #endif
@@ -74,17 +77,21 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair <double, double> &g
         || ((methode == "LandauXGauss" || methode == "LandauXGaussVarBin" || methode == "LandauXGaussInt" || methode == "LandauXGaussIntVarBin") && abs(last - first) < 10))
        {
         if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Inadequate number of points for " << methode << " calculation["
-                                     << abs(last - first) << "] -> will not cintimue!" << std::endl;
+                                     << abs(last - first) << "] -> will not cuntinue!" << std::endl;
         return -1;
        }
 
     // Outlier rejection
-    w2 = OutlierReject(w, 5, 6, first, last);
+    w2 = LGADBase::OutlierReject(w, 4, 0.2, first, last);
+    
     // Calculate dataset mean, std, min and max value for limits and binning variations
     double mean = LGADBase::Mean(&w2);
     double strdv = LGADBase::Stdev(&w2);
     double wmax = *std::max_element(w2.begin(), w2.end());
     double wmin = *std::min_element(w2.begin(), w2.end());
+    double median = LGADBase::CalcMeadian(&w2);
+ 
+    double FWHM = 
 
     if (mean == -99 || strdv == -99 || strdv == 0)
        {
@@ -133,14 +140,22 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair <double, double> &g
 
     std::vector<double> VarBinX; // vector only necessry if rebining 
 
-    if (m_verbose >= 2) std::cout << __FUNCTION__ << " INFO: Calculating before fit | Average: " << mean << " , Standard Deviation: " 
-                                  << strdv << ", Min Value: " << wmin << ", Max Value: "  << wmax << std::endl;
+    if (m_verbose >= 2) 
+       {
+        std::cout << __FUNCTION__ << " INFO: Calculating before fit | Average: " << mean << ", Standard Deviation: " 
+                                  << strdv << ", Median: " << median << std::endl;
+        std::cout << __FUNCTION__ << " INFO: Fitting options | Methode: " << methode << ", Discrete: " << discr << ", Outlieres: " 
+                                  << w->size() - w2.size() << ", fit elements vector size: " << w->size() << ", first - last element: "
+                                  << first << "-" << last << std::endl;
+       }
 
     double fact = pow(10, fabs(floor(log10(fabs(mean))))); // Rounding factor for limits
     int bins_max = 0; // Absolute maximum number of bins extrapolated from minimum resolution and limtis
     int n_elements = 0; // Number of points included inth e fit
     double strdv2 = -99; // standard deviation of modified dataset
     // Iterative re-fitting 1, affects the limits of the histogram only
+    std::vector<double> wb;
+    std::vector<double> w2b;
     for (double gk = 12; gk > 6; gk--) // 6 cases
         {
          if (stop) break;
@@ -151,21 +166,22 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair <double, double> &g
             }
          else if (methode == "LandauXGauss" || methode == "LandauXGaussVarBin" || methode == "LandauXGaussInt" || methode == "LandauXGaussIntVarBin")
                  {
-                  limit1 = floor((wmin + ((gk-7)/9)*strdv) * fact) / fact; // Asymentric limit variaton
-                  limit2 = ceil((wmax - ((gk-7)/3)*strdv) * fact) / fact;
+                  limit1 = floor((median - ((gk-7)/9)*strdv)*fact) / fact; // Asymentric limit variaton
+                  limit2 = ceil((median + ((gk-7)/3)*strdv)*fact) / fact;
                  }
-         w2.clear();
-         std::vector<double>(w2).swap(w2); // setting reserved space back to zero
-         for (int gb = first; gb < last; gb++) if (w->at(gb) >= limit1 && w->at(gb) <= limit2) w2.push_back(w->at(gb));
-         n_elements = w2.size();
+         wb.clear();
+         w2b.clear();
+         for (int gb = first; gb < last; gb++) if (w->at(gb) >= limit1 && w->at(gb) <= limit2) wb.push_back(w->at(gb));
+         for (unsigned int gb = 0; gb < w2.size(); gb++) if (w2.at(gb) >= limit1 && w2.at(gb) <= limit2) w2b.push_back(w2.at(gb));
+         n_elements = wb.size();
          if (n_elements < 5) continue; // minimum number of elements check
-         strdv2 = LGADBase::Stdev(&w2);
+         strdv2 = LGADBase::Stdev(&w2b);
          // Calculate maximum number of bins that makes sense for discreete histograms
          if (discr) bins_max = (int)(fabs(limit2 - limit1) / acc);
          // Calculate bin vector for variable bin histograms
          if (methode == "GaussVarBin" || methode == "LandauXGaussVarBin" || methode == "GaussIntVarBin" || methode == "LandauXGaussIntVarBin")
             {
-             VarBinX = LGADBase::ConrtVarBinX(&w2, limit1, limit2, bins_max);
+             VarBinX = LGADBase::ConrtVarBinX(&wb, limit1, limit2, bins_max);
             }
          LGADBase::CalcuRebin(discr, n_elements, bins_max, limit1, limit2, strdv2, n_bins);
          // Iterative re-fitting 2, affects only the width of the bins but not the fit range
@@ -173,7 +189,7 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair <double, double> &g
          for (unsigned int tmb = 0; tmb < 7; tmb++)
              {
               if (stop) break;
-              if (n_bins[tmb] == -1) continue;
+              if (n_bins[tmb] == -1 || n_bins[tmb] == 0) continue;
               unsigned int iter = (12 - gk) * 7 + tmb;
               // Variable bin algorithm
               if (methode == "GaussVarBin" || methode == "LandauXGaussVarBin" || methode == "GaussIntVarBin" || methode == "LandauXGaussIntVarBin")
@@ -206,7 +222,7 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair <double, double> &g
                     Fits.at(iter) = new TH1D(Form("MagFit%02u", iter), Form("MagFit%02u", iter), m_bins, limit1, limit2);
                    }
               // Create the re-binned histogram and calculate quanitites
-              for (int i = 0; i < n_elements; i++) Fits.at(iter)->Fill(w2.at(i));
+              for (int i = 0; i < n_elements; i++) Fits.at(iter)->Fill(wb.at(i));
               itr.push_back(iter);
               if (Fits.at(iter)->Integral("width") == 0)
                  {
@@ -239,8 +255,8 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair <double, double> &g
                  }
               else if (methode == "LandauXGauss" || methode == "LandauXGaussInt" || methode == "LandauXGaussIntVarBin" ||  methode == "LandauXGaussVarBin")
                       {
-                       rmin = wmin + ((gk-7)/9)*rms; // asymentric range
-                       rmax = wmax - ((gk-7)/3)*rms;
+                       rmin = median - ((gk-7)/9)*rms; // asymentric range
+                       rmax = median + ((gk-7)/3)*rms;
                        bin1 = xaxis->FindBin(rmin);
                        bin2 = xaxis->FindBin(rmax);
                        if (((bin2 - bin1) < 2) || (Fits.at(iter)->Integral(bin1 + 1, bin2 - 1) == 0)) continue;
@@ -870,7 +886,7 @@ std::vector<double> LGADBase::ConrtVarBinX(std::vector<double> *wmod, double lim
 bool LGADBase::CalcuRebin(bool discr, int n_elements, int nbins, double limUp, double limDown, double stdev, int (&Nofbins)[7])
 {
     // Rebinning Algorithm
-    for (unsigned int u = 0; u < 7; u++) Nofbins[u] = 0;
+    for (unsigned int u = 0; u < 7; u++) Nofbins[u] = -1;
     int varlow = 0;
     int varhigh = 0;
     if ((discr && sqrt(n_elements) < nbins) || !discr)
@@ -878,7 +894,7 @@ bool LGADBase::CalcuRebin(bool discr, int n_elements, int nbins, double limUp, d
         if (fabs((limDown - limUp)/stdev) < sqrt(n_elements) || !discr)
            {
             unsigned int dfact = 1;
-            if (fabs((limDown - limUp) / stdev) < sqrt(n_elements))
+            if (fabs((limDown - limUp)/stdev) < sqrt(n_elements))
                {
                 if (discr) // Define the upper part of the bin arrray for descrete datasets
                    {
@@ -889,9 +905,9 @@ bool LGADBase::CalcuRebin(bool discr, int n_elements, int nbins, double limUp, d
                     // if (m_verbose >= 2) std::cout << "Case 1 discr " << dfact << std::endl;
                    }
                 else {
-                       //if (m_verbose >= 2) std::cout << "Case 2, !discr" << std::endl;
-                       varhigh = floor((float)fabs((limDown - limUp) / stdev) / 3);
-                      }
+                      // if (m_verbose >= 2) std::cout << "Case 2, !discr" << std::endl;
+                      varhigh = floor((float)fabs((limDown - limUp) / stdev) / 3);
+                     }
                 varlow = ceil((float)(sqrt(n_elements) - (fabs(limDown - limUp)/stdev))/3);
                 Nofbins[3] = ceil(sqrt(n_elements));
                }
@@ -899,7 +915,7 @@ bool LGADBase::CalcuRebin(bool discr, int n_elements, int nbins, double limUp, d
                     {
                      Nofbins[3] = ceil(fabs(limDown - limUp)/stdev);
                      varlow = ceil((float)((fabs(limDown - limUp)/stdev)-sqrt(n_elements))/3);
-                     varhigh = floor(sqrt(n_elements) / 3);
+                     varhigh = floor(sqrt(n_elements)/3);
                      // if (m_verbose >= 2) std::cout << "Case 3, !discr" << std::endl;
                     }
             // if (m_verbose >= 2)  std::cout << "Numbers: " << varlow << " " << varhigh << " " << sqrt(n_elements) << " " << n_elements << " " << fabs((limDown - limUp) / stdev) << " " << stdev << " " << limDown << " " << limUp << std::endl;
