@@ -6,7 +6,7 @@
 *              egkougko@cern.ch
 *               IFAE-BARCELONA
 */
-
+ 
 #include "LGADUtils/LGADBase.h"
 #include <time.h>
 #include <stdio.h>
@@ -93,8 +93,8 @@ bool LGADBase::ConvertData()
     m_convert = false;
     if (m_instrument == Sampic) 
        {
-        if (m_ext.IsNull()) m_convert = WriteSampic(m_datadir.Data(), m_dataname.Data(), "dat");
-        else m_convert = WriteSampic(m_datadir.Data(), m_dataname.Data(), m_ext.Data());
+        if (m_ext.IsNull()) m_convert = WriteSampic(m_datadir.Data(), m_dataname.Data(), "dat", m_evnt1, m_evnt2);
+        else m_convert = WriteSampic(m_datadir.Data(), m_dataname.Data(), m_ext.Data(), m_evnt1, m_evnt2);
        }
     else if (m_instrument == InfiniiumScope)
             {
@@ -108,8 +108,8 @@ bool LGADBase::ConvertData()
             }
     else if (m_instrument == LabTXT)
             {
-             if (m_ext.IsNull()) m_convert = WriteLecroyTXT(m_datadir.Data(), m_dataname.Data(), "txt", m_evnt1, m_evnt2);
-             else m_convert = WriteLecroyTXT(m_datadir.Data(), m_dataname.Data(), m_ext.Data(), m_evnt1, m_evnt2);
+             if (m_ext.IsNull()) m_convert = WriteLabTXT(m_datadir.Data(), m_dataname.Data(), "txt", m_evnt1, m_evnt2);
+             else m_convert = WriteLabTXT(m_datadir.Data(), m_dataname.Data(), m_ext.Data(), m_evnt1, m_evnt2);
             }
     else if (m_instrument == TektronixScope)
             {
@@ -128,15 +128,17 @@ bool LGADBase::ConvertData()
 // the number of active channels and their respective position. Only accepts evetns that are within
 // one buffer window. Time corrections for bin shifting is applied tking into account the ordered cell0
 // time. All information are included in the output root file.
-bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext)
+bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext, int evt1, int evt2)
 {
   std::ifstream file;
   TBits *b = new TBits;
   char ifname[2048];
   std::string line;
   std::istringstream iss(std::ios_base::app | std::ios_base::in | std::ios_base::out);
-  double tri = 0.0;
+  double tri = -99.;
+  unsigned int TotHits = 0.0;
   std::vector<double> voltage;
+  std::vector<double> l_triggtimeVec;
   double phystime;
   double ordrtime;
   unsigned int npoints;
@@ -152,13 +154,47 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext)
 
   unsigned int nfiles = CountFiles(dir, ext);
   if (nfiles == 0)
-     { 
+     {
       std::cout << __FUNCTION__ << " ERROR: No data files found in " << dir << ", aborting ..." << std::endl;
       return false;
      }
 
+  // Find the last event in the recorded series
+  // Open the last file in the folder
+  if (nfiles == 1) sprintf(ifname, "%s%s.%s", dir, name, ext);  // build the filename for the first event in the first channel
+  else sprintf(ifname, "%s%s.%s_%04d", dir, name, ext, nfiles - 1);
+  file.open(ifname);
+  if (file.is_open())  // Start reading from the back until you get the 3rd line from last
+     {
+      file.seekg(-2, file.end);
+      unsigned rdl = 0;
+      while (rdl < 4) 
+            {
+             char cdfcv;
+             file.get(cdfcv);
+             if ((int)file.tellg() <= 1)
+                {
+                 file.seekg(0);
+                 rdl = 4;
+                }
+             else if (cdfcv == '\n') 
+                     {
+                      file.seekg(-3, ios_base::cur); 
+                      rdl++;
+                     }
+             else file.seekg(-2, ios_base::cur);
+            }
+      file.seekg(3, ios_base::cur);
+      getline(file, line);
+      line = reduce(line, "", "=");
+      sscanf(line.c_str(), "%*s %u %*s %*lf", &TotHits);
+      file.close();
+     }
+
+  l_triggtimeVec.clear();
   for (unsigned int ifile = 0; true; ifile++)
       {
+       memset(ifname, '0', sizeof(ifname));
        if (ifile == 0)
           { 
            const char* ifname_format = "%s%s.%s";
@@ -186,21 +222,24 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext)
        if (ifile == 0)
           {
            unsigned int sysch = 0;
+           line.clear();
            getline(file, line); // skip the first line, may include information later
            // Find the total number of channels in the system
+           line.clear();
            getline(file, line);
            line = reduce(line, "", "===");
-           line = trim(line, " ");
+           line = LGADBase::trim(line, " ");
            sscanf(line.c_str(), "%*s %*s %*f %*s %*s %*s %*s %*s %d", &sysch);
            // Find the number of active channels by converting the hex register value to a decimal
-           getline(file, line);                                             
+           line.clear();
+           getline(file, line);
            line = reduce(line, "", "===");
-           line = trim(line, " ");
+           line = LGADBase::trim(line, " ");
            sscanf(line.c_str(), "%*s %*s %llu %*s %*s %*s %*s %x", &srate, &m_nchan);
            b->Set(sysch, &m_nchan);
            m_nchan = 0;
            for (unsigned int i = 0; i < sysch; i++) if (b->TestBitNumber(i)) { m_channels.push_back(i + 1); m_nchan++; }
-           for (unsigned int i = 0; i < 4; i++) getline(file, line);  // skip the following 4 lines, may include information later
+           for (unsigned int i = 0; i < 4; i++) {line.clear(); getline(file, line);} // skip the following 4 lines, may include information later
            // create the ntuple
            if (!CreateOutputFile(m_ofdir, m_ofname, m_channels))
               {
@@ -208,7 +247,7 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext)
                return false;
               }
           }
-       else for (unsigned int i = 0; i < 7; i++) getline(file, line);  // skip the first 8 lines, may include information later
+       else for (unsigned int i = 0; i < 7; i++) {line.clear(); getline(file, line);} // skip the first 7 lines, may include information later
 
        // Read out time and voltage of all events in file
        l_voltage.clear();
@@ -223,20 +262,51 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext)
               phystime = 0.0;
               ordrtime = 0.0;
               channel = -1;
+              line.clear();
               getline(file, line);
               sscanf(line.c_str(), "%*s %lu", &ievent);
+              // Find out if start - stop events correspond to expectations (first event of first file) and fix it
+              if (ifile == 0 && l_nEvntN.size() == 0)
+                 {
+                  // Start event doeskys not correspond to expectations, find first event
+                  if (evt1 != 0 && evt1 < ievent)
+                     {
+                      evt1 = ievent;
+                      std::cout << __FUNCTION__ << " WARNING: Given start event number " << evt1 << " in disagreement with first event in file: " << ievent << ", attempting to recover... " << std::endl;
+                      if (evt2 != 0 && (TotHits - ievent) <= (evt2 - evt1)) evt2 = ievent + (evt2 - evt1);
+                      else evt2 = TotHits;
+                      std::cout << __FUNCTION__ << "          Adjusting start/stop event to available files from " << evt1 << " to " << evt2 << std::endl;
+                     }
+                  else {
+                        evt1 = ievent;
+                        if (evt2 != 0 && evt2 > TotHits) 
+                           {
+                            std::cout << __FUNCTION__ << " WARNING: Given stop event number " << evt2 << " in disagreement with total events in file: " << TotHits << ", attempting to recover... " << std::endl;
+                            evt2 = TotHits;
+                            std::cout << __FUNCTION__ << "          Adjusting stop event to available files " << evt2 << std::endl;
+                           }
+                        else if (evt2 == 0) evt2 = TotHits;
+                       }
+                 }
+              if ((int)ievent >= evt2) break;
+              LGADBase::ProgressBar(floor((float)(ievent-evt1)/(float)(2*m_nchan)), ceil((float)evt2/(float)m_nchan));
+              line.clear();
               getline(file, line);
-              if (l_voltage.size() == 0) sscanf(line.c_str(), "%*s %u %*s %lf %*s %*u %*s %*lf %*s %lf %*s %u", &channel, &phystime, &ordrtime, &npoints);
-              else sscanf(line.c_str(), "%*s %u %*s %lf %*s %*u %*s %*lf %*s %lf %*s %*u", &channel, &phystime, &ordrtime);
+              // if (l_voltage.size() == 0) sscanf(line.c_str(), "%*s %u %*s %lf %*s %*u %*s %*lf %*s %lf %*s %u", &channel, &phystime, &ordrtime, &npoints);
+              // else sscanf(line.c_str(), "%*s %u %*s %lf %*s %*u %*s %*lf %*s %lf %*s %*u", &channel, &phystime, &ordrtime);
+              if (l_voltage.size() == 0) sscanf(line.c_str(), "%*s %u %*s %lf %*s %*d %*s %*lf %*s %lf %*s %*lf %*s %*lf %*s %*lf %*s %u", &channel, &phystime, &ordrtime, &npoints);
+              else sscanf(line.c_str(), "%*s %u %*s %lf %*s %*d %*s %*lf %*s %lf %*s %*lf %*s %*lf %*s %*lf %*s %*u", &channel, &phystime, &ordrtime);
               if (channel == -1) continue;
-              if (ievent % 1000 == 0) std::cout << "    Converting event " << ievent << std::endl;
               voltage.reserve(npoints);
+              line.clear();
               getline(file, line);
               line = reduce(line, "", "DataSamples");
               line = trim(line, " ");
+              iss.str(std::string());
+              iss.clear();
               iss.str(line);
               for (unsigned int i = 0; i < npoints; i++)
-                  { 
+                  {
                    iss >> tri; 
                    voltage.push_back(tri);
                   }
@@ -250,42 +320,48 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext)
 
        // Trying to find conicidences
        ievent = 0;
-       std::vector<float> saved;
-       saved.clear();
-       saved.reserve(l_voltage.size());
+       unsigned int n = 0;
+       std::vector<unsigned int> ChNo;
+       bool done = false;
+       unsigned int temp = 0;
        for (unsigned int i = 0; i < l_voltage.size(); i++)
-           {          
-            std::vector<unsigned int> ChNo;
+           {
+            temp = i;
+            ChNo.clear();
             ChNo.push_back(l_channel.at(i));
-            unsigned int n = 0;
-            for (unsigned int k = 0; k < saved.size(); k++) if (fabs(l_phystime.at(i) - saved.at(k)) <= npoints*(1 / srate)) continue;
-            // Loop though all events in the file, find if there is any in coincidence with the one we have and populate vectors
-            for (unsigned int j = i+1; j < l_voltage.size(); j++)
-                {
-                 if (ChNo.at(0) == l_channel.at(j)) continue; // Ignore events in the same chanel as the one we have
-                 else if (fabs(l_phystime.at(i) - l_phystime.at(j)) <= npoints*(1 / srate))
-                         {
-                          int wch = -1;
-                          for (unsigned int h = 0; h < m_channels.size(); h++) if (m_channels.at(h) == l_channel.at(j)) wch = h;
-                          if (wch == -1)
+            if (m_channels.size() > 1)
+               {
+                n = 0;
+                // Loop though all events in the file, find if there is any in coincidence with the one we have and populate vectors
+                for (unsigned int j = i + 1; j < l_voltage.size(); j++)
+                    {
+                     if (ChNo.at(0) == l_channel.at(j)) continue; // Ignore events in the same chanel as the one we have
+                     else if (fabs(l_phystime.at(i) - l_phystime.at(j)) <= npoints*(1e3/srate))
                              {
-                              std::cout << __FUNCTION__ << " ERROR: Cannot determine which channel this event corrsponds to" << std::endl;
-                              return false;
+                              int wch = -1;
+                              for (unsigned int h = 0; h < m_channels.size(); h++) if (m_channels.at(h) == l_channel.at(j)) wch = h;
+                              if (wch == -1)
+                                 {
+                                  std::cout << __FUNCTION__ << " ERROR: Cannot determine which channel this event corrsponds to" << std::endl;
+                                  return false;
+                                 }
+                              m_physt[wch] = l_phystime.at(j);
+                              m_ordrt[wch] = l_ordrtime.at(j);
+                              m_w[wch] = l_voltage.at(j);
+                              m_t[wch].clear();
+                              m_t[wch].reserve(npoints);
+                              // This is channel jitter realignement, it assumes time resolutions < sampling interval
+                              int bin = nearbyint((l_ordrtime.at(i) - l_ordrtime.at(j))*srate*0.001);
+                              for (unsigned int k = 0; k < npoints; k++) m_t[wch].push_back((1 / (double)srate)*((int)k - bin)*(1e-6));
+                              ChNo.push_back(l_channel.at(j));
+                              n++;
+                              i = j; // Aassumes time-ordered aquisition
                              }
-                          m_physt[wch] = l_phystime.at(j);
-                          m_ordrt[wch] = l_ordrtime.at(j);
-                          m_w[wch] = l_voltage.at(j);
-                          m_t[wch].clear();
-                          m_t[wch].reserve(npoints);
-                          int bin = nearbyint((l_ordrtime.at(i) - l_ordrtime.at(j))*srate*0.001);
-                          for (unsigned int k = 0; k < npoints; k++) m_t[wch].push_back((1 / (double)srate)*((int)k - bin)*(1e-6));
-                          ChNo.push_back(l_channel.at(j));
-                          n++;
-                         }
-                  else continue;
-                 }
+                     else continue;
+                    }
+               }
             // We found events in coincidednce (at least one)
-            if (n > 0) 
+            if ((n > 0 && m_channels.size() > 1) || (n == 0 && m_channels.size() == 1))
                {
                 // If you have multiple active channels, check that you have found events in conincidence in all channels, if not
                 // fill the ones that are not found with -1.
@@ -308,7 +384,7 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext)
                              }
                         }     
                     }
-                // Save the event that we were checking for conicidences with in the previous setp
+                // Save the event we were checking for conicidences with in the previous setp
                 int wch1 = -1;
                 for (unsigned int d = 0; d < m_channels.size(); d++) if (m_channels.at(d) == ChNo.at(0)) wch1 = d;
                 if (wch1 == -1)
@@ -316,24 +392,25 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext)
                     std::cout << __FUNCTION__ << " ERROR: Cannot determine which channel this event corrsponds to" << std::endl;
                     return false;
                    }
-                 m_w[wch1] = l_voltage.at(i);
+                 m_w[wch1] = l_voltage.at(temp);
                  m_t[wch1].clear();
                  m_t[wch1].reserve(npoints);
                  for (unsigned int k = 0; k < npoints; k++) m_t[wch1].push_back((1/(double)srate)*k*(1e-6));
-                 m_physt[wch1] = l_phystime.at(i);
-                 m_ordrt[wch1] = l_ordrtime.at(i);
+                 m_physt[wch1] = l_phystime.at(temp);
+                 m_ordrt[wch1] = l_ordrtime.at(temp);
                  m_npoints.at(0) = npoints;
                  m_srate.at(0) = ceil(srate*1e6);
-                 m_event = l_nEvntN.at(i);
+                 m_event = l_nEvntN.at(temp);
+                 l_triggtimeVec.push_back(l_phystime.at(temp)/1e9);
                  m_tree->Fill();
-                 saved.push_back(l_phystime.at(i));
                  ievent++;
-                 if (ievent % 400 == 0) std::cout << "    Writing event " << ievent << std::endl;
                 }
+            if (!done) done = LGADBase::ProgressBar(floor((float)(l_voltage.size()+temp)/(float)(2*m_nchan)),ceil((float)l_voltage.size()/(float)m_nchan));
            }
-       std::cout << "    Wrote " << ievent << " total events from file " << ifname << std::endl;
        tevent += ievent;
       }
+  std::cout << "--> Wrote " << tevent << " events into output file " << m_ofile->GetName() << ", Efficiency = " << (float)(ievent*m_nchan) / (float)TotHits << std::endl;
+  LGADBase::CalcTrigFr(l_triggtimeVec, m_trigDt, m_trigFr, m_tree->GetEntries());
 
   delete b;
   m_event = tevent;
@@ -347,10 +424,9 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext)
 // --------------------------------------------------------------------------------------------------------------
 // Readout function for the LeCroy scope on a txt file saving mode where each channel of each event is writen to a seperate txt file.
 // Multiple scopes are supported with a non-limited number of channels as long as the run names are the same
-bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext, int evt1, int evt2)
+bool LGADBase::WriteLabTXT(const char* dir, const char* name, const char* ext, int evt1, int evt2)
 {
     // File name format string for scanf with placeholders for the dir, channel, the event number and extension
-    //--old-- const char* ifname_format = "%s/C%dTrace%05d.%s";
     const char* ifname_format = "%sC%d%s%05d.%s";
     std::istringstream iss(std::ios_base::app | std::ios_base::in | std::ios_base::out);
     double time;
@@ -365,7 +441,7 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
     bool l_labview = false;
     int evtfd = -1;
 
-    unsigned int nfiles = CountFiles(dir, ext);
+    unsigned int nfiles = LGADBase::CountFiles(dir, ext);
     bool end = false;
    
     if (nfiles == 0)
@@ -399,11 +475,23 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
                 }
              else {
                    l_labview = true;
-                   if (sscanf(line.c_str(), "%*u %*u %u %*u %*f %*f %*f %*f %*f %*f %*u %*f %*f %*f %*f \"%*2d %*3s %*4d\" \"%*2d:%*2d:%*2d:%*2d\" \"%*s\" %*u %*u %*u %*u %*lu %*lu ", &npoints) != -1)
+                   memset(oscillos, 0, sizeof(oscillos));
+                   if (sscanf(line.c_str(), "%*u %*u %u %*u %*f %*f %*f %*f %*f %*f %*u %*f %*f %*f %*f \"%*2d %*3s %*4d\" \"%*2d:%*2d:%*2d:%*2d\" \"%*s\" %*u %*u %*u %*u %*lu %*lu ", &npoints) > 0)
                       {
-                       memset(oscillos, 0, sizeof(oscillos));
                        strcpy(oscillos, "Agilent");
                       }
+                   else if (sscanf(line.c_str(), "%*u;%*u;%*3s;%*2s;%*3s;\"%*3s  %*2s %*8s  %*f%*6s  %*f%*6s  %*u %*6s  %*4s %*3s %*4s\";%u;%*s;\"%*s\";%*f;%*f;%*u;\"%*s\";%*f;%*f;%*f;%*u", &npoints) > 0)
+                           {
+                            strcpy(oscillos, "Tektronix");
+                           }
+                   else if (sscanf(line.c_str(), "%*100s %*100s Vertical Offset %*f; Vertical Gain %*f; Horizontal Offset %*f; Horizontal Interval %*f; %u points  from %*d to %*d; Trigger time %*2d:%*2d:%*2d.%*4d  %*2d/%*2d/%*4d", &npoints) > 0)
+                           {
+                            strcpy(oscillos, "LabViewCom");
+                           }
+                   else {
+                         std::cout << __FUNCTION__ << " ERROR: Failed recognizing waveform file header: " << line.c_str()<< std::endl;
+                         return false;
+                        }
                   }
              l_npoints.push_back(npoints);
              m_channels.push_back(i);
@@ -413,7 +501,7 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
          else continue;
         }
 
-    // Start and stop events do not correspond to expectations, find first event
+    // Start event does not correspond to expectations, find first event
     if (m_nchan == 0)
        {
         std::cout << __FUNCTION__ << " WARNING: Given start event number " << evt1 << " in disagreement with files in: " << dir << ", attempting to recover... " << std::endl;
@@ -433,7 +521,7 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
               return false;
              }
        }
-
+    // Verify and adjust stop event
     if (evtfd < 0 && (evt2 > (int)(nfiles/m_nchan)-evt1))
        {
         evt2 = (nfiles/m_nchan)-evt1;
@@ -446,31 +534,32 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
             }
 
     // time of the standard time_t type: the number of seconds since Jan 1, 1970 
-    double trigtime_first = 0; // time of the first event
+    double trigtime_first = 0.0; // time of the first event
     m_trigtime = 0.0;
-    double old_trigtime = 0.0;
 
     // create the ntuple
-    if (!CreateOutputFile(m_ofdir, m_ofname, m_channels))
+    if (!LGADBase::CreateOutputFile(m_ofdir, m_ofname, m_channels))
        {
         std::cout << __FUNCTION__ << " ERROR: Output Ntuple creation failed: " << m_ofname << std::endl;
         return false;
        }
      
-    SetScale(m_channels, m_nchan, &m_scale);
+    if (!l_labview) LGADBase::SetScale(m_channels, m_nchan, &m_scale);
 
     int points = *min_element(l_npoints.begin(), l_npoints.end());
 
     bool comma = false;
-    unsigned int oi;
+    unsigned int oi = 0;
+    unsigned int zr = 0;
     float oi1 = 0;
     float a = 1.;
     // Loop over all event files
     count = 0; // Display coiunter for user refernce
     unsigned int n = 0; // Writen events counter
+    char VUnit[6]; // Voltage Units placeholder
     for (m_event = evt1; true; m_event++)  // NB: an infinite loop -- for (int m_event=0; m_event<10; ++m_event)
         {
-         if (evt2 != 0 && evt2 > evt1 && (int)m_event > evt2) break;
+         if ((evt2 != 0 && evt2 > evt1 && (int)m_event >= evt2) || (m_event*m_nchan == nfiles)) break;
          if (evt2 != 0 && evt2 != evtfd) LGADBase::ProgressBar(m_event-evt1, evt2 - evt1);
          else if (evtfd == -1 && evt2 == 0) LGADBase::ProgressBar(m_event-evt1, (nfiles/m_nchan)-evt1);
          else LGADBase::ProgressBar(m_event - evt1, ((nfiles / m_nchan) + evtfd) - evt1);
@@ -499,32 +588,75 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
                       else if ((m_event*m_nchan) < nfiles) continue; // If a file is missing just go to the next
                       else {end = true; break;}
                      }
-                  if (!l_labview) for (unsigned int h = 0; h < 4; h++) { line.clear(); getline(file, line); }// read the line #1,07-Mar-2007 07:39:21,0
+                  if (!l_labview) for (unsigned int h = 0; h < 4; h++) { line.clear(); getline(file, line); } // read the line #1,07-Mar-2007 07:39:21,0
                   else {
                         line.clear();
                         getline(file, line);
+                        std::replace(line.begin(), line.end(), ',', ' ');
+                        if (std::string(oscillos) == "Agilent" || std::string(oscillos) == "LabViewCom" ) 
+                           {
+                            // get the scale for each channel event
+                            if (std::string(oscillos) == "Agilent")
+                               {
+                                sscanf(line.c_str(), "%*u %*u %*u %*u %*f %*f %*f %f %*f %*f %*u %*f %*f %*f %*f \"%*2d %*3s %*4d\" \"%*2d:%*2d:%*2d:%*2d\" \"%*s\" %*u %*u %*u %*u %*lu %*lu ", &m_scale.at(ich));
+                                m_scale.at(ich) = m_scale.at(ich) / 0.000131732;
+                               }
+                            else sscanf(line.c_str(), "%*100s %*100s Vertical Offset %*f; Vertical Gain %f; Horizontal Offset %*f; Horizontal Interval %*f; %*u points  from %*d to %*d; Trigger time %*2d:%*2d:%*2d.%*4d  %*2d/%*2d/%*4d", &m_scale.at(ich));
+                           }
+                        else if ( std::string(oscillos) == "Tektronix") 
+                                {
+                                 memset(VUnit, 0, sizeof(VUnit));
+                                 sscanf(line.c_str(), "%*u;%*u;%*3s;%*2s;%*3s;\"%*3s  %*2s %*8s  %f%6s  %*f%*6s  %*u %*6s  %*4s %*3s %*4s\";%*u;%*s;\"%*s\";%*f;%*f;%*u;\"%*s\";%*f;%*f;%*f;%*u", &m_scale.at(ich), &VUnit);
+                                 if (std::string(VUnit) == "mV/div") m_scale.at(ich) = m_scale.at(ich)*0.001;
+                                 line.clear();
+                                 getline(file, line);
+                                }
                        }
                   if (!first)                                                  // use the time stamp from the first channel only
                      {
-                      std::replace(line.begin(), line.end(), ',', ' ');         // replace all commas (if any) to spaces
                       char month_str[3];
                       struct tm timeinfo;
                       int year = 0;
-                      if (!l_labview) sscanf(line.c_str(), "#%*d %2d-%3s-%4d %2d:%2d:%2d %*d ", &timeinfo.tm_mday, month_str, &year, &timeinfo.tm_hour, &timeinfo.tm_min, &timeinfo.tm_sec);
+                      if (!l_labview)
+                         {
+                          std::replace(line.begin(), line.end(), ',', ' ');
+                          sscanf(line.c_str(), "#%*d %2d-%3s-%4d %2d:%2d:%2d %*d ", &timeinfo.tm_mday, month_str, &year, &timeinfo.tm_hour, &timeinfo.tm_min, &timeinfo.tm_sec);
+                         }
                       else {
-                            sscanf(line.c_str(), "%*u %*u %*u %*u %*lf %*lf %*lf %*lf %*lf %*lf %*u %*lf %*lf %*lf %*lf \"%2d %3s %4d\" \"%2d:%2d:%2d:%2d\" \"%*20s\" %*u %*u %*u %*u %*lf %*lu ", 
-                                   &timeinfo.tm_mday, month_str, &year, &timeinfo.tm_hour, &timeinfo.tm_min, &timeinfo.tm_sec, &oi);
+                            if (std::string(oscillos) == "Agilent")
+                               {
+                                sscanf(line.c_str(), "%*u %*u %*u %*u %*lf %*lf %*lf %*lf %*lf %*lf %*u %*lf %*lf %*lf %*lf \"%2d %3s %4d\" \"%2d:%2d:%2d:%2u\" \"%*20s\" %*u %*u %*u %*u %*lf %*lu ", 
+                                                    &timeinfo.tm_mday, month_str, &year, &timeinfo.tm_hour, &timeinfo.tm_min, &timeinfo.tm_sec, &oi);
+                               }
+                            else if (std::string(oscillos) == "Tektronix")
+                                    {
+                                     std::replace(line.begin(), line.end(), ',', ' ');
+                                     sscanf(line.c_str(), "%2d/%2d/%4d;%2d:%2d:%2d %3s", &timeinfo.tm_mon, &timeinfo.tm_mday, &year, &timeinfo.tm_hour, &timeinfo.tm_min, &timeinfo.tm_sec, &month_str);
+                                     if (std::string(month_str) == "PM") timeinfo.tm_hour = timeinfo.tm_hour + 12;
+                                    }
+                            else if (std::string(oscillos) == "LabViewCom")
+                                    {
+                                     sscanf(line.c_str(), "%*100s %*100s Vertical Offset %*f; Vertical Gain %*f; Horizontal Offset %*f; Horizontal Interval %*f; %*u points  from %*d to %*d; Trigger time %2d:%2d:%2d.%4u  %2d/%2d/%4d",
+                                            &timeinfo.tm_hour, &timeinfo.tm_min, &timeinfo.tm_sec, &oi, &timeinfo.tm_mday, &timeinfo.tm_mon, &year);
+                                    }
+                            else {
+                                  std::cout << __FUNCTION__ << " ERROR: Failed recognizing oscilloscope type: " << oscillos << std::endl;
+                                  return false;
+                                 }
                            }
                       timeinfo.tm_year = year - 1900;
                       if (!l_labview) timeinfo.tm_mon = std::string("Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec").find(month_str) / 4;   // convert the three-letter month name into a number 0..11
-                      else timeinfo.tm_mon = std::string("JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC").find(month_str) / 4;
-                      old_trigtime = m_trigtime;
+                      else if (std::string(oscillos) == "Agilent") timeinfo.tm_mon = std::string("JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC").find(month_str) / 4;
                       m_trigtime = mktime(&timeinfo);
-                      if (l_labview) a = pow(10, fabs(ceil(log10(abs((int)oi))))); // Rounding factor for limits
+                      if (l_labview && std::string(oscillos) != "Tektronix") 
+                         {
+                          if (std::string(oscillos) == "LabViewCom") a = 10000;
+                          else  a = 100;
+                         }
                       if ((int)m_event == evt1) // time of the first event
                          {
                           trigtime_first = m_trigtime;
-                          if (l_labview) oi1 = (float)oi/a;
+                          if (l_labview && std::string(oscillos) != "Tektronix") oi1 = (float)oi/a;
                          }
                       m_trigtime = (long long int)m_trigtime - (long long int)trigtime_first;
                       if (m_trigtime < 0)
@@ -532,11 +664,17 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
                           do m_trigtime = m_trigtime + 3600;
                           while (m_trigtime < 0);
                          }
-                      if (l_labview) m_trigtime = (m_trigtime + ((float)oi/(float)a)) - oi1;
+                      else if (m_trigtime >= 3600 && n < 12) {trigtime_first = trigtime_first + 3600; m_trigtime = m_trigtime-3600;}
+                      if (l_labview && std::string(oscillos) != "Tektronix") 
+                         {
+                          float rd =  (float)oi/a;
+                          m_trigtime = m_trigtime + ((float)oi/a) - oi1;
+                         }
                       l_triggtimeVec.push_back(m_trigtime);
+                      if (n != 0) first = true;
                      }
                   line.clear();
-                  getline(file, line);    // skip the line Time,Ampl
+                  if (l_labview && std::string(oscillos) != "Tektronix") getline(file, line);    // skip the line Time,Ampl
                   // Read the data
                   Int_t nlines = 0;
                   for (unsigned int i = 0; i < m_npoints.at(ich); i++)
@@ -544,22 +682,31 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
                        line.clear();
                        if (getline(file,line)) // get line from the file
                           {
-                           if (!first) 
+                           if (!first && n == 0) 
                               {
-                               if (std::count(line.begin(), line.end(), ',') > 1) 
-                                  {
-                                   comma = true;
-                                   first = true;
-                                  }
+                               first = true;
+                               if ((int)m_event == evt1) { if (std::count(line.begin(), line.end(), ',') > 1) comma = true; }
                               }
                            if (comma)
                               {
-                               line.replace(line.find(","), 1, ".");
-                               size_t found = line.find(",");
-                               line.replace(line.find(",", found+1), 1, ".");
+                               if (std::count(line.begin(), line.end(), ',') == 3)
+                                  {
+                                   line.replace(line.find(","), 1, ".");
+                                   size_t found = line.find(",");
+                                   line.replace(line.find(",", found+1), 1, ".");
+                                  }
+                               else if (std::count(line.begin(), line.end(), ',') == 2)
+                                       {
+                                        size_t found = line.find(",");
+                                        if (found <= line.size()/2)
+                                           {
+                                            line.replace(line.find(",", found + 1), 1, ".");
+                                           }
+                                        else line.replace(line.find(","), 1, ".");
+                                       }
                               }
                            std::replace(line.begin(), line.end(), ',', ' ');
-                           iss.str("");
+                           iss.str(std::string());
                            iss.clear();
                            iss.str(line);
                            iss >> time >> voltage; // read the space separated data from the line
@@ -571,13 +718,12 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
                              std::cout << __FUNCTION__ << " ERROR: file " << ifname << " has " << nlines << " points instead of " << m_npoints.at(ich) << " npoints." << std::endl;
                              bad = true;
                              l_triggtimeVec.pop_back();
-                             m_trigtime = old_trigtime;
                              break;
                             }
                       }
                   if (!bad) // if event is not bad we take it into acount
                      {
-                      m_srate[ich] = ceil((m_npoints[ich] - 1) / abs(m_t[ich].front() - m_t[ich].back()));
+                      m_srate[ich] = (Long64_t)ceil((double)(m_npoints[ich] - 1)/abs(m_t[ich].front() - m_t[ich].back()));
                       n++;
                      }
                   file.close();
@@ -589,57 +735,9 @@ bool LGADBase::WriteLecroyTXT(const char* dir, const char* name, const char* ext
 
     // Fix the numbers of events
     m_event = n / m_nchan;
-    std::vector<double> DeltaTrigTime;
-    for (unsigned int hp = 0; hp < l_triggtimeVec.size() - 1; hp++) 
-        {
-         oi1 = fabs(l_triggtimeVec.at(hp + 1) - l_triggtimeVec.at(hp));
-         if (oi1 > 30) continue;
-         else DeltaTrigTime.push_back(oi1);
-         m_trigDt->Fill(oi1);
-        }
-
-    float tbin = 0;
-    for (unsigned int ka = 0; ka < l_triggtimeVec.size() - 1; ka++) 
-        {
-         count = 1;
-         oi1 = -1;
-         for (unsigned int ma = ka+1; ma < l_triggtimeVec.size(); ma++)
-             {
-              if ((l_triggtimeVec.at(ma) - l_triggtimeVec.at(ka)) == 0)
-                 {
-                  if (ma < (l_triggtimeVec.size() - 1)) 
-                     {
-                      count++;
-                      continue;
-                     }
-                  else {
-                        if (tbin == 0) tbin = 1;
-                        oi1 = (float)count/tbin;
-                        m_trigFr->Fill(oi1);
-                        ka = ma;
-                       }
-                 }
-              else {
-                    tbin = l_triggtimeVec.at(ma) - l_triggtimeVec.at(ka);
-                    oi1 = (float)count/tbin;
-                    m_trigFr->Fill(oi1);
-                    ka = ma - 1;
-                    break;
-                   }
-             }
-        }
-
     std::cout << "Wrote " << m_event << " events into output file " << m_ofile->GetName() << std::endl;
-    trigtime_first = l_triggtimeVec.back() - l_triggtimeVec.at(0);
-    std::cout << "Event rate = " << m_tree->GetEntries() - 1 << " / " << trigtime_first << " = " << (double)(m_event / trigtime_first) << " Hz" << std::endl;
-    trigtime_first = Mean(&DeltaTrigTime);
-    std::cout << "Mean Trigger: " << trigtime_first;
-    if (trigtime_first != 0 && trigtime_first!=-1) std::cout << ", mean rate: " << 1 / trigtime_first << std::endl;
-    else std::cout << ", no mean rate calculation possible!" << std::endl;
-    trigtime_first = CalcMeadian(&DeltaTrigTime);
-    std::cout << "Median Trigger: " << trigtime_first;
-    if (trigtime_first != 0 && trigtime_first!=-1) std::cout << ", median rate: " << 1 / trigtime_first << std::endl;
-    else std::cout << ", no median rate calculation possible!" << std::endl;
+    LGADBase::CalcTrigFr(l_triggtimeVec, m_trigDt, m_trigFr, m_tree->GetEntries());
+
     m_ofile->Write();
     delete m_trigDt;
     delete m_trigFr;
@@ -745,7 +843,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
          nel = sscanf(line, "%*s %*s %lf %*s %lf %lf", &interval, &time, &volt);
          if (nel == 3) 
             {
-             m_srate.at(i) = 1/interval;
+             m_srate.at(i) = (Long64_t)(ceil((double)1/interval));
              m_t[i].push_back(time); m_w[i].push_back(volt);
              np++;
             }
@@ -1770,7 +1868,7 @@ bool LGADBase::CreateOutputFile(const char* dir, const char* ofname, std::vector
          m_tree->Branch(Form("w%02u", nchan.at(ich)), &(m_w.at(ich)));
          if (m_instrument == InfiniiumScope || m_instrument == LabTXT || m_instrument == TektronixScope || m_instrument == LeCroyWRBin)
             {
-             m_tree->Branch(Form("vScale%02u", nchan.at(ich)), &(m_scale.at(ich)), "m_scale.at(ich)/D");
+             m_tree->Branch(Form("vScale%02u", nchan.at(ich)), &(m_scale.at(ich)), "m_scale.at(ich)/F");
              m_tree->Branch(Form("nPoints%02u", nchan.at(ich)), &(m_npoints.at(ich)), "m_npoints.at(ich)/i");
              m_tree->Branch(Form("SnRate%02u", nchan.at(ich)), &(m_srate.at(ich)), "m_srate.at(ich)/L");
              if (m_instrument == TektronixScope) m_tree->Branch(Form("triggTime%02u", nchan.at(ich)), &(m_triggTime.at(ich)), "m_triggTime.at(ich)/D");
@@ -1817,4 +1915,60 @@ bool LGADBase::CreateOutputFile(const char* dir, const char* ofname, std::vector
   std::cout << std::endl;
 
    return true;
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADBase::CalcTrigFr ( std::vector<double>  EvTrigTime, TH1F* TrigPer, TH1F* TrigFrq, unsigned int entriesNo)
+{
+  float dT1 = 0;
+  std::vector<double> DeltaTrigTime;
+  for (unsigned int hp = 0; hp < EvTrigTime.size() - 1; hp++)
+      {
+       dT1 = fabs(EvTrigTime.at(hp + 1) - EvTrigTime.at(hp));
+       if (dT1 > 30) continue;
+       else DeltaTrigTime.push_back(dT1);
+       TrigPer->Fill(dT1);
+      }
+
+  float tbin = 0;
+  int count = 0;
+  for (unsigned int ka = 0; ka < EvTrigTime.size() - 1; ka++)
+      {
+       count = 1;
+       dT1 = -1;
+       for (unsigned int ma = ka + 1; ma < EvTrigTime.size(); ma++)
+           {
+            if ((EvTrigTime.at(ma) - EvTrigTime.at(ka)) == 0)
+               {
+                if (ma < (EvTrigTime.size() - 1))
+                   {
+                    count++;
+                    continue;
+                   }
+                else {
+                      if (tbin == 0) tbin = 1;
+                      dT1 = (float)count/tbin;
+                      TrigFrq->Fill(dT1);
+                      ka = ma;
+                     }
+               }
+            else {
+                  tbin = EvTrigTime.at(ma) - EvTrigTime.at(ka);
+                  dT1 = (float)count/tbin;
+                  TrigFrq->Fill(dT1);
+                  ka = ma - 1;
+                  break;
+                 }
+           }
+      }
+
+  dT1 = EvTrigTime.back() - EvTrigTime.at(0);
+  std::cout << "Event rate = " << entriesNo << " / " << dT1 << " = " << (double)(entriesNo / dT1) << " Hz" << std::endl;
+  dT1 = LGADBase::Mean(&DeltaTrigTime);
+  std::cout << "Mean Trigger: " << dT1;
+  if (dT1 != 0 && dT1 != -1) std::cout << ", mean rate: " << 1 / dT1 << std::endl;
+  else std::cout << ", no mean rate calculation possible!" << std::endl;
+  dT1 = LGADBase::CalcMeadian(&DeltaTrigTime);
+  std::cout << "Median Trigger: " << dT1;
+  if (dT1 != 0 && dT1 != -1) std::cout << ", median rate: " << 1 / dT1 << std::endl;
+  else std::cout << ", no median rate calculation possible!" << std::endl;
 }
