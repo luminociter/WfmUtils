@@ -25,6 +25,22 @@
 #include "LGADUtils/LGADSel.h"
 #include <vector> 
 
+//#if !defined(__CINT__)
+//ClassImp(LGADSel);
+//#endif
+//
+//#if !defined(__CLING__)
+//ClassImp(LGADSel);
+//#endif
+//
+//#ifdef __CINT__
+//#pragma link C++ class LGADSel;
+//#endif
+//
+//#ifdef __ROOTCLING__
+//#pragma link C++ class LGADSel;
+//#endif
+
 void LGADSel::Begin(TTree * /*tree*/)
 {
    // The Begin() function is called at the start of the query.
