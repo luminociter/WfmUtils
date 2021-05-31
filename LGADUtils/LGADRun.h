@@ -43,12 +43,14 @@ public:
     /// End of processing
     void Terminate();
 
+    bool SetChDQunats(std::vector<double> dQunat, std::vector<std::pair<std::pair<int, int>, double>> DTs);
+
 private:
 
     void VarInit();
     void FirstInit();
 
-    // Nedd to asign Ntuple variables here
+    // Need to asign Ntuple variables here
     std::vector<int> m_EvPol;
     std::vector<double> m_EvCharge;
     std::vector<int> m_EvIsSignal;
@@ -67,18 +69,25 @@ private:
     std::vector<double> m_EvNoiseErr;
     std::vector<double> m_EvPedestErr;
     std::vector<double> m_EvRiseT;
-    std::vector<double> m_EvJitNdVdT;
     std::vector<double> m_EvJitRiseSNR;
     std::vector<double> m_EvTriggTime;
     std::vector<double> m_EvDVDTMax;
-    std::vector<double> m_EvDVDTCFD;
-    std::vector<double> m_EvCFDToT;
     std::vector<double> m_EvTriggToT;
     std::vector<double> m_EvSignalFFT;
     std::vector<double> m_EvNoiseFFT;
     std::vector<int> m_EvComplete;
     std::vector< std::vector<double>> m_EvVAdjCFD;
     std::vector< std::vector<double>> m_EvCFDTime;
+    std::vector< std::vector<double>> m_EvDVDTCFD;
+    std::vector< std::vector<double>> m_EvCFDToT;
+    std::vector< std::vector<double>> m_EvJitNdVdT;
+    std::vector<std::vector<std::vector<double>>> m_EvTmDiff;
+    std::vector<std::vector<TH1D* >> h_TmDiffCFD;
+    std::vector<TH2D* > h_TmSigmas;
+
+    // InterChannel Cut Criteria
+    std::vector<double> m_dTMax;
+    std::vector<double> m_dCMax;
 
     // Branches pointers for Ntuple
     std::vector<TBranch*> b_EvPol;
@@ -128,19 +137,19 @@ private:
     std::vector<TH1D* > h_RiseTimeFt;
     std::vector<TH1D* > h_TriggTimeFt;
     std::vector<TH1D* > h_DVDTMaxFt;
-    std::vector<TH1D* > h_DVDTCFDFt;
-    std::vector<TH1D* > h_CFDToTFt;
     std::vector<TH1D* > h_TriggToTFt;
     std::vector<TH1D* > h_SignalFFTFt;
     std::vector<TH1D* > h_NoiseFFTFt;
     std::vector< std::vector<TH1D* > > h_CFDTimeFt;
+    std::vector< std::vector<TH1D* > > h_DVDTCFDFt;
+    std::vector< std::vector<TH1D* > > h_CFDToTFt;
 
     std::vector<DUTChannel*> m_RunDUTCh;
     // std::vector<WaveForm*> m_RunWaveform;
-    // ClassDef(LGADRun, 0);
     LGADBase* m_RunBase;
-
     unsigned int m_init;
+
+    // ClassDef(LGADRun, 1);
 };
 
 #endif
