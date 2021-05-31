@@ -1,4 +1,4 @@
-/*
+    /*
 * LGADUtils.cxx
 *
 *
@@ -13,17 +13,31 @@
 //#if !defined(__CINT__)
 //ClassImp(LGADUtils);
 //#endif
+//
+//#if !defined(__CLING__)
+//ClassImp(LGADUtils);
+//#endif
+//
+//#ifdef __CINT__
+//#pragma link C++ class LGADUtils;
+//#endif
+//
+//#ifdef __ROOTCLING__
+//#pragma link C++ class LGADUtils;
+//#endif
 
 // Default constructor creating a general base class object
 LGADUtils::LGADUtils()
 {
     m_Base = new LGADBase();
 }
-//------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------
 // Default destructur deleting the general base class object
 LGADUtils::~LGADUtils()
 {
     delete m_Base;
+    if (m_Run) delete m_Run;
+    if (m_chain) delete m_chain;
 }
 // --------------------------------------------------------------------------------------------------------------
 void LGADUtils::SetTrackComb(bool comb)
@@ -36,7 +50,7 @@ void LGADUtils::SetFEi4Eff(bool FEi4Eff)
     m_Base->LGADBase::SetFEi4Eff(FEi4Eff);
 }
 // --------------------------------------------------------------------------------------------------------------
-bool LGADUtils::SetSRate(double rate, unsigned int ch)
+bool LGADUtils::SetSRate(Long64_t rate, unsigned int ch)
 {
     return m_Base->LGADBase::SetSRate(rate, ch);
 }
@@ -51,14 +65,19 @@ void LGADUtils::SetFitMethode(std::string method)
     m_Base->LGADBase::SetFitMethode(method);
 }
 // --------------------------------------------------------------------------------------------------------------
-void LGADUtils::SetInstrument(unsigned int instr)
+void LGADUtils::SetInstrument(AqInstrument instr)
 {
     m_Base->LGADBase::SetInstrument(instr);
 }
 // --------------------------------------------------------------------------------------------------------------
-void LGADUtils::SetStartStopEvnt(unsigned int Evnt1, unsigned int Evnt2)
+void LGADUtils::SetStartStopEvnt(int Evnt1, int Evnt2)
 {
     m_Base->LGADBase::SetStartStopEvnt(Evnt1, Evnt2);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::Initialize()
+{
+    m_Base->LGADBase::Initialize();
 }
 // --------------------------------------------------------------------------------------------------------------
 bool LGADUtils::ConvertData()
@@ -91,13 +110,130 @@ void LGADUtils::SetWaveShape(bool shape)
     m_Base->LGADBase::SetWaveShape(shape);
 }
 // --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetTransFileName(TString filename)
+{
+    m_Base->LGADBase::SetTransFileName(filename);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDoTrnsCorr(bool TrnsCorr)
+{
+    m_Base->LGADBase::SetDoTrnsCorr(TrnsCorr);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetTreeName(std::string treename)
+{
+    m_Base->LGADBase::SetTreeName(treename);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDUTName(int ChId, std::string Name)
+{
+    m_Base->LGADBase::SetDUTName(ChId, Name);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDUTNames(std::vector<std::string> DUTNames)
+{
+    m_Base->LGADBase::SetDUTNames(DUTNames);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDUTBoard(int ChId, AqBoard Brd)
+{
+    m_Base->LGADBase::SetDUTBoard(ChId, Brd);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDUTBoards(std::vector<AqBoard> Brds)
+{
+    m_Base->LGADBase::SetDUTBoards(Brds);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDUTransImp(int ChId, float Transimp)
+{
+    m_Base->LGADBase::SetDUTransImp(ChId, Transimp);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDUTransImps(std::vector<float> Transimps)
+{
+    m_Base->LGADBase::SetDUTransImps(Transimps);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDUTSecStage(int ChId, SecStage Amp)
+{
+    m_Base->LGADBase::SetDUTSecStage(ChId, Amp);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDUTSecStages(std::vector<SecStage> Amps)
+{
+    m_Base->LGADBase::SetDUTSecStages(Amps);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDUTAmpGain(int ChId, int gain)
+{
+    m_Base->LGADBase::SetDUTAmpGain(ChId, gain);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDUTAmpGains(std::vector<int> Gains)
+{
+    m_Base->LGADBase::SetDUTAmpGains(Gains);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDUTrigg(int ChId, float trigg)
+{
+    m_Base->LGADBase::SetDUTrigg(ChId, trigg);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDUTriggs(std::vector<float> Triggs)
+{
+    m_Base->LGADBase::SetDUTriggs(Triggs);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDUTFract(int ChId, float frac)
+{
+    m_Base->LGADBase::SetDUTFract(ChId, frac);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDUTFracts(std::vector<float> Fracs)
+{
+    m_Base->LGADBase::SetDUTFracts(Fracs);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDUTFract(int ChId, double cap)
+{
+    m_Base->LGADBase::SetDUTCap(ChId, cap);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDUTFracts(std::vector<double> Caps)
+{
+    m_Base->LGADBase::SetDUTCaps(Caps);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetChDT(int ChId1, int ChId2, double DT)
+{
+    m_Base->LGADBase::SetChDMgt(ChId1, ChId2, DT, 0);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetChDTs(std::vector<double> DTs)
+{
+    m_Base->LGADBase::SetChDMgts(DTs, 0);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetChDCh(int ChId1, int ChId2, double DCh)
+{
+    m_Base->LGADBase::SetChDMgt(ChId1, ChId2, DCh, 1);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetChDChs(std::vector<double> DChs)
+{
+    m_Base->LGADBase::SetChDMgts(DChs, 1);
+}
+// --------------------------------------------------------------------------------------------------------------
 bool LGADUtils::Analyse(Long64_t nprocess, std::string tree)
 {
 #ifdef _WIN32
-	char print[MAX_PATH];
+    char print[MAX_PATH];
 #else
-	char print[PATH_MAX];
+    char print[PATH_MAX];
 #endif
+
+    int setup = 0;
 
     if (m_Base->LGADBase::GetExtention() == ".root" || m_Base->LGADBase::GetConvertSucess())
        {
@@ -108,29 +244,27 @@ bool LGADUtils::Analyse(Long64_t nprocess, std::string tree)
            {
             if (tree == "")
                {
-                if (m_Base->SetRootTree(m_Base->GetRootFile()))
+                if (m_Base->SetRootTree(m_Base->GetRootFile(), m_Base->GetTreeName()))
                    {
                     m_chain = new TChain(m_Base->GetRootTree()->GetName(), "");
-                    m_chain->SetCacheSize(500 * 1024 * 1024);
-                    m_chain->Add((const char* )(m_Base->GetRootFile()->GetName()));
-                    m_Run = new LGADRun(m_Base);
-                    if (nprocess != 0 && nprocess < (m_chain->GetTree()->GetEntriesFast())) m_chain->Process(m_Run,"", nprocess);
-                    else m_chain->Process(m_Run);
-                    m_Base->LGADBase::SetConvertSucess(false);
+                    setup = 1;
                    }
                 else {
-                      std::cout << __FUNCTION__ << " ERROR: Failed to find tree or more than one trees present!!"<< std::endl;
+                      std::cout << __FUNCTION__ << " ERROR: Failed to find tree or more than one trees present!!" << std::endl;
                       return false;
                      }
                }
             else {
                   strcpy(print, tree.c_str());
-                  m_chain = new TChain(print, "");
-                  m_chain->SetCacheSize(500 * 1024 * 1024);
-                  m_chain->Add((const char* )(m_Base->GetRootFile()->GetName()));
-                  m_Run = new LGADRun(m_Base);
-                  if (nprocess != 0 && nprocess < (m_chain->GetTree()->GetEntriesFast())) m_chain->Process(m_Run,"", nprocess);
-                  else m_chain->Process(m_Run);
+                  if (m_Base->SetRootTree(m_Base->GetRootFile(), std::string(print)))
+                     {
+                      m_chain = new TChain(print, "");
+                      setup = 2;
+                     }
+                  else {
+                        std::cout << __FUNCTION__ << " ERROR: Failed to find tree " << std::string(print) << std::endl;
+                        return false;
+                       }
                  }
            }
         else {
@@ -140,10 +274,20 @@ bool LGADUtils::Analyse(Long64_t nprocess, std::string tree)
               return false;
              }
         }
-   else {
-         std::cout << __FUNCTION__ << " ERROR: No input root file set!!"<< std::endl;
-         return false;
-        }
+    else {
+          std::cout << __FUNCTION__ << " ERROR: No input root file set!!"<< std::endl;
+          return false;
+         }
+   
+    if (setup == 1 || setup == 2)
+      {
+       m_chain->SetCacheSize(500 * 1024 * 1024);
+       m_chain->Add((const char*)(m_Base->GetRootFile()->GetName()));
+       m_Run = new LGADRun(m_Base);
+       if (nprocess != 0 && nprocess < m_chain->GetEntries()) m_chain->Process(m_Run, "", nprocess);
+       else m_chain->Process(m_Run);
+       if (setup == 1) m_Base->LGADBase::SetConvertSucess(false);
+      }
 
     return true;
 }
