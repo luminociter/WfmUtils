@@ -91,7 +91,7 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair <double, double> &g
     double wmin = *std::min_element(w2.begin(), w2.end());
     double median = LGADBase::CalcMeadian(&w2);
  
-    double FWHM = 
+    double FWHM = 0.0;
 
     if (mean == -99 || strdv == -99 || strdv == 0)
        {
