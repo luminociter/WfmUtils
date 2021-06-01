@@ -8,7 +8,7 @@
 */
 
 #ifndef __DUTChannel__
-#define __DUTChannel__0
+#define __DUTChannel__
 
 #include "LGADUtils/WaveForm.h"
 
