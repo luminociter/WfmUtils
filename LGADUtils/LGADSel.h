@@ -17,7 +17,7 @@
 #include <TH2.h>
 #include <TStyle.h>
 
-#include "LGADUtils/WaveForm.h"
+#include "WaveForm.h"
 
 // Fixed size dimensions of array or collections stored in the TTree if any.
 
