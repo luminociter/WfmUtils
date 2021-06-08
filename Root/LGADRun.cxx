@@ -7,7 +7,7 @@
 *               IFAE-BARCELONA
 */
 
-#include "LGADUtils/LGADRun.h"
+#include "../LGADUtils/LGADRun.h"
 
 //#if !defined(__CINT__)
 //ClassImp(LGADRun);
@@ -86,11 +86,11 @@ bool LGADRun::SetChDQunats(std::vector<double> dQunat, std::vector<std::pair<std
                   {
                    for (unsigned int kr = 0; kr < dQunat.size(); kr++)
                        {
-                        if (dQunat.at(kr) = -99) dQunat.at(kr) = (DQs.at(hrt)).second;
+                        if (dQunat.at(kr) == -99) dQunat.at(kr) = (DQs.at(hrt)).second;
                        }
                   }
               }
-          for (unsigned int kp = 0; kp < dQunat.size(); kp++) if (dQunat.at(kp) = -99) dQunat.at(kp) = -1;
+          for (unsigned int kp = 0; kp < dQunat.size(); kp++) if (dQunat.at(kp) == -99) dQunat.at(kp) = -1;
           return true;
          }
 }
