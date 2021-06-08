@@ -7,7 +7,7 @@
 *               IFAE-BARCELONA
 */
 
-#include "LGADUtils/DUTChannel.h"
+#include "../LGADUtils/DUTChannel.h"
 
 //#if !defined(__CINT__)
 //ClassImp(DUTChannel);
