@@ -16,8 +16,6 @@
 #include <iomanip>
 #include <algorithm> 
 #include <numeric>
-#include <sys/stat.h>
-#include <sys/types.h> 
 
 #include "TSystemFile.h"
 #include "TSystemDirectory.h"
@@ -47,6 +45,8 @@
 #else
 #include <dirent.h>
 #include <bits/stdc++.h> 
+#include <sys/stat.h>
+#include <sys/types.h> 
 #endif
 
 enum AqInstrument { Sampic, LabTXT, InfiniiumScope, TektronixScope, LeCroyWRBin, Unasigned };
