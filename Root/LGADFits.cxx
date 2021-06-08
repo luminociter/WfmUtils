@@ -7,7 +7,7 @@
 *               IFAE-BARCELONA
 */
 
-#include "LGADUtils/LGADBase.h"
+#include "../LGADUtils/LGADBase.h"
 #include "TVirtualFFT.h"
 #include "RooRealVar.h"
 #include "RooGaussian.h"
