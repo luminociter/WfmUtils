@@ -22,7 +22,7 @@
 // Root > T->Process("MySelector.C+")
 //
 
-#include "LGADUtils/LGADSel.h"
+#include "../LGADUtils/LGADSel.h"
 #include <vector> 
 
 //#if !defined(__CINT__)
