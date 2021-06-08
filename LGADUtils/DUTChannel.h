@@ -10,7 +10,7 @@
 #ifndef __DUTChannel__
 #define __DUTChannel__
 
-#include "LGADUtils/WaveForm.h"
+#include "WaveForm.h"
 
 class DUTChannel : public LGADBase {
 
