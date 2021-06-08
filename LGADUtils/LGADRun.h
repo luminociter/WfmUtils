@@ -10,8 +10,8 @@
 #ifndef __LGADRun__
 #define __LGADRun__
 
-#include "LGADUtils/DUTChannel.h"
-#include "LGADUtils/LGADSel.h"
+#include "DUTChannel.h"
+#include "LGADSel.h"
 #include <TParameter.h>
 
 class LGADRun : public LGADSel {
