@@ -16,7 +16,7 @@
 // Add Transimpedence consideration on charge
 // Fix small signals charge issue
 
-#include "LGADUtils/LGADBase.h"
+#include "../LGADUtils/LGADBase.h"
 
 //#if !defined(__CINT__)
 //ClassImp(LGADBase);
@@ -281,7 +281,7 @@ void LGADBase::SetChDMgts(std::vector<double> DMgt, int Qt)
 //---------------------------------------------------------------------------------------------------------------
 bool LGADBase::OpenTransFile(TString filename)
 {
-    if (filename = "" || (trim((std::string)filename, " ")).empty())
+    if (filename == "" || ((trim((std::string)filename, " ")).empty()))
        { 
         std::cout << __FUNCTION__ << " WARNING: No transimpedence file set, ignoring transimpedence correction..." << std::endl;
         m_TrnsCorr = false; 
@@ -301,14 +301,14 @@ bool LGADBase::OpenTransFile(TString filename)
                     {
                      if (obj->IsA()->InheritsFrom(TH2D::Class()))
                         {
-                         if (obj->GetName() == "hs1_3p" || obj->GetName() == "hs1_4p" || obj->GetName() == "hs2_3p" || obj->GetName() == "hs2_4p") 
+                         if (!(strcmp(obj->GetName(), "hs1_3p")) || !(strcmp(obj->GetName(), "hs1_4p")) || !(strcmp(obj->GetName(), "hs2_3p")) || !(strcmp(obj->GetName(), "hs2_4p"))) 
                             {
                              info.TransHist = (TH2D*)obj->Clone();
                              info.TransHist->SetDirectory(0);
-                             if (obj->GetName() == "hs1_3p" || obj->GetName() == "hs1_4p") info.Board = SingleCh;
-                             else if (obj->GetName() == "hs2_3p" || obj->GetName() == "hs2_4p") info.Board = FourCh;
-                             if (obj->GetName() == "hs1_3p" || obj->GetName() == "hs2_3p") info.Capacitance = 3;
-                             else if (obj->GetName() == "hs1_4p" || obj->GetName() == "hs2_4p") info.Capacitance = 4;
+                             if (!(strcmp(obj->GetName(), "hs1_3p")) || !(strcmp(obj->GetName(), "hs1_4p"))) info.Board = SingleCh;
+                             else if (!(strcmp(obj->GetName(), "hs2_3p")) || !(strcmp(obj->GetName(), "hs2_4p"))) info.Board = FourCh;
+                             if (!(strcmp(obj->GetName(), "hs1_3p")) || !(strcmp(obj->GetName(), "hs2_3p"))) info.Capacitance = 3;
+                             else if (!(strcmp(obj->GetName(), "hs1_4p")) || !(strcmp(obj->GetName(), "hs2_4p"))) info.Capacitance = 4;
                              m_TrsHists.push_back(info);
                              n++; 
                             }
