@@ -7,7 +7,7 @@
 *               IFAE-BARCELONA
 */
  
-#include "LGADUtils/LGADBase.h"
+#include "../LGADUtils/LGADBase.h"
 #include <time.h>
 #include <stdio.h>
 
@@ -606,7 +606,7 @@ bool LGADBase::WriteLabTXT(const char* dir, const char* name, const char* ext, i
                         else if ( std::string(oscillos) == "Tektronix") 
                                 {
                                  memset(VUnit, 0, sizeof(VUnit));
-                                 sscanf(line.c_str(), "%*u;%*u;%*3s;%*2s;%*3s;\"%*3s  %*2s %*8s  %f%6s  %*f%*6s  %*u %*6s  %*4s %*3s %*4s\";%*u;%*s;\"%*s\";%*f;%*f;%*u;\"%*s\";%*f;%*f;%*f;%*u", &m_scale.at(ich), &VUnit);
+                                 sscanf(line.c_str(), "%*u;%*u;%*3s;%*2s;%*3s;\"%*3s  %*2s %*8s  %f%6s  %*f%*6s  %*u %*6s  %*4s %*3s %*4s\";%*u;%*s;\"%*s\";%*f;%*f;%*u;\"%*s\";%*f;%*f;%*f;%*u", &m_scale.at(ich), VUnit);
                                  if (std::string(VUnit) == "mV/div") m_scale.at(ich) = m_scale.at(ich)*0.001;
                                  line.clear();
                                  getline(file, line);
@@ -631,7 +631,7 @@ bool LGADBase::WriteLabTXT(const char* dir, const char* name, const char* ext, i
                             else if (std::string(oscillos) == "Tektronix")
                                     {
                                      std::replace(line.begin(), line.end(), ',', ' ');
-                                     sscanf(line.c_str(), "%2d/%2d/%4d;%2d:%2d:%2d %3s", &timeinfo.tm_mon, &timeinfo.tm_mday, &year, &timeinfo.tm_hour, &timeinfo.tm_min, &timeinfo.tm_sec, &month_str);
+                                     sscanf(line.c_str(), "%2d/%2d/%4d;%2d:%2d:%2d %3s", &timeinfo.tm_mon, &timeinfo.tm_mday, &year, &timeinfo.tm_hour, &timeinfo.tm_min, &timeinfo.tm_sec, month_str);
                                      if (std::string(month_str) == "PM") timeinfo.tm_hour = timeinfo.tm_hour + 12;
                                     }
                             else if (std::string(oscillos) == "LabViewCom")
