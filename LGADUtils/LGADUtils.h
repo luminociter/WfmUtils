@@ -10,7 +10,7 @@
 #ifndef __LGADUtils__
 #define __LGADUtils__
 
-#include "LGADUtils/LGADRun.h"
+#include "LGADRun.h"
 #include "TChain.h"
 
 class LGADUtils : public LGADRun {
