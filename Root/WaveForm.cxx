@@ -7,7 +7,7 @@
 *               IFAE-BARCELONA
 */
 
-#include "LGADUtils/WaveForm.h"
+#include "../LGADUtils/WaveForm.h"
 
 //#if !defined(__CINT__)
 //ClassImp(WaveForm);
