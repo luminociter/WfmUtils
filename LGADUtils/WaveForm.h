@@ -10,7 +10,7 @@
 #ifndef __WaveForm__
 #define __WaveForm__
 
-#include "LGADUtils/LGADBase.h"
+#include "LGADBase.h"
 
 class WaveForm : public LGADBase {
 
