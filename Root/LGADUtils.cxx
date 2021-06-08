@@ -7,7 +7,7 @@
 *               IFAE-BARCELONA
 */
 
-#include "LGADUtils/LGADUtils.h"
+#include "../LGADUtils/LGADUtils.h"
 #include "LinkDef.h"
 
 //#if !defined(__CINT__)
