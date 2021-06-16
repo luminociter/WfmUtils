@@ -195,34 +195,74 @@ void LGADUtils::SetDUTFracts(std::vector<float> Fracs)
     m_Base->LGADBase::SetDUTFracts(Fracs);
 }
 // --------------------------------------------------------------------------------------------------------------
-void LGADUtils::SetDUTFract(int ChId, double cap)
+void LGADUtils::SetDUTCap(int ChId, double cap)
 {
     m_Base->LGADBase::SetDUTCap(ChId, cap);
 }
 // --------------------------------------------------------------------------------------------------------------
-void LGADUtils::SetDUTFracts(std::vector<double> Caps)
+void LGADUtils::SetDUTCaps(std::vector<double> Caps)
 {
     m_Base->LGADBase::SetDUTCaps(Caps);
 }
 // --------------------------------------------------------------------------------------------------------------
-void LGADUtils::SetChDT(int ChId1, int ChId2, double DT)
+void LGADUtils::SetChVoltCut(int ChId, double VoltCut)
 {
-    m_Base->LGADBase::SetChDMgt(ChId1, ChId2, DT, 0);
+    m_Base->LGADBase::SetChMag(ChId, VoltCut, 0);
 }
 // --------------------------------------------------------------------------------------------------------------
-void LGADUtils::SetChDTs(std::vector<double> DTs)
+void LGADUtils::SetChVoltCuts(std::vector<double> VoltCuts)
 {
-    m_Base->LGADBase::SetChDMgts(DTs, 0);
+    m_Base->LGADBase::SetChMags(VoltCuts, 0);
 }
 // --------------------------------------------------------------------------------------------------------------
-void LGADUtils::SetChDCh(int ChId1, int ChId2, double DCh)
+void LGADUtils::SetChNoiseCut(int ChId, double NoiseCut)
 {
-    m_Base->LGADBase::SetChDMgt(ChId1, ChId2, DCh, 1);
+    m_Base->LGADBase::SetChMag(ChId, NoiseCut, 1);
 }
 // --------------------------------------------------------------------------------------------------------------
-void LGADUtils::SetChDChs(std::vector<double> DChs)
+void LGADUtils::SetChNoiseCuts(std::vector<double> NoiseCuts)
 {
-    m_Base->LGADBase::SetChDMgts(DChs, 1);
+    m_Base->LGADBase::SetChMags(NoiseCuts, 1);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetChChargeCut(int ChId, double ChargeCut)
+{
+    m_Base->LGADBase::SetChMag(ChId, ChargeCut, 2);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetChChargeCuts(std::vector<double> ChargeCuts)
+{
+    m_Base->LGADBase::SetChMags(ChargeCuts, 2);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetChJitterCut(int ChId, double JitterCut)
+{
+    m_Base->LGADBase::SetChMag(ChId, JitterCut, 3);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetChJitterCuts(std::vector<double> JitterCuts)
+{
+    m_Base->LGADBase::SetChMags(JitterCuts, 3);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetPlaneDT(int PlaneId1, int PlaneId2, double DT)
+{
+    m_Base->LGADBase::SetPlaneDMgt(PlaneId1, PlaneId2, DT, 0);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetPlaneDTs(std::vector<double> DTs)
+{
+    m_Base->LGADBase::SetPlaneDMgts(DTs, 0);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetPlaneDCrg(int PlaneId1, int PlaneId2, double DCrg)
+{
+    m_Base->LGADBase::SetPlaneDMgt(PlaneId1, PlaneId2, DCrg, 1);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetPlaneDCrgs(std::vector<double> DCrgs)
+{
+    m_Base->LGADBase::SetPlaneDMgts(DCrgs, 1);
 }
 // --------------------------------------------------------------------------------------------------------------
 bool LGADUtils::Analyse(Long64_t nprocess, std::string tree)
