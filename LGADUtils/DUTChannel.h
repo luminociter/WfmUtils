@@ -42,6 +42,11 @@ public:
   bool SetChFract(float fraction);
   bool SetChTrigg(double trigger);
   bool SetChCap(double cap);
+  bool SetVoltCut(double VoltCut);
+  bool SetChargeCut(double CahrgeCut);
+  bool SetNoiseCut(double NoiseCut);
+  bool SetJitterCut(double JitterCut);
+
   int ChDump();
   bool SetTrnsHist(AqBoard Brd, double Cap, std::vector<TrCrHist> HistVec);
 
@@ -55,6 +60,10 @@ public:
   int GetChAmpGain() { return m_ChAmpgain; };
   float GetChFract() { return m_ChFraction; };
   double GetChFTrigg() { return m_ChTrigg; };
+  double GetVoltCut() { return m_ChVoltCut; };
+  double GetChargetCut() { return m_ChChargeCut; };
+  double GetNoiseCut() { return m_ChNoiseCut; };
+  double GetJitterCut() { return m_ChJitterCut; };
   std::pair <int, int> GetChMaxIndx(int methode = 1);
   std::pair <double, double> GetChMaxVolt(int methode = 1);
   std::pair <int, int> GetChMinIndx(int methode = 1);
@@ -145,6 +154,10 @@ private:
   AqBoard m_board;
   SecStage m_amp;
   double m_ChCap;
+  double m_ChVoltCut;
+  double m_ChNoiseCut;
+  double m_ChJitterCut;
+  double m_ChChargeCut;
 
   // Outword variables, Mean pulse propertirs
   int m_ChMeanPolarity;
