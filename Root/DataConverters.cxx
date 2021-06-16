@@ -136,7 +136,7 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext, i
   std::string line;
   std::istringstream iss(std::ios_base::app | std::ios_base::in | std::ios_base::out);
   double tri = -99.;
-  unsigned int TotHits = 0.0;
+  int TotHits = 0.0;
   std::vector<double> voltage;
   std::vector<double> l_triggtimeVec;
   double phystime;
@@ -167,8 +167,13 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext, i
   if (file.is_open())  // Start reading from the back until you get the 3rd line from last
      {
       file.seekg(-2, file.end);
-      unsigned rdl = 0;
-      while (rdl < 4) 
+      unsigned int rdl = 0;
+#ifdef _WIN32
+      unsigned int ps = 4;
+#else
+      unsigned int ps = 3;
+#endif
+      while (rdl < ps)
             {
              char cdfcv;
              file.get(cdfcv);
@@ -255,7 +260,6 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext, i
        l_ordrtime.clear();
        l_channel.clear();
        l_nEvntN.clear();
-       ievent = 0;
        while (file.good())
              {
               voltage.clear();
@@ -269,11 +273,11 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext, i
               if (ifile == 0 && l_nEvntN.size() == 0)
                  {
                   // Start event doeskys not correspond to expectations, find first event
-                  if (evt1 != 0 && evt1 < ievent)
+                  if (evt1 != 0 && evt1 < (long int)ievent)
                      {
                       evt1 = ievent;
                       std::cout << __FUNCTION__ << " WARNING: Given start event number " << evt1 << " in disagreement with first event in file: " << ievent << ", attempting to recover... " << std::endl;
-                      if (evt2 != 0 && (TotHits - ievent) <= (evt2 - evt1)) evt2 = ievent + (evt2 - evt1);
+                      if (evt2 != 0 && (TotHits - (long int)ievent) <= (evt2 - evt1)) evt2 = (long int)ievent + (evt2 - evt1);
                       else evt2 = TotHits;
                       std::cout << __FUNCTION__ << "          Adjusting start/stop event to available files from " << evt1 << " to " << evt2 << std::endl;
                      }
@@ -288,7 +292,7 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext, i
                         else if (evt2 == 0) evt2 = TotHits;
                        }
                  }
-              if ((int)ievent >= evt2) break;
+              if ((long int)ievent >= evt2) break;
               LGADBase::ProgressBar(floor((float)(ievent-evt1)/(float)(2*m_nchan)), ceil((float)evt2/(float)m_nchan));
               line.clear();
               getline(file, line);
