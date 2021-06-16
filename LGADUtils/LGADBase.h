@@ -125,8 +125,10 @@ class LGADBase : public TSelector {
   void SetDUTFracts(std::vector<float> Fracs);
   void SetDUTCap(int ChId, double cap);
   void SetDUTCaps(std::vector<double> Caps);
-  void SetChDMgt(int ChId1, int ChId2, double DT, int Qt);
-  void SetChDMgts(std::vector<double> DTs, int Qt);
+  void SetPlaneDMgt(int PlaneId1, int PlaneId2, double DMgt, int Qt);
+  void SetPlaneDMgts(std::vector<double> DMgts, int Qt);
+  void SetChMag(int ChId, double ChMags, int Qt);
+  void SetChMags(std::vector<double> ChMags, int Qt);
 
   // Get Methodes
   AqInstrument GetInstrument();
@@ -161,8 +163,12 @@ class LGADBase : public TSelector {
   std::vector<std::pair<int, float>> GetDUTriggs() { return m_DUTChsTrigg; };
   std::vector<std::pair<int, float>> GetDUTFracts() { return m_DUTChsFrc; };
   std::vector<std::pair<int, double>> GetDUTCaps() { return m_DUTChsCaps; };
-  std::vector<std::pair<std::pair<int, int>, double>> GetChDTs() { return m_ChsDTs; };
-  std::vector<std::pair<std::pair<int, int>, double>> GetChDCs() { return m_ChsDCs; };
+  std::vector<std::pair<std::pair<int, int>, double>> GetPlaneDTs() { return m_PlaneDTs; };
+  std::vector<std::pair<std::pair<int, int>, double>> GetPlaneDCs() { return m_PlaneDCs; };
+  std::vector<std::pair<int, double>> GetChVoltCuts() { return m_ChVoltCuts; };
+  std::vector<std::pair<int, double>> GetChNoiseCuts() { return m_ChNoiseCuts; };
+  std::vector<std::pair<int, double>> GetChJitterCuts() { return m_ChJitterCuts; };
+  std::vector<std::pair<int, double>> GetChChargeCuts() { return m_ChChargeCuts; };
 
   // Class funcitons
   void SetStartStopEvnt(int Evnt1 = 0, int Evnt2 = 0);
@@ -219,8 +225,12 @@ class LGADBase : public TSelector {
   std::vector<std::pair<int, int>> m_DUTChsAmpGn;
   std::vector<std::pair<int, std::string>> m_DUTChsNames;
   std::vector<std::pair<int, double>> m_DUTChsCaps;
-  std::vector<std::pair<std::pair<int, int>, double>> m_ChsDTs;
-  std::vector<std::pair<std::pair<int, int>, double>> m_ChsDCs;
+  std::vector<std::pair<std::pair<int, int>, double>> m_PlaneDTs;
+  std::vector<std::pair<std::pair<int, int>, double>> m_PlaneDCs;
+  std::vector<std::pair<int, double>> m_ChNoiseCuts;
+  std::vector<std::pair<int, double>> m_ChVoltCuts;
+  std::vector<std::pair<int, double>> m_ChChargeCuts;
+  std::vector<std::pair<int, double>> m_ChJitterCuts;
 
   // Ntuple Variables
   std::vector<std::vector<double> > m_t;
