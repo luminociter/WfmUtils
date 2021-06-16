@@ -43,7 +43,7 @@ public:
     /// End of processing
     void Terminate();
 
-    bool SetChDQunats(std::vector<double> dQunat, std::vector<std::pair<std::pair<int, int>, double>> DTs);
+    bool SetPlaneDQuants(std::vector<double> dQunat, std::vector<std::pair<std::pair<int, int>, double>> DTs);
 
 private:
 
