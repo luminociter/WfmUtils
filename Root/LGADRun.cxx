@@ -684,12 +684,7 @@ void LGADRun::SlaveTerminate()
          if (MaxIndxFtChi2 != -99 && MaxIndxFtChi2 != -1)
             {
              h_MaxIndxFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("MaxIndx");
-             h_MaxIndxFt.at(ich)->SetName(Form("MaxIndx%02u", m_channels.at(ich)));
-             // we need to print the MaxIndxFtChi2 and the ChFitMxIndx.first "+/-" ChFitMxIndx.second
-                 "Landau X Gauss Fit"
-                     "MPV: " ChFitMxIndx.first "+/-" ChFitMxIndx.second
-                     "Fit Goodnes: " 1-MaxIndxFtChi2
-                 
+             h_MaxIndxFt.at(ich)->SetName(Form("MaxIndx%02u", m_channels.at(ich)));             
              ChHist.at(ich)->Add(h_MaxIndxFt.at(ich));
             }
          MinIndxFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("MinIndx");
