@@ -37,7 +37,7 @@ public:
    void SetWaveShape(bool shape = false);
    void SetDoTrnsCorr(bool TrnsCorr = false);
    void SetTransFileName(TString filename = "");
-
+   // Dut level settings (have to be subdivided to cahnnel and plane level)
    void SetDUTName(int ChId, std::string Name);
    void SetDUTNames(std::vector<std::string> DUTNames);
    void SetDUTBoard(int ChId, AqBoard Brd);
@@ -52,12 +52,22 @@ public:
    void SetDUTriggs(std::vector<float> Triggs);
    void SetDUTFract(int ChId, float frac);
    void SetDUTFracts(std::vector<float> Fracs);
-   void SetDUTFract(int ChId, double cap);
-   void SetDUTFracts(std::vector<double> Caps);
-   void SetChDT(int ChId1, int ChId2, double DT);
-   void SetChDTs(std::vector<double> DTs);
-   void SetChDCh(int ChId1, int ChId2, double DCh);
-   void SetChDChs(std::vector<double> DChs);
+   void SetDUTCap(int ChId, double cap);
+   void SetDUTCaps(std::vector<double> Caps);
+   // Channel level cuts
+   void SetChVoltCut(int ChId, double VoltCut);
+   void SetChVoltCuts(std::vector<double> VoltCuts);
+   void SetChNoiseCut(int ChId, double NoiseCut);
+   void SetChNoiseCuts(std::vector<double> NoiseCuts);
+   void SetChChargeCut(int ChId, double ChargeCut);
+   void SetChChargeCuts(std::vector<double> ChargeCuts);
+   void SetChJitterCut(int ChId, double JitterCut);
+   void SetChJitterCuts(std::vector<double> JitterCuts);
+   // Plane level cuts
+   void SetPlaneDT(int PlaneId1, int PlaneId2, double DT);
+   void SetPlaneDTs(std::vector<double> DTs);
+   void SetPlaneDCrg(int PlaneId1, int PlaneId2, double DCrg);
+   void SetPlaneDCrgs(std::vector<double> DCrgs);
 
    bool Analyse(Long64_t nprocess = 0, std::string tree = "");
    std::string GetTreeName() { return LGADBase::GetTreeName(); };
