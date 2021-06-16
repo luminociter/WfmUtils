@@ -53,7 +53,7 @@ LGADRun::~LGADRun()
     for (unsigned int gh = 0; gh < m_RunDUTCh.size(); gh++) delete m_RunDUTCh.at(gh);
 }
 //------------------------------------------------------------------------------
-bool LGADRun::SetChDQunats(std::vector<double> dQunat, std::vector<std::pair<std::pair<int, int>, double>> DQs)
+bool LGADRun::SetPlaneDQuants(std::vector<double> dQunat, std::vector<std::pair<std::pair<int, int>, double>> DQs)
 {
     if (m_nchan == 0)
        {
@@ -70,7 +70,7 @@ bool LGADRun::SetChDQunats(std::vector<double> dQunat, std::vector<std::pair<std
                     found = false;
                     for (unsigned gh = 0; gh < DQs.size(); gh++)
                          {
-                          if (((DQs.at(gh)).first).first == m_channels.at(k) && ((DQs.at(gh)).first).second == m_channels.at(g))
+                          if (((DQs.at(gh)).first).first == (int)(m_channels.at(k)) && ((DQs.at(gh)).first).second == (int)(m_channels.at(g)))
                              {
                               found = true;
                               dQunat.push_back((DQs.at(gh)).second);
@@ -147,8 +147,8 @@ Bool_t LGADRun::Notify()
   if (m_init < 2) 
      {
       FirstInit();
-      if ((m_RunBase->GetChDTs()).size() > 0) SetChDQunats(m_dTMax, m_RunBase->GetChDTs());
-      if ((m_RunBase->GetChDCs()).size() > 0) SetChDQunats(m_dCMax, m_RunBase->GetChDCs());
+      if ((m_RunBase->GetPlaneDTs()).size() > 0) SetPlaneDQuants(m_dTMax, m_RunBase->GetPlaneDTs());
+      if ((m_RunBase->GetPlaneDCs()).size() > 0) SetPlaneDQuants(m_dCMax, m_RunBase->GetPlaneDCs());
      }
 
   std::cout << setfill('-') << setw(89) << "-" << std::endl << setfill(' ');
@@ -610,7 +610,7 @@ void LGADRun::SlaveTerminate()
          ChFitComplete = std::make_pair(-99, -99);
          ChFitSoNR = std::make_pair(-99, -99);
 
-         int iter = (m_nchan-(ich+1));
+         unsigned int iter = (m_nchan-(ich+1));
          TmDiffChi2.clear();
          TmDiffFitQts.clear();
          TmDiffChi2.resize(iter);
@@ -685,6 +685,11 @@ void LGADRun::SlaveTerminate()
             {
              h_MaxIndxFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("MaxIndx");
              h_MaxIndxFt.at(ich)->SetName(Form("MaxIndx%02u", m_channels.at(ich)));
+             // we need to print the MaxIndxFtChi2 and the ChFitMxIndx.first "+/-" ChFitMxIndx.second
+                 "Landau X Gauss Fit"
+                     "MPV: " ChFitMxIndx.first "+/-" ChFitMxIndx.second
+                     "Fit Goodnes: " 1-MaxIndxFtChi2
+                 
              ChHist.at(ich)->Add(h_MaxIndxFt.at(ich));
             }
          MinIndxFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("MinIndx");
@@ -849,7 +854,7 @@ void LGADRun::SlaveTerminate()
          unsigned int a = 0;
          unsigned int b = 0;
          // Lets create the Time difference histos and polupate the time difference sigmas histo
-         for (int ich2 = ich + 1; ich2 < m_nchan; ich2++)
+         for (unsigned int ich2 = ich + 1; ich2 < m_nchan; ich2++)
              {
               a = ((float)(ich*(ich2 - 1)))/2;
               std::pair <double, double> mean;
@@ -857,7 +862,8 @@ void LGADRun::SlaveTerminate()
               int qual;
               char title[20];
               h_TmSigmas.at(a) = new TH2D(Form("h_TimeMap%02u-%02u", m_channels.at(ich), m_channels.at(ich2)), 
-                                          Form("CFD Map, Channels %02u-%02u", m_channels.at(ich), m_channels.at(ich2)),
+                                          Form("CFD Map, Channels %02u-%02u;CFD %% Channel %02u;CFD %% Channel %02u;#sigma_{t(%02u)-t(%02u)}", 
+                                               m_channels.at(ich), m_channels.at(ich2), m_channels.at(ich), m_channels.at(ich2), m_channels.at(ich), m_channels.at(ich2)),
                                           19, 0.025, 0.975, 19, 0.025, 0.975); // initialize the 2D sigmas histos
               for (int bin1 = 0; bin1 < 19; bin1++)
                   {
@@ -895,7 +901,8 @@ void LGADRun::SlaveTerminate()
                             memset(title, '0', sizeof(title));
                             sprintf(title, "TmDiffCFD%02u%%-%02u%%CH%02u-%02u", bin1*5+5, bin2*5+5, m_channels.at(ich), m_channels.at(ich2));
                             (h_TmDiffCFD.at(a)).at(b)->SetName((const char*)title);
-                            (h_TmDiffCFD.at(a)).at(b)->SetTitle(Form("#Deltat Channel %02u (%02u%% CFD) - Channel %02u (%02u%% CFD)", m_channels.at(ich), bin1*5+5, m_channels.at(ich2), bin2*5+5));
+                            (h_TmDiffCFD.at(a)).at(b)->SetTitle(Form("#Deltat Channel %02u (%02u%% CFD) - Channel %02u (%02u%% CFD);#DeltaT_{%02u-%02u} [sec];Entries", 
+                                                                     m_channels.at(ich), bin1*5+5, m_channels.at(ich2), bin2*5+5, m_channels.at(ich), m_channels.at(ich2)));
                             TimeDiff.at(a)->Add((h_TmDiffCFD.at(a)).at(b));
                             h_TmSigmas.at(a)->SetBinContent(bin1 + 1, bin2 + 1, ((TmDiffFitQts.at(a)).at(b)).second);
                            }
@@ -1037,9 +1044,9 @@ void LGADRun::FirstInit()
 {
   // Create new DUT channels
   m_RunDUTCh.resize(m_nchan, nullptr);
-  std::vector<bool> foundPr[8];
-  for (unsigned int h = 0; h < 8; h++) foundPr[h].resize(m_nchan, false);
-  int sizes[8];
+  std::vector<bool> foundPr[12];
+  for (unsigned int h = 0; h < 12; h++) foundPr[h].resize(m_nchan, false);
+  unsigned int sizes[12];
   sizes[0] = (m_RunBase->LGADBase::GetDUTNames()).size();
   sizes[1] = (m_RunBase->LGADBase::GetDUTBoards()).size();
   sizes[2] = (m_RunBase->LGADBase::GetDUTransImps()).size();
@@ -1048,16 +1055,21 @@ void LGADRun::FirstInit()
   sizes[5] = (m_RunBase->LGADBase::GetDUTriggs()).size();
   sizes[6] = (m_RunBase->LGADBase::GetDUTFracts()).size();
   sizes[7] = (m_RunBase->LGADBase::GetDUTCaps()).size();
+  sizes[8] = (m_RunBase->LGADBase::GetChVoltCuts()).size();
+  sizes[9] = (m_RunBase->LGADBase::GetChNoiseCuts()).size();
+  sizes[10] = (m_RunBase->LGADBase::GetChJitterCuts()).size();
+  sizes[11] = (m_RunBase->LGADBase::GetChChargeCuts()).size();
+
   for (unsigned int a = 0; a < m_nchan; a++)
       {
        m_RunDUTCh.at(a) = new DUTChannel(m_channels.at(a), m_RunBase);
-       for (unsigned int u = 0; u < 8; u++)
+       for (unsigned int u = 0; u < 12; u++)
            {
             for (unsigned int w = 0; w < sizes[u]; w++) 
                 {
                  if (u == 0)
                     {
-                     if (m_channels.at(a) == ((m_RunBase->LGADBase::GetDUTNames()).at(w)).first) 
+                     if ((int)(m_channels.at(a)) == ((m_RunBase->LGADBase::GetDUTNames()).at(w)).first) 
                         {
                          m_RunDUTCh.at(a)->DUTChannel::SetChName(((m_RunBase->LGADBase::GetDUTNames()).at(w)).second);
                          (foundPr[u]).at(a) = true;
@@ -1065,7 +1077,7 @@ void LGADRun::FirstInit()
                     }
                  if (u == 1)
                     {
-                     if (m_channels.at(a) == ((m_RunBase->LGADBase::GetDUTBoards()).at(w)).first)
+                     if ((int)(m_channels.at(a)) == ((m_RunBase->LGADBase::GetDUTBoards()).at(w)).first)
                         {
                          m_RunDUTCh.at(a)->DUTChannel::SetChBoard(((m_RunBase->LGADBase::GetDUTBoards()).at(w)).second);
                          (foundPr[u]).at(a) = true;
@@ -1073,7 +1085,7 @@ void LGADRun::FirstInit()
                     }
                  if (u == 2)
                     {
-                     if (m_channels.at(a) == ((m_RunBase->LGADBase::GetDUTransImps()).at(w)).first)
+                     if ((int)(m_channels.at(a)) == ((m_RunBase->LGADBase::GetDUTransImps()).at(w)).first)
                         {
                          m_RunDUTCh.at(a)->DUTChannel::SetChTransImp(((m_RunBase->LGADBase::GetDUTransImps()).at(w)).second);
                          (foundPr[u]).at(a) = true;
@@ -1081,7 +1093,7 @@ void LGADRun::FirstInit()
                     }
                  if (u == 3)
                     {
-                     if (m_channels.at(a) == ((m_RunBase->LGADBase::GetDUTSecStages()).at(w)).first)
+                     if ((int)(m_channels.at(a)) == ((m_RunBase->LGADBase::GetDUTSecStages()).at(w)).first)
                         {
                          m_RunDUTCh.at(a)->DUTChannel::SetSecStage(((m_RunBase->LGADBase::GetDUTSecStages()).at(w)).second);
                          (foundPr[u]).at(a) = true;
@@ -1089,7 +1101,7 @@ void LGADRun::FirstInit()
                     }
                  if (u == 4)
                     {
-                     if (m_channels.at(a) == ((m_RunBase->LGADBase::GetDUTAmpGains()).at(w)).first)
+                     if ((int)(m_channels.at(a)) == ((m_RunBase->LGADBase::GetDUTAmpGains()).at(w)).first)
                         {
                          m_RunDUTCh.at(a)->DUTChannel::SetChAmpGain(((m_RunBase->LGADBase::GetDUTAmpGains()).at(w)).second);
                          (foundPr[u]).at(a) = true;
@@ -1097,7 +1109,7 @@ void LGADRun::FirstInit()
                     }
                  if (u == 5)
                     {
-                     if (m_channels.at(a) == ((m_RunBase->LGADBase::GetDUTriggs()).at(w)).first)
+                     if ((int)(m_channels.at(a)) == ((m_RunBase->LGADBase::GetDUTriggs()).at(w)).first)
                         {
                          m_RunDUTCh.at(a)->DUTChannel::SetChTrigg(((m_RunBase->LGADBase::GetDUTriggs()).at(w)).second);
                          (foundPr[u]).at(a) = true;
@@ -1105,7 +1117,7 @@ void LGADRun::FirstInit()
                     }
                  if (u == 6)
                     {
-                     if (m_channels.at(a) == ((m_RunBase->LGADBase::GetDUTFracts()).at(w)).first)
+                     if ((int)(m_channels.at(a)) == ((m_RunBase->LGADBase::GetDUTFracts()).at(w)).first)
                         {
                          m_RunDUTCh.at(a)->DUTChannel::SetChFract(((m_RunBase->LGADBase::GetDUTFracts()).at(w)).second);
                          (foundPr[u]).at(a) = true;
@@ -1113,9 +1125,41 @@ void LGADRun::FirstInit()
                     }
                  if (u == 7)
                     {
-                     if (m_channels.at(a) == ((m_RunBase->LGADBase::GetDUTCaps()).at(w)).first)
+                     if ((int)(m_channels.at(a)) == ((m_RunBase->LGADBase::GetDUTCaps()).at(w)).first)
                         {
                          m_RunDUTCh.at(a)->DUTChannel::SetChCap(((m_RunBase->LGADBase::GetDUTCaps()).at(w)).second);
+                         (foundPr[u]).at(a) = true;
+                        }
+                    }
+                 if (u == 8)
+                    {
+                     if ((int)(m_channels.at(a)) == ((m_RunBase->LGADBase::GetChVoltCuts()).at(w)).first)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetVoltCut(((m_RunBase->LGADBase::GetChVoltCuts()).at(w)).second);
+                         (foundPr[u]).at(a) = true;
+                        }
+                    }
+                 if (u == 9)
+                    {
+                     if ((int)(m_channels.at(a)) == ((m_RunBase->LGADBase::GetChNoiseCuts()).at(w)).first)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetNoiseCut(((m_RunBase->LGADBase::GetChNoiseCuts()).at(w)).second);
+                         (foundPr[u]).at(a) = true;
+                        }
+                    }
+                 if (u == 10)
+                    {
+                     if ((int)(m_channels.at(a)) == ((m_RunBase->LGADBase::GetChJitterCuts()).at(w)).first)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetJitterCut(((m_RunBase->LGADBase::GetChJitterCuts()).at(w)).second);
+                         (foundPr[u]).at(a) = true;
+                        }
+                    }
+                 if (u == 11)
+                    {
+                     if ((int)(m_channels.at(a)) == ((m_RunBase->LGADBase::GetChChargeCuts()).at(w)).first)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetChargeCut(((m_RunBase->LGADBase::GetChChargeCuts()).at(w)).second);
                          (foundPr[u]).at(a) = true;
                         }
                     }
@@ -1125,11 +1169,11 @@ void LGADRun::FirstInit()
 
   if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Intialized Channel ID properties for " << m_nchan << " channels" << std::endl;
 
-  std::vector<unsigned int> skip[8];
+  std::vector<unsigned int> skip[12];
   // Fill the properties of the channel without index
   for (unsigned int a = 0; a < m_nchan; a++)
       {
-       for (unsigned int u = 0; u < 8; u++)
+       for (unsigned int u = 0; u < 12; u++)
            {
             if (!(foundPr[u]).at(a))
                {
@@ -1174,6 +1218,26 @@ void LGADRun::FirstInit()
                      if (u == 7 && ((m_RunBase->LGADBase::GetDUTCaps()).at(w)).first == -99)
                         {
                          m_RunDUTCh.at(a)->DUTChannel::SetChCap(((m_RunBase->LGADBase::GetDUTCaps()).at(w)).second);
+                         (skip[u]).push_back(w);
+                        }
+                     if (u == 8 && ((m_RunBase->LGADBase::GetChVoltCuts()).at(w)).first == -99)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetVoltCut(((m_RunBase->LGADBase::GetChVoltCuts()).at(w)).second);
+                         (skip[u]).push_back(w);
+                        }
+                     if (u == 9 && ((m_RunBase->LGADBase::GetChNoiseCuts()).at(w)).first == -99)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetNoiseCut(((m_RunBase->LGADBase::GetChNoiseCuts()).at(w)).second);
+                         (skip[u]).push_back(w);
+                        }
+                     if (u == 10 && ((m_RunBase->LGADBase::GetChJitterCuts()).at(w)).first == -99)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetJitterCut(((m_RunBase->LGADBase::GetChJitterCuts()).at(w)).second);
+                         (skip[u]).push_back(w);
+                        }
+                     if (u == 11 && ((m_RunBase->LGADBase::GetChChargeCuts()).at(w)).first == -99)
+                        {
+                         m_RunDUTCh.at(a)->DUTChannel::SetChargeCut(((m_RunBase->LGADBase::GetChChargeCuts()).at(w)).second);
                          (skip[u]).push_back(w);
                         }
                     }
@@ -1423,7 +1487,7 @@ void LGADRun::VarInit()
       }
   m_EvVAdjCFD.resize(m_nchan);
 
-  int combi = (m_nchan*(m_nchan-1))/2;
+  unsigned int combi = (m_nchan*(m_nchan-1))/2;
   m_EvTmDiff.resize(combi);
   h_TmDiffCFD.resize(combi);
   h_TmSigmas.resize(combi);
