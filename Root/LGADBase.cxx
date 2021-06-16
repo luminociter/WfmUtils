@@ -239,41 +239,85 @@ void LGADBase::SetDUTCaps(std::vector<double> Caps)
         }
 }
 //---------------------------------------------------------------------------------------------------------------
-void LGADBase::SetChDMgt(int ChId1, int ChId2, double DMgt, int Qt)
+void LGADBase::SetChMag(int ChId, double ChMag, int Qt)
 {
-    if (0 < ChId1 && ChId1 > 64)
+    if (0 < ChId && ChId < 65)
        {
-        if (ChId2 > ChId1 && ChId2 > 64)
+        if (ChMag > 0)
+           {
+            if (Qt == 0) m_ChVoltCuts.push_back(std::make_pair(ChId, ChMag));
+            else if (Qt == 1) m_ChNoiseCuts.push_back(std::make_pair(ChId, ChMag));
+            else if (Qt == 2) m_ChChargeCuts.push_back(std::make_pair(ChId, ChMag));
+            else if (Qt == 3) m_ChJitterCuts.push_back(std::make_pair(ChId, ChMag));
+           }
+        else {
+              std::cout << __FUNCTION__ << " WARNING: Invalid"; 
+              if (Qt == 0) std::cout << " voltage cut";
+              else if (Qt == 1) std::cout << " noise cut";
+              else if (Qt == 2) std::cout << " charge cut";
+              else if (Qt == 3) std::cout << " jitter cut";
+              std::cout << " value for channel " << ChId << "!" << std::endl;
+             }
+       }
+    else std::cout << __FUNCTION__ << " WARNING: Plane id not supported." << std::endl; 
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetChMags(std::vector<double> ChMags, int Qt)
+{
+    for (unsigned int k = 0; k < ChMags.size(); k++)
+        {
+         if (ChMags.at(k) > 0)
+            {
+             if (Qt == 0) m_ChVoltCuts.push_back(std::make_pair(-99, ChMags.at(k)));
+             else if (Qt == 1) m_ChNoiseCuts.push_back(std::make_pair( -99, ChMags.at(k)));
+             else if (Qt == 2) m_ChChargeCuts.push_back(std::make_pair(-99, ChMags.at(k)));
+             else if (Qt == 3) m_ChJitterCuts.push_back(std::make_pair(-99, ChMags.at(k)));
+            }
+         else {
+               if (Qt == 0) std::cout << __FUNCTION__ << " WARNING: Invalid value on chanel voltage cut";
+               else if (Qt == 1) std::cout << __FUNCTION__ << " WARNING: Invalid value on chanel noise cut";
+               else if (Qt == 2) std::cout << __FUNCTION__ << " WARNING: Invalid value on chanel charge cut";
+               else if (Qt == 3) std::cout << __FUNCTION__ << " WARNING: Invalid value on chanel jitter cut";
+               std::cout <<" vector entry " << k << ", ignoring..." << std::endl;
+              }
+        }
+}
+//---------------------------------------------------------------------------------------------------------------
+void LGADBase::SetPlaneDMgt(int PlaneId1, int PlaneId2, double DMgt, int Qt)
+{
+    if (0 < PlaneId1)
+       {
+        if (PlaneId2 > PlaneId1)
            {
             if (DMgt > 0) 
                {
-                if (Qt == 0) m_ChsDTs.push_back(std::make_pair(std::make_pair(ChId1, ChId2), DMgt));
-                else if (Qt == 1) m_ChsDCs.push_back(std::make_pair(std::make_pair(ChId1, ChId2), DMgt));
+                if (Qt == 0) m_PlaneDTs.push_back(std::make_pair(std::make_pair(PlaneId1, PlaneId2), DMgt));
+                else if (Qt == 1) m_PlaneDCs.push_back(std::make_pair(std::make_pair(PlaneId1, PlaneId2), DMgt));
                }
             else {
                   std::cout << __FUNCTION__ << " WARNING: Invalid"; 
                   if (Qt == 0) std::cout << " time difference";
                   else if (Qt ==1) std::cout << " charge difference";
-                  std::cout << " value between channels " << ChId1 << " and " << ChId2 << "!" << std::endl;
+                  std::cout << " value between channels " << PlaneId1 << " and " << PlaneId2 << "!" << std::endl;
                  }
            }
-        else std::cout << __FUNCTION__ << " WARNING: Cahnnel ID2 needs to be grater thand ChId1 and between 2-64!" << std::endl;
+        else std::cout << __FUNCTION__ << " WARNING: Plane id 2 needs to be grater than Plane Id 1!" << std::endl;
        }
-    else std::cout << __FUNCTION__ << " WARNING: Cahnnel ID not supported, 1 - 64 channels allowed." << std::endl;
+    else std::cout << __FUNCTION__ << " WARNING: Plane id not supported." << std::endl;
 }
 // --------------------------------------------------------------------------------------------------------------
-void LGADBase::SetChDMgts(std::vector<double> DMgt, int Qt)
+void LGADBase::SetPlaneDMgts(std::vector<double> DMgts, int Qt)
 {
-    for (unsigned int k = 0; k < DMgt.size(); k++)
+    for (unsigned int k = 0; k < DMgts.size(); k++)
         {
-         if (DMgt.at(k) > 0) 
+         if (DMgts.at(k) > 0) 
             {
-             if (Qt == 0) m_ChsDTs.push_back(std::make_pair(std::make_pair(-99, -99), DMgt.at(k)));
-             if (Qt == 1) m_ChsDCs.push_back(std::make_pair(std::make_pair(-99, -99), DMgt.at(k)));
+             if (Qt == 0) m_PlaneDTs.push_back(std::make_pair(std::make_pair(-99, -99), DMgts.at(k)));
+             else if (Qt == 1) m_PlaneDCs.push_back(std::make_pair(std::make_pair(-99, -99), DMgts.at(k)));
             }
          else {
-               if (Qt == 0) std::cout << __FUNCTION__ << " WARNING: Invalid time difference value on channel dT";
-               if (Qt == 1) std::cout << __FUNCTION__ << " WARNING: Invalid cahrge difference value on channel dC";
+               if (Qt == 0) std::cout << __FUNCTION__ << " WARNING: Invalid time difference value on plane time";
+               else if (Qt == 1) std::cout << __FUNCTION__ << " WARNING: Invalid cahrge difference value on plane charge";
                std::cout <<" vector entry " << k << ", ignoring..." << std::endl;
               }
         }
@@ -397,8 +441,12 @@ void LGADBase::Initialize()
     m_DUTChsAmpGn.clear();
     m_DUTChsNames.clear();
     m_DUTChsCaps.clear();
-    m_ChsDTs.clear();
-    m_ChsDCs.clear();
+    m_PlaneDTs.clear();
+    m_PlaneDCs.clear();
+    m_ChNoiseCuts.clear();
+    m_ChVoltCuts.clear();
+    m_ChChargeCuts.clear();
+    m_ChJitterCuts.clear();
     if (m_instrument == TektronixScope)
        {
         m_npoints.push_back(1024);
@@ -821,7 +869,7 @@ template <typename V> V LGADBase::OutlierReject(V *w, unsigned int order, float 
     double mnt = 0.0;
     int rd = ceil(((float)(wmod.size()*elem))/2);
     // if (m_verbose == 2) std::cout << __FUNCTION__ << ": " << wmod.size() << " " << elem << " " << rd << std::endl; 
-    for (unsigned int i = 0; i < rd; i++) mnt += (wmod.at(ceil(((float)wmod.size()/2)+i)) + wmod.at(floor(((float)wmod.size()/2)-i)))/2;
+    for (int i = 0; i < rd; i++) mnt += (wmod.at(ceil(((float)wmod.size()/2)+i)) + wmod.at(floor(((float)wmod.size()/2)-i)))/2;
     mnt = mnt/((float)rd);
     // if (m_verbose == 2) std::cout << __FUNCTION__ << ": " << mnt << std::endl;
     for (unsigned int de = 0; de < wmod.size(); de++)
