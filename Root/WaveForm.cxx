@@ -512,11 +512,11 @@ float WaveForm::GetTrsFromHisto(double signalFFT, TH2D* transhist)
 {
     float transimp = -99.;
 
-    for (unsigned int k = 0; k <= m_trnsHist->GetNbinsX(); k++)
+    for (int k = 0; k <= m_trnsHist->GetNbinsX(); k++)
         { 
          if (signalFFT >= (transhist->GetXaxis()->GetBinLowEdge(k)) && signalFFT < (transhist->GetXaxis()->GetBinUpEdge(k)))
             {
-             for (unsigned int j = 0 ; j <= m_trnsHist->GetNbinsY(); j++) 
+             for (int j = 0 ; j <= m_trnsHist->GetNbinsY(); j++) 
                  {
                   if (m_trnsHist->GetBinContent(k, j) != 0) 
                      {
