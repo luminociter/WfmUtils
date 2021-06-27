@@ -702,10 +702,7 @@ bool LGADBase::WriteLabTXT(const char* dir, const char* name, const char* ext, i
                                else if (std::count(line.begin(), line.end(), ',') == 2)
                                        {
                                         size_t found = line.find(",");
-                                        if (found <= line.size()/2)
-                                           {
-                                            line.replace(line.find(",", found + 1), 1, ".");
-                                           }
+                                        if (found <= line.size()/2) line.replace(line.find(",", found + 1), 1, ".");
                                         else line.replace(line.find(","), 1, ".");
                                        }
                               }
@@ -947,7 +944,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
 // --------------------------------------------------------------------------------------------------------------
 // Function to merge tracking information from EUTelescope reconstruction
 //
-// Author: Luci­a Castillo Garci­a - lucia.castillo.garcia@cern.ch - IFAE-BARCELONA
+// Author: Luciï¿½a Castillo Garciï¿½a - lucia.castillo.garcia@cern.ch - IFAE-BARCELONA
 //
 bool LGADBase::CombineTrack(const char* dir, const char* name)
 {
@@ -1347,7 +1344,7 @@ bool LGADBase::CombineTrack(const char* dir, const char* name)
 }
 // --------------------------------------------------------------------------------------------------------------
 // Function to read Lecroy oscilloscope data from DESY test beams
-// Author: Lucía Castillo García - lucia.castillo.garcia@cern.ch - IFAE-BARCELONA
+// Author: Lucï¿½a Castillo Garcï¿½a - lucia.castillo.garcia@cern.ch - IFAE-BARCELONA
 bool LGADBase::WriteLecroyBinary(const char* dir, const char* name, const char* ext, unsigned int evt1, unsigned int evt2)
 {
     std::vector<unsigned int> nevt_seq;  // internal, number of events per sequence, identical for all channels

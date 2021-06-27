@@ -347,11 +347,11 @@ void LGADRun::SlaveTerminate()
     ChFitParam->SetAutoFlush(10000); // Set autoflush to 30 MB
 
     TList *histoslist = new TList();
-    std::vector<TList *> ChHist;
-    std::vector<TList *> CFDTimeHist;
-    std::vector<TList *> CFDToTHist;
-    std::vector<TList *> CFDdVdTHist;
-    std::vector<TList *> TimeDiff;
+    std::vector<TList *> ChCanv;
+    std::vector<TList* > CFDTimeCanv;
+    std::vector<TList* > CFDToTCanv;
+    std::vector<TList* > CFDdVdTCanv;
+    std::vector<TList*> TimeDiffCanv;
 
     int chName = 0;
     // Channel properties from respective fits
@@ -565,11 +565,11 @@ void LGADRun::SlaveTerminate()
          m_RunDUTCh.at(ich)->DUTChannel::updateChProperties(m_WaveShape, m_tree);
          if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: After channel update: " << ich + 1 << "/" << m_nchan << std::endl;
 
-         ChHist.push_back(new TList());
-         CFDTimeHist.push_back(new TList());
-         CFDToTHist.push_back(new TList());
-         CFDdVdTHist.push_back(new TList());
-         for (unsigned int d = ich + 1; d < m_nchan; d++) TimeDiff.push_back(new TList());
+         ChCanv.push_back(new TList());
+         CFDTimeCanv.push_back(new TList());
+         CFDToTCanv.push_back(new TList());
+         CFDdVdTCanv.push_back(new TList());
+         for (unsigned int d = ich + 1; d < m_nchan; d++) TimeDiffCanv.push_back(new TList());
 
          chName = m_channels.at(ich);
 
@@ -679,139 +679,158 @@ void LGADRun::SlaveTerminate()
          ChFitSoNR = m_RunDUTCh.at(ich)->DUTChannel::GetChSoNR(2);
          if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Recovered fit variables for channel: " << ich +1 << "/" << m_nchan << std::endl;
 
-         // Get the fits  and relevent chi2 to the Ntuple
+         // Get the fits and relevent chi2 to the Ntuple
          MaxIndxFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("MaxIndx");
          if (MaxIndxFtChi2 != -99 && MaxIndxFtChi2 != -1)
             {
-             h_MaxIndxFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("MaxIndx");
-             h_MaxIndxFt.at(ich)->SetName(Form("MaxIndx%02u", m_channels.at(ich)));             
-             ChHist.at(ich)->Add(h_MaxIndxFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("MaxIndx"), &h_MaxIndxFt.at(ich))) 
+                {
+                 ChCanv.at(ich)->Add(h_MaxIndxFt.at(ich));
+                }
             }
          MinIndxFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("MinIndx");
          if (MinIndxFtChi2 != -99 && MinIndxFtChi2 != -1)
             {
-             h_MinIndxFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("MinIndx");
-             h_MinIndxFt.at(ich)->SetName(Form("MinIndx%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_MinIndxFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("MinIndx"), &h_MinIndxFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_MinIndxFt.at(ich));
+                }
             }
          MaxVoltFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("MaxVolt");
          if (MaxVoltFtChi2 != -99 && MaxVoltFtChi2 != -1)
             {
-             h_MaxVoltFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("MaxVolt");
-             h_MaxVoltFt.at(ich)->SetName(Form("MaxVolt%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_MaxVoltFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("MaxVolt"), &h_MaxVoltFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_MaxVoltFt.at(ich));
+                }
             }
          MinVoltFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("MinVotl");
          if (MinVoltFtChi2 != -99 && MinVoltFtChi2 != -1)
             {
-             h_MinVoltFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("MinVotl");
-             h_MinVoltFt.at(ich)->SetName(Form("MinVotl%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_MinVoltFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("MinVotl"), &h_MinVoltFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_MinVoltFt.at(ich));
+                }
             }
          StrIndxFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("Strindx");
          if (StrIndxFtChi2 != -99 && StrIndxFtChi2 != -1)
             {
-             h_StrIndxFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("Strindx");
-             h_StrIndxFt.at(ich)->SetName(Form("Strindx%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_StrIndxFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("Strindx"), &h_StrIndxFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_StrIndxFt.at(ich));
+                }
             }
          EndIndxFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("EndIndx");
          if (EndIndxFtChi2 != -99 && EndIndxFtChi2 != -1)
             {
-             h_EndIndxFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("EndIndx");
-             h_EndIndxFt.at(ich)->SetName(Form("EndIndx%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_EndIndxFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("EndIndx"), &h_EndIndxFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_EndIndxFt.at(ich));
+                }
             }
          NoiseFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("Noise");
          if (NoiseFtChi2 != -99 && NoiseFtChi2 != -1)
             {
-             h_NoiseFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("Noise");
-             h_NoiseFt.at(ich)->SetName(Form("Noise%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_NoiseFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("Noise"), &h_NoiseFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_NoiseFt.at(ich));
+                }
             }
          NoiseErrFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("NoisErr");
          if (NoiseErrFtChi2 != -99 && NoiseErrFtChi2 != -1)
             {
-             h_NoiseErrFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("NoisErr");
-             h_NoiseErrFt.at(ich)->SetName(Form("NoisErr%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_NoiseErrFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("NoisErr"), &h_NoiseErrFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_NoiseErrFt.at(ich));
+                }
             }
          PedestFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("Pedestl");
          if (PedestFtChi2 != -99 && PedestFtChi2 != -1)
             {
-             h_PedestFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("Pedestl");
-             h_PedestFt.at(ich)->SetName(Form("Pedestl%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_PedestFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("Pedestl"), &h_PedestFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_PedestFt.at(ich));
+                }
             }
          PedestErrFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("PdslErr");
          if (PedestErrFtChi2 != -99 && PedestErrFtChi2 != -1)
             {
-             h_NPedestErrFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("PdslErr");
-             h_NPedestErrFt.at(ich)->SetName(Form("PdslErr%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_NPedestErrFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("PdslErr"), &h_NPedestErrFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_NPedestErrFt.at(ich));
+                }
             }
          MaxTimeFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("MaxTime");
          if (MaxTimeFtChi2 != -99 && MaxTimeFtChi2 != -1)
             {
-             h_MaxTimeFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("MaxTime");
-             h_MaxTimeFt.at(ich)->SetName(Form("MaxTime%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_MaxTimeFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("MaxTime"), &h_MaxTimeFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_MaxTimeFt.at(ich));
+                }
             }
          MinTimeFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("MinTime");
          if (MinTimeFtChi2 != -99 && MinTimeFtChi2 != -1)
             {
-             h_MinTimeFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("MinTime");
-             h_MinTimeFt.at(ich)->SetName(Form("MinTime%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_MinTimeFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("MinTime"), &h_MinTimeFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_MinTimeFt.at(ich));
+                }
             }
          ChargeFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("Charge");
          if (ChargeFtChi2 != -99 && ChargeFtChi2 != -1)
             {
-             h_ChargeFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("Charge");
-             h_ChargeFt.at(ich)->SetName(Form("Charge%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_ChargeFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("Charge"), &h_ChargeFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_ChargeFt.at(ich));
+                }
             }
          RiseTimeFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("RiseTime");
          if (RiseTimeFtChi2 != -99 && RiseTimeFtChi2 != -1)
             {
-             h_RiseTimeFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("RiseTime");
-             h_RiseTimeFt.at(ich)->SetName(Form("RiseTime%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_RiseTimeFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("RiseTime"), &h_RiseTimeFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_RiseTimeFt.at(ich));
+                }
             }
          TriggTimeFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("TriggTime");
          if (TriggTimeFtChi2 != -99 && TriggTimeFtChi2 != -1)
             {
-             h_TriggTimeFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("TriggTime");
-             h_TriggTimeFt.at(ich)->SetName(Form("TriggTime%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_TriggTimeFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("TriggTime"), &h_TriggTimeFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_TriggTimeFt.at(ich));
+                }
             }
          DVDTMaxFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("DVDTMax");
          if (DVDTMaxFtChi2 != -99 && DVDTMaxFtChi2 != -1)
             {
-             h_DVDTMaxFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("DVDTMax");
-             h_DVDTMaxFt.at(ich)->SetName(Form("DVDTMax%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_DVDTMaxFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("DVDTMax"), &h_DVDTMaxFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_DVDTMaxFt.at(ich));
+                }
             }
          TriggToTFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("TrigToT");
          if (TriggToTFtChi2 != -99 && TriggToTFtChi2 != -1)
             {
-             h_TriggToTFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("TrigToT");
-             h_TriggToTFt.at(ich)->SetName(Form("TrigToT%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_TriggToTFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("TrigToT"), &h_TriggToTFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_TriggToTFt.at(ich));
+                }
             }
          SignalFFTFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("SigFFT");
          if (SignalFFTFtChi2 != -99 && SignalFFTFtChi2 != -1)
             {
-             h_SignalFFTFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("SigFFT");
-             h_SignalFFTFt.at(ich)->SetName(Form("SigFFT%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_SignalFFTFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("SigFFT"), &h_SignalFFTFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_SignalFFTFt.at(ich));
+                }
             }
          NoiseFFTFtChi2 = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("NoiseFFT");
          if (NoiseFFTFtChi2 != -99 && NoiseFFTFtChi2 != -1)
             {
-             h_NoiseFFTFt.at(ich) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("NoiseFFT");
-             h_NoiseFFTFt.at(ich)->SetName(Form("NoiseFFT%02u", m_channels.at(ich)));
-             ChHist.at(ich)->Add(h_NoiseFFTFt.at(ich));
+             if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("NoiseFFT"), &h_NoiseFFTFt.at(ich)))
+                {
+                 ChCanv.at(ich)->Add(h_NoiseFFTFt.at(ich));
+                }
             }
 
          for (unsigned int h = 0; h < 19; h++)
@@ -820,28 +839,35 @@ void LGADRun::SlaveTerminate()
               CFDTimeFtChi2.at(h) = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("CFDTime", h);
               if (CFDTimeFtChi2.at(h) != -99 && CFDTimeFtChi2.at(h) != -1)
                  {
-                  sprintf(title, "CFDTime%02u-%02u%%", m_channels.at(ich), (h*5+5));
-                  (h_CFDTimeFt.at(ich)).at(h) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("CFDTime", h);
-                  (h_CFDTimeFt.at(ich)).at(h)->SetName((const char*)title);
-                  CFDTimeHist.at(ich)->Add((h_CFDTimeFt.at(ich)).at(h));
+                  if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("CFDTime", h), &(h_CFDTimeFt.at(ich)).at(h)))
+                     {
+                      sprintf(title, "CFDTime%02u-%02u%%", m_channels.at(ich), (h*5+5));
+                      (h_CFDTimeFt.at(ich)).at(h)->SetName((const char*)title);
+                      CFDTimeCanv.at(ich)->Add((h_CFDTimeFt.at(ich)).at(h));
+                     }
                  }
               DVDTCFDFtChi2.at(h) = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("DVDTCFD", h);
               if (DVDTCFDFtChi2.at(h) != -99 && DVDTCFDFtChi2.at(h) != -1)
                  {
-                  memset(title, '0', sizeof(title));
-                  sprintf(title, "DVDTCFD%02u-%02u%%", m_channels.at(ich), (h * 5 + 5));
-                  (h_DVDTCFDFt.at(ich)).at(h) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("DVDTCFD", h);
-                  (h_DVDTCFDFt.at(ich)).at(h)->SetName((const char*)title);
-                  CFDdVdTHist.at(ich)->Add((h_DVDTCFDFt.at(ich)).at(h));
+                  if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("DVDTCFD", h), &(h_DVDTCFDFt.at(ich)).at(h)))
+                     {
+                      memset(title, '0', sizeof(title));
+                      sprintf(title, "DVDTCFD%02u-%02u%%", m_channels.at(ich), (h * 5 + 5));
+                      (h_DVDTCFDFt.at(ich)).at(h)->SetName((const char*)title);
+                      CFDdVdTCanv.at(ich)->Add((h_DVDTCFDFt.at(ich)).at(h));
+                     }
                 }
               CFDToTFtChi2.at(h) = m_RunDUTCh.at(ich)->DUTChannel::GetFitChi2("CFDToT", h);
               if (CFDToTFtChi2.at(h) != -99 && CFDToTFtChi2.at(h) != -1)
                  {
-                  memset(title, '0', sizeof(title));
-                  sprintf(title, "CFDToT%02u-%02u%%", m_channels.at(ich), (h * 5 + 5));
-                  (h_CFDToTFt.at(ich)).at(h) = m_RunDUTCh.at(ich)->DUTChannel::GetFit("CFDToT", h);
-                  (h_CFDToTFt.at(ich)).at(h)->SetName((const char*)title);
-                  CFDToTHist.at(ich)->Add((h_CFDToTFt.at(ich)).at(h));
+                  if (LGADBase::PrintFitInfo(m_RunDUTCh.at(ich)->DUTChannel::GetFit("CFDToT", h), &(h_CFDToTFt.at(ich)).at(h)))
+                     {
+                      memset(title, '0', sizeof(title));
+                      sprintf(title, "CFDToT%02u-%02u%%", m_channels.at(ich), (h * 5 + 5));
+                      (h_CFDToTFt.at(ich)).at(h)->SetName((const char*)title);
+                      CFDToTCanv.at(ich)->Add((h_CFDToTFt.at(ich)).at(h));
+                      if (h == 18) (h_CFDToTFt.at(ich)).at(h)->Draw();
+                     }
                  }
              }
          if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Recovered fits for channel: " << ich + 1 << "/" << m_nchan << std::endl;
@@ -859,7 +885,7 @@ void LGADRun::SlaveTerminate()
               h_TmSigmas.at(a) = new TH2D(Form("h_TimeMap%02u-%02u", m_channels.at(ich), m_channels.at(ich2)), 
                                           Form("CFD Map, Channels %02u-%02u;CFD %% Channel %02u;CFD %% Channel %02u;#sigma_{t(%02u)-t(%02u)}", 
                                                m_channels.at(ich), m_channels.at(ich2), m_channels.at(ich), m_channels.at(ich2), m_channels.at(ich), m_channels.at(ich2)),
-                                          19, 0.025, 0.975, 19, 0.025, 0.975); // initialize the 2D sigmas histos
+                                               19, 0.025, 0.975, 19, 0.025, 0.975); // initialize the 2D sigmas histos
               for (int bin1 = 0; bin1 < 19; bin1++)
                   {
                    for (int bin2 = 0; bin2 < 19; bin2++)
@@ -898,7 +924,10 @@ void LGADRun::SlaveTerminate()
                             (h_TmDiffCFD.at(a)).at(b)->SetName((const char*)title);
                             (h_TmDiffCFD.at(a)).at(b)->SetTitle(Form("#Deltat Channel %02u (%02u%% CFD) - Channel %02u (%02u%% CFD);#DeltaT_{%02u-%02u} [sec];Entries", 
                                                                      m_channels.at(ich), bin1*5+5, m_channels.at(ich2), bin2*5+5, m_channels.at(ich), m_channels.at(ich2)));
-                            TimeDiff.at(a)->Add((h_TmDiffCFD.at(a)).at(b));
+                            if (LGADBase::PrintFitInfo((h_TmDiffCFD.at(a)).at(b), &(h_TmDiffCFDCanv.at(a)).at(b)))
+                               {
+                                TimeDiffCanv.at(ich)->Add((h_TmDiffCFDCanv.at(a)).at(b));
+                               }
                             h_TmSigmas.at(a)->SetBinContent(bin1 + 1, bin2 + 1, ((TmDiffFitQts.at(a)).at(b)).second);
                            }
                         else h_TmSigmas.at(a)->SetBinContent(bin1 + 1, bin2 + 1, 0.0);
@@ -983,22 +1012,22 @@ void LGADRun::SlaveTerminate()
          // Create folder for each channel and write corresponding histos
          m_ofile->mkdir(Form("ChHistos%02u", m_channels.at(ich)));
          m_ofile->cd(Form("ChHistos%02u", m_channels.at(ich)));
-         ChHist.at(ich)->Write();
+         ChCanv.at(ich)->Write();
 
          m_ofile->mkdir(Form("ChHistos%02u/CFDTimeHists%02u", m_channels.at(ich), m_channels.at(ich)));
          m_ofile->cd(Form("ChHistos%02u/CFDTimeHists%02u", m_channels.at(ich), m_channels.at(ich)));
-         CFDTimeHist.at(ich)->Write();
-         m_ofile->mkdir(Form("ChHistos%02u/CFDToTHists%02u", m_channels.at(ich), m_channels.at(ich)));
-         m_ofile->cd(Form("ChHistos%02u/CFDToTHists%02u", m_channels.at(ich), m_channels.at(ich)));
-         CFDToTHist.at(ich)->Write();
+         CFDTimeCanv.at(ich)->Write();
          m_ofile->mkdir(Form("ChHistos%02u/CFDdVdTHists%02u", m_channels.at(ich), m_channels.at(ich)));
          m_ofile->cd(Form("ChHistos%02u/CFDdVdTHists%02u", m_channels.at(ich), m_channels.at(ich)));
-         CFDdVdTHist.at(ich)->Write();
+         CFDdVdTCanv.at(ich)->Write();
+         m_ofile->mkdir(Form("ChHistos%02u/CFDToTHists%02u", m_channels.at(ich), m_channels.at(ich)));
+         m_ofile->cd(Form("ChHistos%02u/CFDToTHists%02u", m_channels.at(ich), m_channels.at(ich)));
+         CFDToTCanv.at(ich)->Write();
          for (unsigned int gp = ich + 1; gp < m_nchan; gp++) 
              {
               m_ofile->mkdir(Form("ChHistos%02u/TimeDiff%02u-%02u", m_channels.at(ich), m_channels.at(ich), m_channels.at(gp)));
               m_ofile->cd(Form("ChHistos%02u/TimeDiff%02u-%02u", m_channels.at(ich), m_channels.at(ich), m_channels.at(gp)));
-              TimeDiff.at(((float)(ich*(gp-1)))/2)->Write();
+              TimeDiffCanv.at(((float)(ich*(gp-1)))/2)->Write();
              }
          m_ofile->cd();
         }
@@ -1008,11 +1037,11 @@ void LGADRun::SlaveTerminate()
     // deleting the histogram lists, deletion happens from end to start
     for (unsigned int a = m_nchan-1; a == 0; a--)
         {
-         delete CFDdVdTHist.at(a);
-         delete CFDToTHist.at(a);
-         delete CFDTimeHist.at(a);
-         delete ChHist.at(a);
-         for (unsigned int gp = m_nchan - 1; gp == a+1; gp--) delete TimeDiff.at(((float)(a*(gp-1)))/2);
+         delete CFDdVdTCanv.at(a);
+         delete CFDToTCanv.at(a);
+         delete CFDTimeCanv.at(a);
+         delete ChCanv.at(a);
+         for (unsigned int gp = m_nchan - 1; gp == a + 1; gp--) delete TimeDiffCanv.at(((float)(a*(gp-1)))/2);
         }
     delete histoslist;
     delete ChFitParam;
@@ -1485,11 +1514,13 @@ void LGADRun::VarInit()
   unsigned int combi = (m_nchan*(m_nchan-1))/2;
   m_EvTmDiff.resize(combi);
   h_TmDiffCFD.resize(combi);
+  h_TmDiffCFDCanv.resize(combi);
   h_TmSigmas.resize(combi);
   for (unsigned int k = 0; k < combi; k++)
       {
        (m_EvTmDiff.at(k)).resize(19*19);
        (h_TmDiffCFD.at(k)).resize(19*19, nullptr);
+       (h_TmDiffCFDCanv.at(k)).resize(19 * 19, nullptr);
        h_TmSigmas.push_back(nullptr);
       }
 }

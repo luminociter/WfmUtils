@@ -766,6 +766,103 @@ unsigned int LGADBase::CountFiles(const char* dir, const char* ext)
     return nfiles;
 }
 // --------------------------------------------------------------------------------------------------------------
+bool LGADBase::PrintFitInfo(TH1D* histo, TCanvas** ca, std::string funcName)
+{
+  TIter nextfunc(histo->GetListOfFunctions());
+  TFunction* func = 0;
+  std::vector <std::string> FitNames;
+  while ((func = (TFunction*)nextfunc())) FitNames.push_back(func->GetName());
+  bool found = false;
+  if (m_verbose > 2)
+     {
+      std::cout << __FUNCTION__ << " INFO: Found functions in histogram " << histo->GetName() << ": ";
+      for (unsigned int k = 0; k < FitNames.size(); k++) std::cout << FitNames.at(k) << " ";
+      std::cout << std::endl;
+     }
+  if (funcName == "none" && FitNames.size() == 1) { found = true; funcName = FitNames.at(0); }
+  else if (funcName != "none" && FitNames.size() > 1)
+          {
+           for (unsigned int k = 0; k < FitNames.size(); k++)
+               {
+                if (FitNames.at(k) == funcName) { found = true; break; }
+               }
+          }
+  if (found)
+     {
+      std::string fitname;
+      std::string par0;
+      std::string par1;
+      if (funcName == "LandXGauFun") 
+         {
+          fitname = "Landau X Guass Fit";
+          par0 = Form("MPV: %e +/- %e", histo->GetFunction(funcName.c_str())->GetParameter(1), histo->GetFunction(funcName.c_str())->GetParError(1));
+          par1 = Form("#lambda : %e +/- %e", histo->GetFunction(funcName.c_str())->GetParameter(3), histo->GetFunction(funcName.c_str())->GetParError(3));
+         }
+      else if (funcName == "GaussFit") 
+              {
+               fitname = "Gauss Fit";
+               par0 = Form("Mean: %e +/- %e", histo->GetFunction(funcName.c_str())->GetParameter(1), histo->GetFunction(funcName.c_str())->GetParError(1));
+               par1 = Form("#sigma %e +/- %e", histo->GetFunction(funcName.c_str())->GetParameter(2), histo->GetFunction(funcName.c_str())->GetParError(2));
+              }
+      else if (funcName == "line")
+              {
+               fitname = "Linear Fit";
+               par0 = Form("Intercept: %e +/- %e", histo->GetFunction(funcName.c_str())->GetParameter(0), histo->GetFunction(funcName.c_str())->GetParError(0));
+               par1 = Form("Slope: %e +/- %e", histo->GetFunction(funcName.c_str())->GetParameter(1), histo->GetFunction(funcName.c_str())->GetParError(1));
+              }
+      else if (funcName == "LanXGau")
+              {
+               fitname = "RooFit Landau X Gauss Fit";
+              }
+      else if (funcName == "LinXGau")
+              {
+               fitname = "RooFit Linear X Gauss Fit";
+              }
+      else {
+            std::cout << __FUNCTION__ << " WARNING: Unsupported fit type for histogram " << histo->GetName() << ": " << funcName << std::endl;
+            return false;
+           }    
+      gROOT->SetBatch(kTRUE);
+      TGaxis::SetMaxDigits(3);
+      gStyle->SetOptStat(kFALSE);
+      (*ca) = new TCanvas(Form("%s_Ca", histo->GetName()), histo->GetTitle(), 500, 500);
+      //(*ca)->cd(1);
+      gPad->SetGrid(1, 1);
+      gPad->SetTicky(1);
+      gPad->SetTickx(1);
+      //gROOT->ForceStyle();
+      //(*ca)->Draw();
+      histo->Draw(/*"PE1"*/);
+      histo->GetYaxis()->SetTitleOffset(1.3);
+      TPaveText* paveA = new TPaveText(0.50, 0.60, 0.90, 0.75, "NDCNB");
+      paveA->SetTextAlign(11);
+      paveA->SetFillStyle(0);
+      paveA->SetBorderSize(0);
+      paveA->AddText(fitname.c_str());
+      ((TText*)paveA->GetListOfLines()->Last())->SetTextColor(1);
+      ((TText*)paveA->GetListOfLines()->Last())->SetTextFont(32);
+      ((TText*)paveA->GetListOfLines()->Last())->SetTextSize(0.035);
+      paveA->AddText(Form("Entires: %lu", (long unsigned int)(histo->GetEntries())));
+      ((TText*)paveA->GetListOfLines()->Last())->SetTextColor(histo->GetLineColor());
+      paveA->AddText(par0.c_str());
+      ((TText*)paveA->GetListOfLines()->Last())->SetTextColor(histo->GetLineColor());
+      paveA->AddText(par1.c_str());
+      ((TText*)paveA->GetListOfLines()->Last())->SetTextColor(histo->GetLineColor());
+      par0 = std::to_string(fabs(1 - (histo->GetFunction(funcName.c_str())->GetChisquare()/histo->GetFunction(funcName.c_str())->GetNDF()))*100);
+      par0 = "Goodness : " + par0 + "%";
+      paveA->AddText(par0.c_str());
+      ((TText*)paveA->GetListOfLines()->Last())->SetTextColor(histo->GetLineColor());
+      paveA->Draw();
+      (*ca)->Update();
+      gROOT->SetBatch(kFALSE);
+      return true;
+     }
+  else {
+        std::cout << __FUNCTION__ << " WARNING: Requested function not found in histogram " << histo->GetName() << std::endl;
+        return false;
+       }
+}
+// --------------------------------------------------------------------------------------------------------------
 template <typename T> T LGADBase::Derivate(T *w, int start)
 {
     int sz = w->size();
@@ -844,17 +941,76 @@ template <typename V> double LGADBase::CalcMeadian(V *vec, int start, int stop)
     if (start < 0 || start >= (int)(vec->size())) start = 0;
 
     V wmod;
-    for (int ga = start; ga < stop; ga++) wmod.push_back(vec->at(ga));
-    size_t size = wmod.size();
-    if (size == 0)
+    if (start != 0 && stop != 0)
+       {
+        for (int ga = start; ga < stop; ga++) wmod.push_back(vec->at(ga));
+       }
+    else wmod = *vec;
+    unsigned int Wsize = wmod.size();
+    if (Wsize == 0)
        {
         std::cout << __FUNCTION__ << " ERROR: Trying to calculate median of empty vector!" << std::endl;
         return -1;  // Undefined, realy.
        }
     else {
           sort(wmod.begin(), wmod.end());
-          if (size % 2 == 0) return (wmod.at((size / 2) - 1) + wmod.at(size / 2)) / 2;
-          else return wmod.at(ceil((float)size / 2));
+          if (Wsize % 2 == 0) return (wmod.at((Wsize/2)-1) + wmod.at(Wsize/2))/2;
+          else return wmod.at(ceil((float)Wsize / 2));
+         }
+}
+// --------------------------------------------------------------------------------------------------------------
+template <typename V> double LGADBase::CalcFWHM(V* vec, double median, int start, int stop)
+{
+    if (stop <= 0 || stop > (int)(vec->size()) || stop <= start) stop = vec->size();
+    if (start < 0 || start >= (int)(vec->size())) start = 0;
+
+    V wmod;
+    if (start != 0 && stop != 0)
+       {
+        for (int ga = start; ga < stop; ga++) wmod.push_back(vec->at(ga));
+       }
+    else wmod = *vec;
+    unsigned int Wsize = wmod.size();
+    if (Wsize == 0)
+       {
+        std::cout << __FUNCTION__ << " ERROR: Trying to calculate FWHM of empty vector!" << std::endl;
+        return -1;  // Undefined, realy.
+       }
+    else {
+          if (median == -99) median = LGADBase::CalcMeadian(&wmod);
+          if (median == -1)
+             {
+              std::cout << __FUNCTION__ << " ERROR: Median calcuulation failed, will not continue!" << std::endl;
+              return -1;
+             }
+          sort(wmod.begin(), wmod.end());
+          V wb;
+          unsigned int a = 0;
+          do {
+              wb.push_back(wmod.at(a));
+              a++;
+             } 
+          while (wmod.at(a) < median);
+          float b = 0;
+          for (; a < wmod.size(); a++) if (wmod.at(a) == median) b++;
+          b = ceil(b/2);
+          if (b > 0) for (int k = 0; k < b; k++) wb.push_back(median);
+          V wb2;
+          a = 1;
+          do {
+              wb2.push_back(wmod.at(wmod.size()-a));
+              a++;
+             } 
+          while (a <= (wmod.size() - wb.size()));
+          if (m_verbose >= 3) std::cout << __FUNCTION__  << " INFO: Original size: " << wmod.size() << " first half size: " << wb.size() << " second half size: " << wb2.size() << std::endl;
+          double FWHM1 = LGADBase::CalcMeadian(&wb);
+          double FWHM2 = LGADBase::CalcMeadian(&wb2);
+          if (m_verbose >=3 ) std::wcout << __FUNCTION__ << " INFO: First median: " << FWHM1 << " second median: " << FWHM2 << " Full width half max: " << FWHM2 - FWHM1 << std::endl;
+          if (FWHM2 != -1 && FWHM1 != -1) return (FWHM2 - FWHM1);
+          else {
+                std::cout << __FUNCTION__ << " ERROR: Failed determingnf edge of peak!" << std::endl;
+                return -1;
+               }
          }
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -933,6 +1089,9 @@ template double LGADBase::Stdev<vector<float> >(std::vector<float> *, int, int, 
 template double LGADBase::Stdev<vector<double> >(std::vector<double> *, int, int, double);
 template double LGADBase::BayesianErr<vector<int>, int>(std::vector<int> *, int);
 template double LGADBase::BayesianErr<vector<bool>, bool>(std::vector<bool> *, bool);
+template double LGADBase::CalcFWHM<vector<int> >(std::vector<int>*, double, int, int);
+template double LGADBase::CalcFWHM<vector<float> >(std::vector<float>*, double, int, int);
+template double LGADBase::CalcFWHM<vector<double> >(std::vector<double>*, double, int, int);
 template double LGADBase::CalcMeadian<vector<int> >(std::vector<int> *, int, int);
 template double LGADBase::CalcMeadian<vector<float> >(std::vector<float> *, int, int);
 template double LGADBase::CalcMeadian<vector<double> >(std::vector<double> *, int, int);

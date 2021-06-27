@@ -1326,7 +1326,7 @@ double WaveForm::CFDTimeLinear(std::vector<double> *w, std::vector<double> *t, f
 {
     if (m_maxVolt == -99) m_maxVolt = VoltMax(w, true);
     if (m_minVolt == -99) m_minVolt = VoltMin(w, true);
-    if (fraction*m_maxVolt > m_minVolt) return FirstTimeForVoltage(w, t, fraction*m_maxVolt);
+    if (fraction*m_maxVolt >= m_minVolt) return FirstTimeForVoltage(w, t, fraction*m_maxVolt);
     else return -1.;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -1513,7 +1513,7 @@ double WaveForm::CFDToTLinear(std::vector<double> *w, std::vector<double> *t, fl
     if (fraction != m_fraction || m_CFDTime == -99) st_time = CFDTimeLinear(w, t, fraction);
     else  st_time = m_CFDTime;
     double nd_time = SecondTimeForVoltage(w, t, fabs(fraction*m_maxVolt));
-    if (nd_time != -99 && st_time != -99 && nd_time != st_time) return fabs(nd_time - st_time);
+    if (nd_time != -1 && st_time != -1 && nd_time != st_time) return abs(nd_time - st_time);
     else {
           if (m_WvBase->LGADBase::GetVerbosity() > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed to calculate CFD ToT!" << std::endl;
           return -1.;
@@ -1528,7 +1528,7 @@ double WaveForm::TriggToTLinear(std::vector<double> *w, std::vector<double> *t, 
     if (m_TriggTime == -99 || m_trigg != trig) t1 = FirstTimeForVoltage(w, t, trig);
     else t1 = m_TriggTime;
     double t2 = SecondTimeForVoltage(w, t, trig);
-    if (t1 != -99 && t2 !=-99 && t1 != t2) return fabs(t2 - t1); // Time over threshold
+    if (t1 != -99 && t2 !=-1 && t1 != t2) return fabs(t2 - t1); // Time over threshold
     else {
           if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " ERROR: Failed to calculate Trigger ToT!" << std::endl;
           return -1.;

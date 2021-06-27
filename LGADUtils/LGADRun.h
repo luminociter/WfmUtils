@@ -83,6 +83,7 @@ private:
     std::vector< std::vector<double>> m_EvJitNdVdT;
     std::vector<std::vector<std::vector<double>>> m_EvTmDiff;
     std::vector<std::vector<TH1D* >> h_TmDiffCFD;
+    std::vector<std::vector<TCanvas* >> h_TmDiffCFDCanv;
     std::vector<TH2D* > h_TmSigmas;
 
     // InterChannel Cut Criteria
@@ -121,28 +122,28 @@ private:
     std::vector<TBranch*> b_EvVAdjCFD;
     std::vector<TBranch*> b_EvCFDTime;
 
-    std::vector<TH1D* > h_MaxIndxFt;
-    std::vector<TH1D* > h_MinIndxFt;
-    std::vector<TH1D* > h_MaxVoltFt;
-    std::vector<TH1D* > h_MinVoltFt;
-    std::vector<TH1D* > h_StrIndxFt;
-    std::vector<TH1D* > h_EndIndxFt;
-    std::vector<TH1D* > h_NoiseFt;
-    std::vector<TH1D* > h_NoiseErrFt;
-    std::vector<TH1D* > h_PedestFt;
-    std::vector<TH1D* > h_NPedestErrFt;
-    std::vector<TH1D* > h_MaxTimeFt;
-    std::vector<TH1D* > h_MinTimeFt;
-    std::vector<TH1D* > h_ChargeFt;
-    std::vector<TH1D* > h_RiseTimeFt;
-    std::vector<TH1D* > h_TriggTimeFt;
-    std::vector<TH1D* > h_DVDTMaxFt;
-    std::vector<TH1D* > h_TriggToTFt;
-    std::vector<TH1D* > h_SignalFFTFt;
-    std::vector<TH1D* > h_NoiseFFTFt;
-    std::vector< std::vector<TH1D* > > h_CFDTimeFt;
-    std::vector< std::vector<TH1D* > > h_DVDTCFDFt;
-    std::vector< std::vector<TH1D* > > h_CFDToTFt;
+    std::vector<TCanvas* > h_MaxIndxFt;
+    std::vector<TCanvas* > h_MinIndxFt;
+    std::vector<TCanvas* > h_MaxVoltFt;
+    std::vector<TCanvas* > h_MinVoltFt;
+    std::vector<TCanvas* > h_StrIndxFt;
+    std::vector<TCanvas* > h_EndIndxFt;
+    std::vector<TCanvas* > h_NoiseFt;
+    std::vector<TCanvas* > h_NoiseErrFt;
+    std::vector<TCanvas* > h_PedestFt;
+    std::vector<TCanvas* > h_NPedestErrFt;
+    std::vector<TCanvas* > h_MaxTimeFt;
+    std::vector<TCanvas* > h_MinTimeFt;
+    std::vector<TCanvas* > h_ChargeFt;
+    std::vector<TCanvas* > h_RiseTimeFt;
+    std::vector<TCanvas* > h_TriggTimeFt;
+    std::vector<TCanvas* > h_DVDTMaxFt;
+    std::vector<TCanvas* > h_TriggToTFt;
+    std::vector<TCanvas* > h_SignalFFTFt;
+    std::vector<TCanvas* > h_NoiseFFTFt;
+    std::vector< std::vector<TCanvas* > > h_CFDTimeFt;
+    std::vector< std::vector<TCanvas* > > h_DVDTCFDFt;
+    std::vector< std::vector<TCanvas* > > h_CFDToTFt;
 
     std::vector<DUTChannel*> m_RunDUTCh;
     // std::vector<WaveForm*> m_RunWaveform;

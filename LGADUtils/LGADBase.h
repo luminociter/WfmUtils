@@ -35,6 +35,13 @@
 #include "TH2.h"
 #include "TString.h"
 #include "RooFitResult.h"
+#include "TCanvas.h"
+#include "TFunction.h"
+#include "TStyle.h"
+#include "TPaveText.h"
+#include "TPad.h"
+#include "TText.h"
+#include "TGaxis.h"
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -192,9 +199,11 @@ class LGADBase : public TSelector {
   template <typename V> double CalcMeadian(V *vec, int start = 0, int stop = 0);
   template <typename V> V OutlierReject(V *w, unsigned int order, float elem, int start = 0, int stop = 0);
   template <typename T, typename V> T CalResolution(V *w, unsigned int order, int start = 0, int stop = 0);
+  template <typename V> double CalcFWHM(V* vec, double median = -99, int start = 0, int stop = 0);
 
   bool ProgressBar(Long64_t evt, Long64_t total);
   int Addoriel(int val);
+  bool PrintFitInfo(TH1D* histo, TCanvas** ca, std::string funcName = "none");
 
   // LGAD Fits
   int IterativeFit(std::vector<double> *w, std::pair <double, double> &gmean, std::pair <double, double> &gsigma, TH1D* &FitHist,
@@ -247,13 +256,13 @@ class LGADBase : public TSelector {
   bool CreateOutputFile(const char* dir, const char* ofname, std::vector<unsigned int> nchan);
   bool SetScale(std::vector<unsigned int> channel, unsigned int nchan, std::vector<float>* scale);
   std::vector<double> ConrtVarBinX(std::vector<double> *wmod, double limUp, double limDown, int &nbins);
-  bool CalcuRebin(bool discr, int n_elements, int nbins, double limUp, double limDown, double stdev, int (&Nofbins)[7]);
+  bool CalcuRebin(bool discr, int n_elements, int nbins, double limDown, double limUp, double stdev, int (&Nofbins)[7]);
   void CalcTrigFr(std::vector<double>  EvTrigTime, TH1F* TrigPer, TH1F* TrigFrq, unsigned int entriesNo);
   bool OpenTransFile(TString filename = "");
 
   // Internal functions for iterative re-fitting
   TFitResultPtr Gauss(double rmin, double rmax, double strdv, double mean, TH1D* &Magnitude, std::string integ = "");
-  TFitResultPtr GauXLandau(double rmin, double rmax, double strdv, TH1D* &Magnitude, std::string integ = "");
+  TFitResultPtr GauXLandau(double rmin, double rmax, double median, double FWHM, TH1D* &Magnitude, std::string integ = "");
   Double_t LandXGauFun(Double_t *x, Double_t *par);
   int langaupro(TFitResultPtr fitResult, double &maxx, double &FWHM);
 
