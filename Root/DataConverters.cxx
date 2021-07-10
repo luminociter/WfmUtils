@@ -678,7 +678,7 @@ bool LGADBase::WriteLabTXT(const char* dir, const char* name, const char* ext, i
                       if (n != 0) first = true;
                      }
                   line.clear();
-                  if (l_labview && std::string(oscillos) != "Tektronix") getline(file, line);    // skip the line Time,Ampl
+                  if ((l_labview && std::string(oscillos) != "Tektronix") || !l_labview) getline(file, line);    // skip the line Time,Ampl
                   // Read the data
                   Int_t nlines = 0;
                   for (unsigned int i = 0; i < m_npoints.at(ich); i++)
@@ -944,7 +944,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
 // --------------------------------------------------------------------------------------------------------------
 // Function to merge tracking information from EUTelescope reconstruction
 //
-// Author: Luciï¿½a Castillo Garciï¿½a - lucia.castillo.garcia@cern.ch - IFAE-BARCELONA
+// Author: Luci­a Castillo Garci­a - lucia.castillo.garcia@cern.ch - IFAE-BARCELONA
 //
 bool LGADBase::CombineTrack(const char* dir, const char* name)
 {
@@ -1344,7 +1344,7 @@ bool LGADBase::CombineTrack(const char* dir, const char* name)
 }
 // --------------------------------------------------------------------------------------------------------------
 // Function to read Lecroy oscilloscope data from DESY test beams
-// Author: Lucï¿½a Castillo Garcï¿½a - lucia.castillo.garcia@cern.ch - IFAE-BARCELONA
+// Author: Lucía Castillo García - lucia.castillo.garcia@cern.ch - IFAE-BARCELONA
 bool LGADBase::WriteLecroyBinary(const char* dir, const char* name, const char* ext, unsigned int evt1, unsigned int evt2)
 {
     std::vector<unsigned int> nevt_seq;  // internal, number of events per sequence, identical for all channels
