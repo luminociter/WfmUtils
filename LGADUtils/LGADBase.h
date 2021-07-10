@@ -200,6 +200,7 @@ class LGADBase : public TSelector {
   template <typename V> V OutlierReject(V *w, unsigned int order, float elem, int start = 0, int stop = 0);
   template <typename T, typename V> T CalResolution(V *w, unsigned int order, int start = 0, int stop = 0);
   template <typename V> double CalcFWHM(V* vec, double median = -99, int start = 0, int stop = 0);
+  template <typename T, typename V> T MaxDensity(V* w, T res = -99, int start = 0, int stop = 0);
 
   bool ProgressBar(Long64_t evt, Long64_t total);
   int Addoriel(int val);
