@@ -1075,6 +1075,123 @@ template <typename T, typename V> T LGADBase::CalResolution(V *w, unsigned int o
     return res;
 }
 // --------------------------------------------------------------------------------------------------------------
+template <typename T, typename V> T LGADBase::MaxDensity(V* w, T res, int start, int stop)
+{
+    if (stop <= 0 || stop > (int)(w->size()) || stop <= start) stop = w->size();
+    if (start < 0 || start >= (int)(w->size())) start = 0;
+
+    V wmod;
+    for (int ga = start; ga < stop; ga++) wmod.push_back(w->at(ga));
+    sort(wmod.begin(), wmod.end());
+
+   // if (res == -99)  // Non discreate case
+   //    {
+
+        // Clcualte the density of observations
+        std::vector<double> density;
+        for (unsigned int k = 0; k < (wmod.size() - 1); k++) 
+            {
+             if (wmod.at(k + 1) != wmod.at(k)) density.push_back(1.0/(fabs(wmod.at(k + 1) - wmod.at(k))));
+             else density.push_back(0.0);
+             // std::cout << __FUNCTION__ << " Density at " << k << " " << density.back() << " " << wmod.at(k) << " " << wmod.at(k + 1) << std::endl;
+            }
+        // Find points of zero density and correct them with respect to the frequency
+        for (unsigned int gi = 0; gi < density.size(); gi++)
+            {
+             if (density.at(gi) == 0)
+                {
+                 T wmod_value = wmod.at(gi);
+                 T wmod_valueaft = -99;
+                 unsigned int frq = 2;
+                 for (unsigned int gt = gi + 1; gt < density.size(); gt++)
+                     {
+                      if (density.at(gt) == 0) frq++;
+                      else { wmod_valueaft = wmod.at(gt); break; }
+                     }
+                 density.at(gi) = frq/(wmod_valueaft-wmod_value);
+                 for (unsigned int gt = gi + 1; gt < density.size(); gt++)
+                     {
+                      if (density.at(gt) == 0) density.at(gt) = frq / (wmod_valueaft - wmod_value);
+                      else break;
+                     }
+                }
+            }
+        double maxdens = *std::max_element(density.begin(), density.end());
+        // std::cout << __FUNCTION__ << " Max density: " << maxdens << " " << density.size() << std::endl;
+
+        // Find if points of increased densitty exist 
+        std::vector<unsigned int> dens_points[5];
+        for (unsigned int m = 0; m < density.size(); m++)
+            {
+             for (unsigned int d = 0; d < 5; d++)
+                 {
+                  if (density.at(m) >= (0.9-(d*0.1))*maxdens) dens_points[d].push_back(m);
+                  break; 
+                 }
+             }
+        // Minimize diatances of the mean between the elements with respect to the median
+        double med = CalcMeadian(&wmod);
+        // std::cout << __FUNCTION__ << " Median of non-descrete vector: " << med << std::endl;
+        int maxdensindx[5];
+        for (unsigned int h = 0; h < 5; h++)
+            {
+             maxdensindx[h] = -1;
+             // std::cout << __FUNCTION__ << " No of points at " << (0.9-h*0.1)*100 << "% of max density: "  << dens_points[h].size() << std::endl;
+             if (dens_points[h].size() > 2)
+                { 
+                 double mimdist = fabs(med); 
+                 double cal = 2*mimdist;
+                 for (unsigned int t = 0; t < (dens_points[h].size() - 1); t++)
+                     {
+                      int indx = ceil((dens_points[h].at(t) + dens_points[h].at(t+1))/2);
+                      cal = fabs(wmod.at(indx) - med);
+                      // std::cout << __FUNCTION__ << " inside density points " << h << ":" << t << "/" << (dens_points[h].size()-1) << " " << indx << " " << cal << " " << mimdist << " " << dens_points[h].at(t) << " " << dens_points[h].at(t + 1) << std::endl;
+                      // std::cout << cal - mimdist << std::endl;
+                      if ((cal-mimdist)<(1e-10*mimdist))
+                         {
+                          mimdist = cal;                         
+                          maxdensindx[h] = std::max_element(std::next(density.begin(), dens_points[h].at(t)), std::next(density.begin(), dens_points[h].at(t + 1))) - density.begin();
+                          // std::cout << __FUNCTION__ << " Replacing minimization values " << mimdist << " " << maxdensindx[h] << std::endl;
+                         }
+                     }
+                }
+             else if (dens_points[h].size() == 2) maxdensindx[h] = std::max_element(std::next(density.begin(), dens_points[h].at(0)), std::next(density.begin(), dens_points[h].at(1))) - density.begin();
+             // std::cout << __FUNCTION__ << " At " << (0.9 - h * 0.1) * 100 << "%, max density point: " << maxdensindx[h] << std::endl;
+            }
+        // Find mean of element closest to median and return it
+        T masdensval = 0.0;
+        float crt = 0.;
+        for (unsigned int o = 0; o < 5; o++) if (maxdensindx[o] != -1) { masdensval += wmod.at(maxdensindx[o]); crt += 1.;}
+        // std::cout << __FUNCTION__ << " we are at the end, " << masdensval << " " << crt << " " << maxdens << std::endl;
+        if (crt > 0) return masdensval/crt;
+        else return wmod.at(std::max_element(density.begin(), density.end()) - density.begin());
+
+      // }
+   /* else {
+          // will work only if all bins of the binned magnitude are occupied, if not it won't work.....
+          std::vector<unsigned int> wmod_count;
+          V wmod_value;
+          std::cout << __FUNCTION__ << " we are on the discrete case with resolution" << res << std::endl;
+          for (unsigned int i = 0; i < wmod.size(); i++)
+              {
+               wmod_value.push_back(wmod.at(i));
+               unsigned int j = i;
+               do j++;
+               while (wmod.at(j) == wmod_value.at(i) || j < wmod.size());
+               wmod_count.push_back(j - i);
+              }
+          // Find out if we have contiues elements or if we are missing some discrete elements
+          float miselem = 0.0;
+          for (unsigned int a = ceil(0.2*wmod_value.size()); a < ceil(0.8*wmod_value.size()); a++)
+              {
+               if (fabs(wmod_value.at(a + 1) - wmod_value.at(a)) > res) miselem+=1;
+              }
+          miselem = miselem/(ceil(0.8*wmod_value.size())-ceil(0.2*wmod_value.size()));
+          int maxfrq = std::max_element(wmod_count.begin(), wmod_count.end()) - wmod_count.begin();
+          return wmod_value.at(maxfrq);
+         }*/
+}
+// --------------------------------------------------------------------------------------------------------------
 // Explicit template instantanization
 template vector<int> LGADBase::Derivate<vector<int> >(std::vector<int> *, int);
 template vector<float> LGADBase::Derivate<vector<float> >(std::vector<float> *, int);
@@ -1095,6 +1212,9 @@ template double LGADBase::CalcFWHM<vector<double> >(std::vector<double>*, double
 template double LGADBase::CalcMeadian<vector<int> >(std::vector<int> *, int, int);
 template double LGADBase::CalcMeadian<vector<float> >(std::vector<float> *, int, int);
 template double LGADBase::CalcMeadian<vector<double> >(std::vector<double> *, int, int);
+template int LGADBase::MaxDensity<int, vector<int> >(std::vector<int> *, int, int, int);
+template float LGADBase::MaxDensity<float, vector<float> >(std::vector<float> *, float, int, int);
+template double LGADBase::MaxDensity<double, vector<double> >(std::vector<double> *, double, int, int);
 template vector<int> LGADBase::OutlierReject<vector<int> >(std::vector<int> *, unsigned int, float, int, int);
 template vector<float> LGADBase::OutlierReject<vector<float> >(std::vector<float> *, unsigned int, float, int, int);
 template vector<double> LGADBase::OutlierReject<vector<double> >(std::vector<double> *, unsigned int, float, int, int);
