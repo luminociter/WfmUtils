@@ -89,8 +89,6 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair <double, double> &g
     double strdv = LGADBase::Stdev(&w2);
     double wmax = *std::max_element(w2.begin(), w2.end());
     double wmin = *std::min_element(w2.begin(), w2.end());
-    double median = LGADBase::CalcMeadian(&w2);
-    double FWHM = LGADBase::CalcFWHM(&w2, median);
 
     if (mean == -99 || strdv == -99 || strdv == 0)
        {
@@ -99,10 +97,17 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair <double, double> &g
         return -2;
        }
 
+    double median = -99.;
     // Calculate minimum element distance to define minimum bin width
     if (methode == "GaussVarBin" || methode == "LandauXGaussVarBin" || methode == "GaussIntVarBin" || methode == "LandauXGaussIntVarBin") discr = true;
     double acc = -1;
-    if (discr) acc = LGADBase::CalResolution<double>(&w2, 5);
+    if (discr) 
+       {
+        acc = LGADBase::CalResolution<double>(&w2, 5);
+        median = LGADBase::MaxDensity<double>(&w2, acc);
+       }
+    else median = LGADBase::MaxDensity<double>(&w2);
+    double FWHM = LGADBase::CalcFWHM(&w2, median);
 
     // Histogtam bins and limits
     double limit1 = 0.0;
@@ -165,12 +170,11 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair <double, double> &g
             {
              limit1 = floor((mean - (gk/3)*strdv)*fact) / fact; // Symentric limit variaton
              limit2 = ceil((mean + (gk/3)*strdv)*fact) / fact;
-             // std::cout << "Guass Limits: " << limit1 << " - " << limit2 << " :: " << mean << " " << strdv << " " << fact << std::endl;
             }
          else if (methode == "LandauXGauss" || methode == "LandauXGaussVarBin" || methode == "LandauXGaussInt" || methode == "LandauXGaussIntVarBin")
                  {
-                  limit1 = floor((median - ((gk-5)/8)*FWHM)*fact) / fact; // Asymentric limit variaton
-                  limit2 = ceil((median + ((gk-2)/6)*FWHM)*fact) / fact;
+                  limit1 = floor((median - ((gk-5)/7)*FWHM)*fact) / fact; // Asymentric limit variaton
+                  limit2 = ceil((median + ((gk-2)/4)*FWHM)*fact) / fact;
                  }
          wb.clear();
          w2b.clear();
@@ -181,10 +185,14 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair <double, double> &g
          // Compute numbers for modified datasheet
          strdv2 = LGADBase::Stdev(&w2b);
          mean2 = LGADBase::Mean(&w2b);
-         median2 = LGADBase::CalcMeadian(&w2b);
-         FWHM2 = LGADBase::CalcFWHM(&w2b, median2);
          // Calculate maximum number of bins that makes sense for discreete histograms
-         if (discr) bins_max = (int)(fabs(limit2 - limit1) / acc);
+         if (discr) 
+            {
+             bins_max = (int)(fabs(limit2 - limit1) / acc);
+             median2 = LGADBase::MaxDensity<double>(&w2b, acc);
+            }
+         else median2 = LGADBase::MaxDensity<double>(&w2b);
+         FWHM2 = LGADBase::CalcFWHM(&w2b, median2);
          // Calculate bin vector for variable bin histograms
          if (methode == "GaussVarBin" || methode == "LandauXGaussVarBin" || methode == "GaussIntVarBin" || methode == "LandauXGaussIntVarBin")
             {
@@ -265,8 +273,9 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair <double, double> &g
                  }
               else if (methode == "LandauXGauss" || methode == "LandauXGaussInt" || methode == "LandauXGaussIntVarBin" ||  methode == "LandauXGaussVarBin")
                       {
-                       rmin = median3 - ((gk-5)/8) * FWHM3; // asymentric range
-                       rmax = median3 + ((gk-2)/6) * FWHM3;
+                       rmin = median3 - ((gk-5)/7)*FWHM3; // asymentric range
+                       rmax = median3 + ((gk-2)/4)*FWHM3;
+                       // std::cout << "Median: " << (fabs(median3-median2)/median2)*100 << "%, FWHM: " << (fabs(FWHM3-FWHM2)/FWHM2)*100  << "%, Lower Limit: " << (fabs(rmin-limit1)/limit1)*100  << "%,  Upper Limit: " << (fabs(rmax-limit2)/limit2)*100 << "%" << std::endl;
                        bin1 = xaxis->FindBin(rmin);
                        bin2 = xaxis->FindBin(rmax);
                        if (((bin2 - bin1) < 2) || (Fits.at(iter)->Integral(bin1 + 1, bin2 - 1) == 0)) continue;
@@ -441,10 +450,10 @@ TFitResultPtr LGADBase::GauXLandau(double rmin, double rmax, double median, doub
         else mygauland->SetParameter(1, (limitdown + ((limitup - limitdown) / 2)) - (a*(limitup - limitdown) / ((limitup - limitdown) + 2 * a)));
        }
     else mygauland->SetParameter(1, median);
-    mygauland->SetParameter(0, (wmax-wmin)/10);
+    mygauland->SetParameter(0, (wmax - wmin)/10);
     mygauland->SetParameter(2, integral);
     mygauland->SetParameter(3, FWHM /10);
-    mygauland->SetParLimits(0, (wmax - wmin)/10, 10*(wmax - wmin));
+    mygauland->SetParLimits(0, (wmax-wmin)/10, 10*(wmax-wmin));
     mygauland->SetParLimits(1, rmin, rmax);
     mygauland->SetParLimits(2, 0.1*integral, 10*integral);
     mygauland->SetParLimits(3, 0.01*(FWHM / 2), 100 * (FWHM / 2));
