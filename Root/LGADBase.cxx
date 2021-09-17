@@ -63,10 +63,10 @@ void LGADBase::SetFitMethode(std::string method)
 void LGADBase::SetInstrument(AqInstrument instr)
 {
 
-    if (instr == LeCroyWRBin || instr == Unasigned || instr == Sampic || instr == LabTXT || instr == InfiniiumScope || instr == TektronixScope) m_instrument = instr;
+    if (instr == LeCroyWRBin || instr == TektronixBinary || instr == Unasigned || instr == Sampic || instr == LabTXT || instr == InfiniiumScope || instr == TektronixScope) m_instrument = instr;
     else {
           std::cout << __FUNCTION__ << " ERROR: instrument value " << instr
-                    << " not allowed. Allowed values are in ascending order: Sampic, LecroyWP725Zi, TektronixScope, InfiniumScope or Undefined. Falling back to "
+                    << " not allowed. Allowed values are in ascending order: Sampic, LecroyWP725Zi, TektronixScope, InfiniumScope, TektronixBinary or Undefined. Falling back to "
                     << m_instrument << std::endl;
          }
 }
@@ -462,7 +462,7 @@ void LGADBase::Initialize()
              m_npoints.push_back(1024);
              m_srate.push_back(2e10);
             }
-    else if (m_instrument == InfiniiumScope || m_instrument == LeCroyWRBin)
+    else if (m_instrument == InfiniiumScope || m_instrument == LeCroyWRBin || m_instrument == TektronixBinary)
             {
              m_npoints.push_back(1024);
              m_srate.push_back(4e10);
@@ -542,8 +542,8 @@ int LGADBase::Addoriel(int val)
 // --------------------------------------------------------------------------------------------------------------
 bool LGADBase::ProgressBar(Long64_t evt, Long64_t total)
 {
-    float prd = (float)total / (float)100;
-    if (((remainder((float)evt, prd) < 0 && ceil(remainder((float)evt, prd)) == 0)) && (evt + 1) < total)
+    float prd = (float)total/(float)100;
+    if ((remainder((float)evt, prd) <= 0  && ceil(remainder((float)evt, prd)) == 0) && (evt + 1) < total)
        {
         std::cout << "<" << std::setfill('=') << std::setw(floor((0.2*((float)evt/prd)))) << "";
         std::cout << std::setfill(' ') << std::setw(20 - floor((0.2*((float)evt / prd))) + 2) << std::right << "> :";

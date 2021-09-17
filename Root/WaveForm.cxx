@@ -280,7 +280,7 @@ bool WaveForm::Calculate()
              m_minTime = TimeMin(m_voltage, m_SnRate, false, false);
              return false;
             }
-    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Pulse has been adjasted " << m_voltageAdj.size() << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Pulse has been adjusted " << m_voltageAdj.size() << std::endl;
     m_RiseTime = RiseTimeLinear(&m_voltageAdj, m_SnRate);
     if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Rise time calculation " << m_RiseTime << std::endl;
     m_CFDTime = CFDTimeLinear(&m_voltageAdj, m_time, m_fraction);
@@ -1261,7 +1261,7 @@ std::vector<double> WaveForm::PulseAdj(std::vector<double> *w, double baseline, 
     m_halfPtsIndx = FindHalfPoints(&wadj, true);
     m_StrIndx = StartIndx(&wadj, true);
     m_EndIndx = EndIndx(&wadj, true);
-    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: After pedestal subbtraction and inversion : baseline " << baseline 
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: After pedestal subtraction and inversion : baseline " << baseline 
                                                            << ", corrected vector size: " << wadj .size() << ", factor " << factor << std::endl;
 
     return wadj;
@@ -1307,7 +1307,7 @@ double WaveForm::FirstTimeForVoltage(std::vector<double> *w, std::vector<double>
         else  tar = LinearInter(t->at(ind_tar), w->at(ind_tar), t->at(ind_tar + 1), w->at(ind_tar + 1), volt);
         if (tar < t->back() && tar > t->front()) return tar;
         else {
-              if (m_WvBase->LGADBase::GetVerbosity() > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed to find voltage time for " << volt << " trigger!" << std::endl;
+              if (m_WvBase->LGADBase::GetVerbosity() > 0 ) std::cout << __FUNCTION__ << " ERROR: Failed locating time for voltage at " << volt << " trigger!" << std::endl;
               return -1.;
              }
        }

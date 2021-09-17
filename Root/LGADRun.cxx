@@ -1032,6 +1032,8 @@ void LGADRun::SlaveTerminate()
          m_ofile->cd();
         }
 
+    // Chi2 system level minimization algorithm
+
     ChFitParam->Write();
     histoslist->Write();
     // deleting the histogram lists, deletion happens from end to start

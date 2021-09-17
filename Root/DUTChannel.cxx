@@ -1338,6 +1338,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
            }
        }
 
+  std::cout << __FUNCTION__ << " INFO : Calculating max time for channel " << m_channelID << "... " << std::endl;
   m_ChFitMaxTime = CalculateMeanG(&m_ChMaxTime, &m_ChComplete, m_ChMaxTimeFt, m_ChMaxTimeChi2, 2, m_fitopt, true);
   if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit Max time: " << m_ChFitMaxTime.first << " +/- "
                                 << m_ChFitMaxTime.second << ", Chi2: " << m_ChMaxTimeChi2 << std::endl;
@@ -1346,6 +1347,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
       m_ChMaxTimeFt->SetNameTitle(Form("Ch_MaxTime%02u", m_channelID), Form("Max Time, Channel %02u;Time [sec];Entries", m_channelID));
       m_ChMaxTimeFt->SetDirectory(nullptr); // detach histo from open directory
      }
+  std::cout << __FUNCTION__ << " INFO : Calculating min time for channel " << m_channelID << "... " << std::endl;
   m_ChFitMinTime = CalculateMeanG(&m_ChMinTime, &m_ChComplete, m_ChMinTimeFt, m_ChMinTimeChi2, 2, m_fitopt, true);
   if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit Min time: " << m_ChFitMinTime.first << " +/- "
                                 << m_ChFitMinTime.second << ", Chi2: " << m_ChMinTimeChi2 << std::endl;
@@ -1354,6 +1356,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
       m_ChMinTimeFt->SetNameTitle(Form("Ch_MinTime%02u", m_channelID), Form("Min Time, Channel %02u;Time [sec];Entries", m_channelID));
       m_ChMinTimeFt->SetDirectory(nullptr); // detach histo from open directory
      }
+  std::cout << __FUNCTION__ << " INFO : Calculating charge for channel " << m_channelID << "... " << std::endl;
   m_ChFitCharge = CalculateMeanGLandau(&m_ChCharge, &m_ChComplete, m_ChChargeFt, m_ChChargeChi2, 2, m_fitopt, false);
   if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit Charge: " << m_ChFitCharge.first << " +/- "
                                 << m_ChFitCharge.second << ", Chi2: " << m_ChChargeChi2 << std::endl;
@@ -1362,6 +1365,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
       m_ChChargeFt->SetNameTitle(Form("Ch_Charge%02u", m_channelID), Form("Collected Cahrge, Cahnnel %02u;Charge [Q];Entries", m_channelID));
       m_ChChargeFt->SetDirectory(nullptr); // detach histo from open directory
      }
+  std::cout << __FUNCTION__ << " INFO : Calculating ride time for channel " << m_channelID << "... " << std::endl;
   m_ChFitRiseTime = CalculateMeanG(&m_ChRiseTime, &m_ChComplete, m_ChFitRiseTimeFt, m_ChFitRiseTimeChi2, 2, m_fitopt, false);
   if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit Rise time: " << m_ChFitRiseTime.first << " +/- "
                                 << m_ChFitRiseTime.second << ", Chi2: " << m_ChFitRiseTimeChi2 << std::endl;
@@ -1505,7 +1509,7 @@ std::pair <double, double> DUTChannel::CalculateMeanGLandau(std::vector<double>*
           else if (fitopt == "root") qual = m_ChBase->LGADBase::IterativeFit(&volt, VoltMPV, VoltSigma, hitHist, fitChi2, "LandauXGauss", std::make_pair(-1, -1), discrt);
           if (qual == 0) VoltMPV.second = VoltSigma.first;
           else {
-                std::cout << __FUNCTION__ << " WARNING : Cannot perform Gaussian x Landau fit, reventing to Gaussian (code: " << qual << ")!!" << std::endl;
+                std::cout << __FUNCTION__ << " WARNING : Cannot perform Gaussian x Landau fit, reventing to Gaussian (code: " << qual  << ", fit option: " << fitopt << ", discrete: " << discrt << ", completness level: " << level << ")!!" << std::endl;
                 VoltMPV = CalculateMeanG(vec, signal, hitHist, fitChi2, level, fitopt, discrt);
                }
          }

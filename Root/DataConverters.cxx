@@ -91,21 +91,22 @@ bool LGADBase::ConvertData()
     m_nchan = 0;
     m_channels.clear();
     m_convert = false;
-    if (m_instrument == Sampic) 
+    if (m_instrument == LeCroyWRBin || m_instrument == TektronixBinary || m_instrument == Sampic || m_instrument == InfiniiumScope)
        {
-        if (m_ext.IsNull()) m_convert = WriteSampic(m_datadir.Data(), m_dataname.Data(), "dat", m_evnt1, m_evnt2);
-        else m_convert = WriteSampic(m_datadir.Data(), m_dataname.Data(), m_ext.Data(), m_evnt1, m_evnt2);
+        if (m_ext.IsNull()) 
+           {
+            if (m_instrument == Sampic) m_convert = WriteSampic(m_datadir.Data(), m_dataname.Data(), "dat", m_evnt1, m_evnt2);
+            else if (m_instrument == LeCroyWRBin) m_convert = WriteLecroyBinary(m_datadir.Data(), m_dataname.Data(), "dat", m_evnt1, m_evnt2);
+            else if (m_instrument == InfiniiumScope) m_convert = WriteAgilentBinary(m_datadir.Data(), m_dataname.Data(), "dat", m_evnt1, m_evnt2);
+            else (m_instrument == TektronixBinary) m_convert = WriteTekBinary(m_datadir.Data(), m_dataname.Data(), "dat", m_evnt1, m_evnt2);
+           }
+        else {
+              if (m_instrument == LeCroyWRBin) m_convert = WriteLecroyBinary(m_datadir.Data(), m_dataname.Data(), m_ext.Data(), m_evnt1, m_evnt2);
+              else if (m_instrument == InfiniiumScope) m_convert = WriteAgilentBinary(m_datadir.Data(), m_dataname.Data(), m_ext.Data(), m_evnt1, m_evnt2);
+              else if (m_instrument == Sampic) m_convert = WriteSampic(m_datadir.Data(), m_dataname.Data(), m_ext.Data(), m_evnt1, m_evnt2);
+              else (m_instrument == TektronixBinary) m_convert = WriteTekBinary(m_datadir.Data(), m_dataname.Data(), m_ext.Data(), m_evnt1, m_evnt2);
+              }
        }
-    else if (m_instrument == InfiniiumScope)
-            {
-             if (m_ext.IsNull()) m_convert = WriteAgilentBinary(m_datadir.Data(), m_dataname.Data(), "dat", m_evnt1, m_evnt2);
-             else m_convert = WriteAgilentBinary(m_datadir.Data(), m_dataname.Data(), m_ext.Data(), m_evnt1, m_evnt2);
-            }
-    else if (m_instrument == LeCroyWRBin)
-            {
-             if (m_ext.IsNull()) m_convert = WriteLecroyBinary(m_datadir.Data(), m_dataname.Data(), "dat", m_evnt1, m_evnt2);
-             else m_convert = WriteLecroyBinary(m_datadir.Data(), m_dataname.Data(), m_ext.Data(), m_evnt1, m_evnt2);
-            }
     else if (m_instrument == LabTXT)
             {
              if (m_ext.IsNull()) m_convert = WriteLabTXT(m_datadir.Data(), m_dataname.Data(), "txt", m_evnt1, m_evnt2);
@@ -944,7 +945,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
 // --------------------------------------------------------------------------------------------------------------
 // Function to merge tracking information from EUTelescope reconstruction
 //
-// Author: Luci­a Castillo Garci­a - lucia.castillo.garcia@cern.ch - IFAE-BARCELONA
+// Author: Luciï¿½a Castillo Garciï¿½a - lucia.castillo.garcia@cern.ch - IFAE-BARCELONA
 //
 bool LGADBase::CombineTrack(const char* dir, const char* name)
 {
@@ -1344,7 +1345,7 @@ bool LGADBase::CombineTrack(const char* dir, const char* name)
 }
 // --------------------------------------------------------------------------------------------------------------
 // Function to read Lecroy oscilloscope data from DESY test beams
-// Author: Lucía Castillo García - lucia.castillo.garcia@cern.ch - IFAE-BARCELONA
+// Author: Lucï¿½a Castillo Garcï¿½a - lucia.castillo.garcia@cern.ch - IFAE-BARCELONA
 bool LGADBase::WriteLecroyBinary(const char* dir, const char* name, const char* ext, unsigned int evt1, unsigned int evt2)
 {
     std::vector<unsigned int> nevt_seq;  // internal, number of events per sequence, identical for all channels
@@ -1631,6 +1632,10 @@ bool LGADBase::WriteLecroyBinary(const char* dir, const char* name, const char* 
     return true;
 }
 // --------------------------------------------------------------------------------------------------------------
+bool LGADBase::WriteTekBinary(const char* dir, const char* name, const char* ext, unsigned int evt1, unsigned int evt2)
+{
+}
+// --------------------------------------------------------------------------------------------------------------
 // Function to read binary files from multiple oscilloscopes supporting up to 64 channels, or a total of 16 non-connected scopes or 
 // 31 dasy chaned scopes with common clock and syncronistion with Agilent readout code option for multimanaging.
 bool LGADBase::WriteAgilentBinary(const char* dir, const char* name, const char* ext, unsigned int evt1, unsigned int evt2)
@@ -1867,7 +1872,7 @@ bool LGADBase::CreateOutputFile(const char* dir, const char* ofname, std::vector
             }
          m_tree->Branch(Form("t%02u", nchan.at(ich)), &(m_t.at(ich)));
          m_tree->Branch(Form("w%02u", nchan.at(ich)), &(m_w.at(ich)));
-         if (m_instrument == InfiniiumScope || m_instrument == LabTXT || m_instrument == TektronixScope || m_instrument == LeCroyWRBin)
+         if (m_instrument == InfiniiumScope || m_instrument == TektronixBinary || m_instrument == LabTXT || m_instrument == TektronixScope || m_instrument == LeCroyWRBin)
             {
              m_tree->Branch(Form("vScale%02u", nchan.at(ich)), &(m_scale.at(ich)), "m_scale.at(ich)/F");
              m_tree->Branch(Form("nPoints%02u", nchan.at(ich)), &(m_npoints.at(ich)), "m_npoints.at(ich)/i");

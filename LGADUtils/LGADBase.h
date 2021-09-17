@@ -56,7 +56,7 @@
 #include <sys/types.h> 
 #endif
 
-enum AqInstrument { Sampic, LabTXT, InfiniiumScope, TektronixScope, LeCroyWRBin, Unasigned };
+enum AqInstrument { Sampic, LabTXT, InfiniiumScope, TektronixScope, LeCroyWRBin, TektronixBinary, Unasigned };
 enum AqBoard { SingleCh, FourCh, IN2P3, KU, SiPM };
 enum SecStage { MinCircuits, Particulars, CIVIDEC, none };
 struct TrCrHist { AqBoard Board; float Capacitance; TH2D* TransHist; };
@@ -253,6 +253,7 @@ class LGADBase : public TSelector {
   bool WriteTectronixTXT(const char* dir, const char* name, const char* ext);
   bool WriteAgilentBinary(const char* dir, const char* name, const char* ext, unsigned int evt1 = 0, unsigned int evt2 = 0);
   bool WriteLecroyBinary(const char* dir, const char* name, const char* ext, unsigned int evt1 = 0, unsigned int evt2 = 0);
+  bool WriteTekBinary(const char* dir, const char* name, const char* ext, unsigned int evt1 = 0, unsigned int evt2 = 0);
   bool CombineTrack(const char* dir, const char* name);
   bool CreateOutputFile(const char* dir, const char* ofname, std::vector<unsigned int> nchan);
   bool SetScale(std::vector<unsigned int> channel, unsigned int nchan, std::vector<float>* scale);

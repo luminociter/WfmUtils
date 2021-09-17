@@ -101,13 +101,17 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair <double, double> &g
     // Calculate minimum element distance to define minimum bin width
     if (methode == "GaussVarBin" || methode == "LandauXGaussVarBin" || methode == "GaussIntVarBin" || methode == "LandauXGaussIntVarBin") discr = true;
     double acc = -1;
+    double FWHM = -1;
     if (discr) 
        {
         acc = LGADBase::CalResolution<double>(&w2, 5);
-        median = LGADBase::MaxDensity<double>(&w2, acc);
+        if (methode == "LandauXGaussVarBin" || methode == "LandauXGaussIntVarBin") median = LGADBase::MaxDensity<double>(&w2, acc);
        }
-    else median = LGADBase::MaxDensity<double>(&w2);
-    double FWHM = LGADBase::CalcFWHM(&w2, median);
+    else if (methode == "LandauXGauss" || methode == "LandauXGaussVarBin" || methode == "LandauXGaussInt" || methode == "LandauXGaussIntVarBin")
+            { 
+             median = LGADBase::MaxDensity<double>(&w2);
+             FWHM = LGADBase::CalcFWHM(&w2, median);
+            }
 
     // Histogtam bins and limits
     double limit1 = 0.0;
@@ -189,10 +193,13 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair <double, double> &g
          if (discr) 
             {
              bins_max = (int)(fabs(limit2 - limit1) / acc);
-             median2 = LGADBase::MaxDensity<double>(&w2b, acc);
+             if (methode == "LandauXGaussVarBin" || methode == "LandauXGaussIntVarBin") median2 = LGADBase::MaxDensity<double>(&w2b, acc);
             }
-         else median2 = LGADBase::MaxDensity<double>(&w2b);
-         FWHM2 = LGADBase::CalcFWHM(&w2b, median2);
+         else if (methode == "LandauXGauss" || methode == "LandauXGaussVarBin" || methode == "LandauXGaussInt" || methode == "LandauXGaussIntVarBin")
+                 {
+                  median2 = LGADBase::MaxDensity<double>(&w2b);
+                  FWHM2 = LGADBase::CalcFWHM(&w2b, median2);
+                 }
          // Calculate bin vector for variable bin histograms
          if (methode == "GaussVarBin" || methode == "LandauXGaussVarBin" || methode == "GaussIntVarBin" || methode == "LandauXGaussIntVarBin")
             {
