@@ -2,38 +2,6 @@ This Package can be used to support the nalysis of HGTD Data originating
 from a testbeam or a bench top osciloscope testing with beta source.
 Functions should be applid to raw data aquired with the instrument.
 
-More details on the use of specific classes, methods, and utility 
-codes can be found on the following TWiki: 
-https://twiki.cern.ch/twiki/bin/view/AtlasProtected/HGTDUtils
-
-rcSetup Base,2.4.20 # if first time
-rcSetup # after that
-
-rc compile
-
-# there are two ways to run it:
-# through root [Vagg]
-root -l
-.x macros/Run.C
-
-# through an executable run, by just:
-run [options]
-# you need to have either a dir "input" with the initial files
-# or set the inputdir to be sth else adding 
-run -in newInputFolder 
-# there is a default file set to run on 
-# but can be changed by 
-run -f newFile
-# there is the default folder to be created with the output "results"
-# but can be changed by
-run -out newOutput
-# the default operation is "convert" data
-# but can be change to "analyze" converted data by
-run -do analyze
-# and of course combination of all above
-
-
-
 ###############################################
 Some info on the output file
 ###############################################
