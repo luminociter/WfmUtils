@@ -1365,7 +1365,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
       m_ChChargeFt->SetNameTitle(Form("Ch_Charge%02u", m_channelID), Form("Collected Cahrge, Cahnnel %02u;Charge [Q];Entries", m_channelID));
       m_ChChargeFt->SetDirectory(nullptr); // detach histo from open directory
      }
-  std::cout << __FUNCTION__ << " INFO : Calculating ride time for channel " << m_channelID << "... " << std::endl;
+  std::cout << __FUNCTION__ << " INFO : Calculating rise time for channel " << m_channelID << "... " << std::endl;
   m_ChFitRiseTime = CalculateMeanG(&m_ChRiseTime, &m_ChComplete, m_ChFitRiseTimeFt, m_ChFitRiseTimeChi2, 2, m_fitopt, false);
   if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit Rise time: " << m_ChFitRiseTime.first << " +/- "
                                 << m_ChFitRiseTime.second << ", Chi2: " << m_ChFitRiseTimeChi2 << std::endl;
@@ -1376,8 +1376,10 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
      }
 
   std::cout << __FUNCTION__ << " INFO : Performing CFD fits for all bins.." << std::endl;
+  m_ChBase->SetVerbose(1);
   for (unsigned int i = 0; i < 19; i++) 
       {
+       if (m_ChBase->GetVerbosity() >= 1) std::cout << "=========================================== Iteration " << i << "/19 ==========================================" << std::endl;
        m_ChBase->LGADBase::ProgressBar(i, 19);
        m_FitChCFDTime.push_back(CalculateMeanG(&m_ChCFDTime[i], &m_ChComplete, m_ChCFDTimeFt[i], m_ChCFDTimeChi2[i], 2, m_fitopt, false));
        if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit CFD Time at " << (i + 1) * 5 << "%: "
@@ -1388,6 +1390,8 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
            m_ChCFDTimeFt[i]->SetNameTitle(Form("Ch_CFDT%02u%02u", m_channelID, i), Form("CFD Time at %02u%% CFD, Channel %02u;CFD Time [sec];Entries", 5+5*i, m_channelID));
            m_ChCFDTimeFt[i]->SetDirectory(nullptr); // detach histo from open directory
           }
+       // This is the one thath as the issue and needs to be corrected. vWhy is dV/dT discrete? It always fails and delays the rest and also reveres to Guass because the convoluted fit fails
+       // Is this really discreete? Should there be a criteria for discretness in the iterative refitter and not here?
        m_FitChDVDTCFD.push_back(CalculateMeanGLandau(&m_ChDVDTCFD[i], &m_ChComplete, m_ChDVDTCFDFt[i], m_ChDVDTCFDChi2[i], 3, m_fitopt, true));
        if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit dV/dT at " << (i + 1) * 5 << "%: "
                                                     << m_FitChDVDTCFD[i].first << " +/- " << m_FitChDVDTCFD[i].second 
@@ -1411,6 +1415,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
        if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit Jitter (from #partialV/#partialt) at " << (i + 1) * 5 << "%: "
                                                     << m_FitChJitNdVdT[i].first << " +/- " << m_FitChJitNdVdT[i].second << std::endl;
       }
+  m_ChBase->SetVerbose(0);
 
   m_ChFitTriggTime = CalculateMeanG(&m_ChTriggTime, &m_ChComplete, m_ChTriggTimeFt, m_ChTriggTimeChi2, 3, m_fitopt, false);
   if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit Trigger time: " << m_ChFitTriggTime.first << " +/- "
@@ -1420,6 +1425,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
       m_ChTriggTimeFt->SetNameTitle(Form("Ch_TriggT%02u", m_channelID), Form("Trigger Time, Channel %02u;Trigger Time [sec];Entries", m_channelID));
       m_ChTriggTimeFt->SetDirectory(nullptr); // detach histo from open directory
      }
+  // This also has an issue. Agin is this discrete????
   m_ChFitDVDTMax = CalculateMeanGLandau(&m_ChDVDTMax, &m_ChComplete, m_ChDVDTMaxFt, m_ChDVDTMaxChi2, 2, m_fitopt, true);
   if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit Max dV/dT: " << m_ChFitDVDTMax.first << " +/- "
                                                << m_ChFitDVDTMax.second << ", Chi2: " << m_ChDVDTMaxChi2 << std::endl;

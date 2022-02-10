@@ -98,13 +98,13 @@ bool LGADBase::ConvertData()
             if (m_instrument == Sampic) m_convert = WriteSampic(m_datadir.Data(), m_dataname.Data(), "dat", m_evnt1, m_evnt2);
             else if (m_instrument == LeCroyWRBin) m_convert = WriteLecroyBinary(m_datadir.Data(), m_dataname.Data(), "dat", m_evnt1, m_evnt2);
             else if (m_instrument == InfiniiumScope) m_convert = WriteAgilentBinary(m_datadir.Data(), m_dataname.Data(), "dat", m_evnt1, m_evnt2);
-            else (m_instrument == TektronixBinary) m_convert = WriteTekBinary(m_datadir.Data(), m_dataname.Data(), "dat", m_evnt1, m_evnt2);
+            else m_convert = WriteTekBinary(m_datadir.Data(), m_dataname.Data(), "dat", m_evnt1, m_evnt2);
            }
         else {
               if (m_instrument == LeCroyWRBin) m_convert = WriteLecroyBinary(m_datadir.Data(), m_dataname.Data(), m_ext.Data(), m_evnt1, m_evnt2);
               else if (m_instrument == InfiniiumScope) m_convert = WriteAgilentBinary(m_datadir.Data(), m_dataname.Data(), m_ext.Data(), m_evnt1, m_evnt2);
               else if (m_instrument == Sampic) m_convert = WriteSampic(m_datadir.Data(), m_dataname.Data(), m_ext.Data(), m_evnt1, m_evnt2);
-              else (m_instrument == TektronixBinary) m_convert = WriteTekBinary(m_datadir.Data(), m_dataname.Data(), m_ext.Data(), m_evnt1, m_evnt2);
+              else m_convert = WriteTekBinary(m_datadir.Data(), m_dataname.Data(), m_ext.Data(), m_evnt1, m_evnt2);
               }
        }
     else if (m_instrument == LabTXT)
@@ -1634,6 +1634,7 @@ bool LGADBase::WriteLecroyBinary(const char* dir, const char* name, const char* 
 // --------------------------------------------------------------------------------------------------------------
 bool LGADBase::WriteTekBinary(const char* dir, const char* name, const char* ext, unsigned int evt1, unsigned int evt2)
 {
+    return true;
 }
 // --------------------------------------------------------------------------------------------------------------
 // Function to read binary files from multiple oscilloscopes supporting up to 64 channels, or a total of 16 non-connected scopes or 
