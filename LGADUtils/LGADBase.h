@@ -56,7 +56,7 @@
 #include <sys/types.h> 
 #endif
 
-enum AqInstrument { Sampic, LabTXT, TestBeamBin, TestBeamBin1, TestBeamBin2, TektronixScope, LeCroyWRBin, Unasigned };
+enum AqInstrument { Sampic, LabTXT, TestBeamBin, TektronixScope, LeCroyWRBin, Unasigned, TestBeamBin1, TestBeamBin2,};
 enum AqBoard { SingleCh, FourCh, IN2P3, KU, SiPM };
 enum SecStage { MinCircuits, Particulars, CIVIDEC, none };
 struct TrCrHist { AqBoard Board; float Capacitance; TH2D* TransHist; };

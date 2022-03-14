@@ -63,7 +63,7 @@ void LGADBase::SetFitMethode(std::string method)
 // --------------------------------------------------------------------------------------------------------------
 void LGADBase::SetInstrument(AqInstrument instr)
 {    
-    if (instr == LeCroyWRBin || instr == TestBeamBin1 || instr == TestBeamBin || instr == Unasigned || instr == Sampic || instr == LabTXT || instr == TektronixScope) m_instrument = instr;
+    if (instr == Sampic || instr == LabTXT || instr == TestBeamBin || instr == TektronixScope || instr == LeCroyWRBin || instr == Unasigned || instr == TestBeamBin1 || instr == TestBeamBin2) m_instrument = instr;
     else {
           std::cout << __FUNCTION__ << " ERROR: instrument value " << instr
                     << " not allowed. Allowed values are in ascending order: Sampic, LabTXT, TestBeamBin, TektronixScope, LeCroyWRBin, or Unasigned. Falling back to "

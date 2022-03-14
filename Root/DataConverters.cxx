@@ -1769,8 +1769,8 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
                         unsigned int type = 0;
                         if (n_bytes == 1) type = 100;  
                         else if (n_bytes == 2) type = 200;
-                        if (strcmp(sn2, "LSB") == 0) type += 10;
-                        else if (strcmp(sn2, "MSB") == 0) type += 20;
+                        if (strcmp(sn2, "MSB") == 0) type += 10;
+                        else if (strcmp(sn2, "LSB") == 0) type += 20;
                         if (strcmp(sn0, "RI") == 0) type += 1;
                         else if (strcmp(sn0, "RP") == 0) type += 2;
                         dattype.push_back(type);
@@ -2023,19 +2023,19 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
                             // 1 byte, MSB, signed int RI (SHOULD ADD +128?)
                             if (dattype.at(j) == 111 || dattype.at(j) == 121) m_w[j].push_back((int)(((int8_t)fileBuf[lCurPos + w])+128) * yscale[j] + yoffset[j]);
                             // 1 byte, MSB, positive int RP
-                            else if (dattype.at(j) == 112 || dattype.at(j) == 122) m_w[j].push_back( ((uint8_t)fileBuf[lCurPos + w])*yscale[j] + yoffset[j]);
+                            else if (dattype.at(j) == 112 || dattype.at(j) == 122) m_w[j].push_back(((uint8_t)fileBuf[lCurPos + w])*yscale[j] + yoffset[j]);
                             // 2 byte, MSB, signed int RI (SHOULD ADD +32,768?)
-                            else if (dattype.at(j) == 211) m_w[j].push_back((double)((short int)(fileBuf[lCurPos + w]+fileBuf[lCurPos+w+1]*256)+32768)*yscale[j] + yoffset[j]);
+                            else if (dattype.at(j) == 211) m_w[j].push_back((double)((short int)(fileBuf[lCurPos+2*w]+fileBuf[lCurPos+2*w+1]*256)+32768)*yscale[j] + yoffset[j]);
                             // 2 byte, MSB, positive int RP 
-                            else if (dattype.at(j) == 212) m_w[j].push_back((unsigned short int)(fileBuf[lCurPos+w]+fileBuf[lCurPos+w+1]*256)*yscale[j] + yoffset[j]);
+                            else if (dattype.at(j) == 212) m_w[j].push_back((unsigned short int)(fileBuf[lCurPos+2*w]+fileBuf[lCurPos+2*w+1]*256)*yscale[j] + yoffset[j]);
                             // 2 byte, LSB, signed int RI (SHOULD ADD +32,768?)
-                            else if (dattype.at(j) == 221) m_w[j].push_back((double)((short int)(fileBuf[lCurPos + w]*256+fileBuf[lCurPos+w+1])+32768)*yscale[j] + yoffset[j]);
+                            else if (dattype.at(j) == 221) m_w[j].push_back((double)((short int)(fileBuf[lCurPos+2*w]*256+fileBuf[lCurPos+2*w+1])+32768)*yscale[j] + yoffset[j]);
                             // 2 byte, LSB, positive int RP 
-                            else if (dattype.at(j) == 222) m_w[j].push_back((unsigned short int)(fileBuf[lCurPos+w]*256+fileBuf[lCurPos+w+1])*yscale[j] + yoffset[j]);                          
+                            else if (dattype.at(j) == 222) m_w[j].push_back((unsigned short int)(fileBuf[lCurPos+2*w]*256+fileBuf[lCurPos+2*w+1])*yscale[j] + yoffset[j]);                          
                             m_t[j].push_back((double)w/l_srate.at(j) + xoffset[j]);
                            }
                         else { // Assumes MSB representation (BIG ENDIANESS)
-                              m_w[j].push_back((short int)(fileBuf[lCurPos+w] +fileBuf[lCurPos+w+1])*256 * yscale[j] + yoffset[j]);
+                              m_w[j].push_back((short int)(fileBuf[lCurPos+2*w]+fileBuf[lCurPos+2*w+1])*256*yscale[j] + yoffset[j]);
                               m_t[j].push_back((double)w / l_srate.at(j));
                              }
                        }
