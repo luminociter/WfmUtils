@@ -419,11 +419,17 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext, i
 
   delete b;
   m_event = tevent;
-  if (((TDirectory*)CurrentDirectory())->Cd(m_tree->GetDirectory())) m_tree->Write();
-  delete m_trigDt;
-  delete m_trigFr;
-  delete m_tree;
+
+  TListIter l_next_object(gDirectory->GetList());
+  l_next_object.Reset();
+  TObject* l_obj;
+  while ((l_obj=l_next_object()))
+        {
+         l_obj->Write("", kWriteDelete);
+         delete l_obj;
+        }
   m_ofile->Close();
+
   return true;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -732,11 +738,16 @@ bool LGADBase::WriteLabTXT(const char* dir, const char* name, const char* ext, i
     std::cout << "Wrote " << m_event << " events into output file " << m_ofile->GetName() << std::endl;
     LGADBase::CalcTrigFr(l_triggtimeVec, m_trigDt, m_trigFr, m_tree->GetEntries());
 
-    if (((TDirectory*)CurrentDirectory())->Cd(m_tree->GetDirectory())) m_tree->Write();
-    delete m_trigDt;
-    delete m_trigFr;
-    delete m_tree;
+    TListIter l_next_object(gDirectory->GetList());
+    l_next_object.Reset();
+    TObject* l_obj;
+    while ((l_obj=l_next_object()))
+          {
+           l_obj->Write("", kWriteDelete);
+           delete l_obj;
+          }
     m_ofile->Close();
+
     return true;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -928,11 +939,16 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
          ifname = ifname.substr(0, ifname.find_last_of("_Ch") + 1);
         }
 
-    if (((TDirectory*)CurrentDirectory())->Cd(m_tree->GetDirectory())) m_tree->Write();
-    // delete m_trigDt;
-    // delete m_trigFr;
-    delete m_tree;
+    TListIter l_next_object(gDirectory->GetList());
+    l_next_object.Reset();
+    TObject* l_obj;
+    while ((l_obj=l_next_object()))
+          {
+           l_obj->Write("", kWriteDelete);
+           delete l_obj;
+          }
     m_ofile->Close();
+
     return true;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -1614,13 +1630,18 @@ bool LGADBase::WriteLecroyBinary(const char* dir, const char* name, const char* 
 
     fclose(fd_file);
     m_event = m_event - 1;
-    if (((TDirectory*)CurrentDirectory())->Cd(m_tree->GetDirectory())) m_tree->Write();
-    // delete m_trigDt;
-    // delete m_trigFr;
-    delete m_tree;
-    m_ofile->Close();
-    return true;
 
+    TListIter l_next_object(gDirectory->GetList());
+    l_next_object.Reset();
+    TObject* l_obj;
+    while ((l_obj=l_next_object()))
+          {
+           l_obj->Write("", kWriteDelete);
+           delete l_obj;
+          }
+    m_ofile->Close();
+
+    return true;
 }
 // --------------------------------------------------------------------------------------------------------------
 // Function to read binary files from multiple oscilloscopes supporting up to 64 channels, or a total of 16 non-connected scopes or 
@@ -2055,16 +2076,17 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
     if (m_instrument == TestBeamBin2) LGADBase::CalcTrigFr(l_triggtimeVec, m_trigDt, m_trigFr, m_tree->GetEntries());
 
     fclose(fd_file);
-    if (((TDirectory*)CurrentDirectory())->Cd(m_tree->GetDirectory())) m_tree->Write();
 
-    if (m_instrument == TestBeamBin2)
-       {
-        delete m_trigDt;
-        delete m_trigFr;
-       }
-
-    delete m_tree;
+    TListIter l_next_object(gDirectory->GetList());
+    l_next_object.Reset();
+    TObject* l_obj;
+    while ((l_obj=l_next_object()))
+          {
+           l_obj->Write("", kWriteDelete);
+           delete l_obj;
+          }
     m_ofile->Close();
+
     return true;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -2103,7 +2125,7 @@ bool LGADBase::CreateOutputFile(const char* dir, const char* ofname, std::vector
     m_ofile->SetCompressionLevel(6);
     std::cout << "    Creating output ROOT file: " << m_ofile->GetName() << std::endl;
     m_tree = new TTree("wfm", "Timing part of charge collection measurements");
-    m_tree->SetAutoFlush(10000); // Set autoflush to 30 MB
+    m_tree->SetAutoFlush(-300000000); // Set autoflush to 300 MB
     LGADBase::SetVectorSize(nchan.size());
 
     for (unsigned int ich = 0; ich < nchan.size(); ich++)
