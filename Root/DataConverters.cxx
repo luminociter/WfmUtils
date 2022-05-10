@@ -419,7 +419,7 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext, i
 
   delete b;
   m_event = tevent;
-  if ((m_tree->GetDirectory())->Cd()) m_tree->Write();
+  if ((<TDirectory*>CurrentDirecrtory())->Cd(m_tree->GetDirectory())) m_tree->Write();
   delete m_trigDt;
   delete m_trigFr;
   delete m_tree;
@@ -732,7 +732,7 @@ bool LGADBase::WriteLabTXT(const char* dir, const char* name, const char* ext, i
     std::cout << "Wrote " << m_event << " events into output file " << m_ofile->GetName() << std::endl;
     LGADBase::CalcTrigFr(l_triggtimeVec, m_trigDt, m_trigFr, m_tree->GetEntries());
 
-    if ((m_tree->GetDirectory())->Cd()) m_tree->Write();
+    if ((<TDirectory*>CurrentDirecrtory())->Cd(m_tree->GetDirectory())) m_tree->Write();
     delete m_trigDt;
     delete m_trigFr;
     delete m_tree;
@@ -928,7 +928,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
          ifname = ifname.substr(0, ifname.find_last_of("_Ch") + 1);
         }
 
-    if ((m_tree->GetDirectory())->Cd()) m_tree->Write();
+    if ((<TDirectory*>CurrentDirecrtory())->Cd(m_tree->GetDirectory())) m_tree->Write();
     // delete m_trigDt;
     // delete m_trigFr;
     delete m_tree;
@@ -1614,7 +1614,7 @@ bool LGADBase::WriteLecroyBinary(const char* dir, const char* name, const char* 
 
     fclose(fd_file);
     m_event = m_event - 1;
-    if ((m_tree->GetDirectory())->Cd()) m_tree->Write();
+    if ((<TDirectory*>CurrentDirecrtory())->Cd(m_tree->GetDirectory())) m_tree->Write();
     // delete m_trigDt;
     // delete m_trigFr;
     delete m_tree;
@@ -2055,7 +2055,7 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
     if (m_instrument == TestBeamBin2) LGADBase::CalcTrigFr(l_triggtimeVec, m_trigDt, m_trigFr, m_tree->GetEntries());
 
     fclose(fd_file);
-    if ((m_tree->GetDirectory())->Cd()) m_tree->Write();
+    if ((<TDirectory*>CurrentDirecrtory())->Cd(m_tree->GetDirectory())) m_tree->Write();
 
     if (m_instrument == TestBeamBin2)
        {
