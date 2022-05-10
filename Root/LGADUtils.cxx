@@ -279,8 +279,21 @@ bool LGADUtils::Analyse(Long64_t nprocess, std::string tree)
     if (m_Base->LGADBase::GetExtention() == ".root" || m_Base->LGADBase::GetConvertSucess())
        {
         bool file = false;
-        if (!m_Base->LGADBase::GetConvertSucess()) file = m_Base->SetRootFile(m_Base->GetDataDir() + m_Base->GetDataName() + m_Base->GetExtention());
-        else file = m_Base->SetRootFile(m_Base->GetOutFileaDir() + m_Base->GetOutFileName() + ".root");
+        if (!m_Base->LGADBase::GetConvertSucess()) 
+           {
+           if ((m_Base->LGADBase::GetOutFileName() == "" || m_Base->LGADBase::GetOutFileName() == m_Base->LGADBase::GetDataName()) && (m_Base->LGADBase::GetOutFileDir() == m_Base->LGADBase::GetDataDir()))
+              {
+               file = m_Base->SetRootFile(m_Base->GetDataDir() + m_Base->GetDataName() + m_Base->GetExtention());
+              }
+           else {
+                 std::cout <<  __FUNCTION__ << " INFO: Creating new output file at " << m_Base->GetOutFileDir() << " With name: " << m_Base->GetOutFileName() + ".root" << std::endl;
+                 if (m_Base->LGADBase::GetOutFileName() != "") m_Base->SetOutDataNames(m_Base->GetOutFileDir(), m_Base->GetOutFileName() + ".root" );
+                 else  m_Base->SetOutDataNames(m_Base->GetOutFileDir(), m_Base->GetDataName() + ".root")
+                 (m_Base->GetRootFile())->TFile::Cp(m_Base->GetDataDir() + m_Base->GetDataName() + ".root", m_Base->GetOutFileDir() + m_Base->GetOutFileName() + ".root", kTRUE, 1000000);
+                 m_Base->SetRootFile(m_Base->GetOutFileDir() + m_Base->GetOutFileName() + ".root");
+                }
+           }
+        else file = m_Base->SetRootFile(m_Base->GetOutFileDir() + m_Base->GetOutFileName() + ".root");
         if (file)
            {
             if (tree == "")

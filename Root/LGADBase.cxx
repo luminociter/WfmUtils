@@ -589,8 +589,7 @@ else if (n == 0) return false;
 else return false;
 }
 // --------------------------------------------------------------------------------------------------------------
-// Helper Function integrated to trim strings by reoving spaces or other defined characters from it's begining and 
-// end. 
+// Helper Function integrated to trim strings by reoving spaces or other defined characters from it's begining and end. 
 std::string LGADBase::trim(const std::string str, const std::string whitespace)
 {
     int strBegin = str.find_first_not_of(whitespace);

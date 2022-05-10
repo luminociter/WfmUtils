@@ -159,7 +159,7 @@ class LGADBase : public TSelector {
   TString GetExtention() { return m_ext; };
   TString GetDataDir() { return m_datadir; };
   TString GetDataName() { return m_dataname; };
-  TString GetOutFileaDir() { return m_ofdir; };
+  TString GetOutFileDir() { return m_ofdir; };
   TString GetOutFileName() { return m_ofname; };
   std::string GetTreeName() { return m_treename; };
   std::vector<std::pair<int, std::string>> GetDUTNames() { return m_DUTChsNames; };

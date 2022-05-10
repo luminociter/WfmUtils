@@ -41,7 +41,8 @@ void LGADBase::SetOutDataNames(TString DataDir, TString DataName)
 {
     TString sLast = DataDir[DataDir.Length() - 1];
     if (!sLast.Contains("/")) DataDir = DataDir + "/";
-    m_ofname = DataName;
+    if (DataName.Contains(".root")) m_ofname = DataName(0, DataName.Length() - 5);
+    else m_ofname = DataName;
     m_ofdir = DataDir;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -418,7 +419,7 @@ bool LGADBase::WriteSampic(const char* dir, const char* name, const char* ext, i
 
   delete b;
   m_event = tevent;
-  m_ofile->Write();
+  if (Cd(m_tree->GetDirectory())) m_tree->Write();
   delete m_trigDt;
   delete m_trigFr;
   delete m_tree;
@@ -731,7 +732,7 @@ bool LGADBase::WriteLabTXT(const char* dir, const char* name, const char* ext, i
     std::cout << "Wrote " << m_event << " events into output file " << m_ofile->GetName() << std::endl;
     LGADBase::CalcTrigFr(l_triggtimeVec, m_trigDt, m_trigFr, m_tree->GetEntries());
 
-    m_ofile->Write();
+    if (Cd(m_tree->GetDirectory())) m_tree->Write();
     delete m_trigDt;
     delete m_trigFr;
     delete m_tree;
@@ -927,7 +928,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
          ifname = ifname.substr(0, ifname.find_last_of("_Ch") + 1);
         }
 
-    m_ofile->Write();
+    if (Cd(m_tree->GetDirectory())) m_tree->Write();    
     // delete m_trigDt;
     // delete m_trigFr;
     delete m_tree;
@@ -1613,12 +1614,13 @@ bool LGADBase::WriteLecroyBinary(const char* dir, const char* name, const char* 
 
     fclose(fd_file);
     m_event = m_event - 1;
-    m_ofile->Write();
+    if (Cd(m_tree->GetDirectory())) m_tree->Write();
     // delete m_trigDt;
     // delete m_trigFr;
     delete m_tree;
     m_ofile->Close();
     return true;
+
 }
 // --------------------------------------------------------------------------------------------------------------
 // Function to read binary files from multiple oscilloscopes supporting up to 64 channels, or a total of 16 non-connected scopes or 
@@ -2053,12 +2055,14 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
     if (m_instrument == TestBeamBin2) LGADBase::CalcTrigFr(l_triggtimeVec, m_trigDt, m_trigFr, m_tree->GetEntries());
 
     fclose(fd_file);
-    m_ofile->Write();
+    if (Cd(m_tree->GetDirectory())) m_tree->Write();
+
     if (m_instrument == TestBeamBin2)
        {
         delete m_trigDt;
         delete m_trigFr;
        }
+
     delete m_tree;
     m_ofile->Close();
     return true;
