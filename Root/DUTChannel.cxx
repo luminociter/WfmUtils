@@ -1376,7 +1376,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
      }
 
   std::cout << __FUNCTION__ << " INFO : Performing CFD fits for all bins.." << std::endl;
-  m_ChBase->SetVerbose(1);
+  //m_ChBase->SetVerbose(1);
   for (unsigned int i = 0; i < 19; i++) 
       {
        if (m_ChBase->GetVerbosity() >= 1) std::cout << "=========================================== Iteration " << i << "/19 ==========================================" << std::endl;
@@ -1415,7 +1415,7 @@ int DUTChannel::updateChProperties(bool waveshape, TTree* wavetree)
        if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit Jitter (from #partialV/#partialt) at " << (i + 1) * 5 << "%: "
                                                     << m_FitChJitNdVdT[i].first << " +/- " << m_FitChJitNdVdT[i].second << std::endl;
       }
-  m_ChBase->SetVerbose(0);
+  //m_ChBase->SetVerbose(0);
 
   m_ChFitTriggTime = CalculateMeanG(&m_ChTriggTime, &m_ChComplete, m_ChTriggTimeFt, m_ChTriggTimeChi2, 3, m_fitopt, false);
   if (m_ChBase->GetVerbosity() >= 1) std::cout << __FUNCTION__ << " INFO : Channel fit Trigger time: " << m_ChFitTriggTime.first << " +/- "

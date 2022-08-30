@@ -63,7 +63,15 @@ void LGADBase::SetFitMethode(std::string method)
 // --------------------------------------------------------------------------------------------------------------
 void LGADBase::SetInstrument(AqInstrument instr)
 {    
-    if (instr == Sampic || instr == LabTXT || instr == TestBeamBin || instr == TektronixScope || instr == LeCroyWRBin || instr == Unasigned || instr == TestBeamBin1 || instr == TestBeamBin2) m_instrument = instr;
+    if (instr == Sampic || instr == LabTXT || instr == TestBeamBin || instr == TektronixScope || instr == LeCroyWRBin || instr == Unasigned || instr == TestBeamBin1 || instr == TestBeamBin2)
+       {
+        m_instrument = instr;
+        if (instr == TestBeamBin || instr == TestBeamBin1 || instr == TestBeamBin2)
+           {
+            LGADBase::SetScopeDelay();
+            LGADBase::SetTrigClk();
+           }
+       }
     else {
           std::cout << __FUNCTION__ << " ERROR: instrument value " << instr
                     << " not allowed. Allowed values are in ascending order: Sampic, LabTXT, TestBeamBin, TektronixScope, LeCroyWRBin, or Unasigned. Falling back to "
@@ -432,6 +440,7 @@ void LGADBase::Initialize()
     m_ordrt.clear();
     m_ordrt.push_back(0);
     m_npoints.clear();
+    m_scope.clear();
     m_srate.clear();
     m_DUTChsBrd.clear();
     m_DUTChsAmp.clear();
@@ -466,6 +475,8 @@ void LGADBase::Initialize()
             {
              m_npoints.push_back(1024);
              m_srate.push_back(4e10);
+             LGADBase::SetScopeDelay();
+             LGADBase::SetTrigClk();
             }
 
     m_evnt1 = 0;
@@ -508,6 +519,7 @@ void LGADBase::SetVectorSize(unsigned int nch)
     m_triggTime.clear();
     m_npoints.clear();
     m_srate.clear();
+    m_scope.clear();
 
     m_t.resize(nch);
     m_w.resize(nch);
@@ -524,6 +536,7 @@ void LGADBase::SetVectorSize(unsigned int nch)
           m_npoints.resize(nch);
           m_srate.resize(nch);
           m_scale.resize(nch);
+          m_scope.resize(nch);
          }
 
 }
@@ -861,6 +874,15 @@ bool LGADBase::PrintFitInfo(TH1D* histo, TCanvas** ca, std::string funcName)
        }
 }
 // --------------------------------------------------------------------------------------------------------------
+template <typename A> bool LGADBase::IsVecEqual(std::vector<A>& first, std::vector<A>& second)
+{
+    if (first.size() != second.size()) return false;
+    std::unordered_multiset<double> s1(first.begin(), first.end());
+    std::unordered_multiset<double> s2(second.begin(), second.end());
+    if (s1 == s2) return true;
+    else return false;
+}
+// --------------------------------------------------------------------------------------------------------------
 template <typename T> T LGADBase::Derivate(T *w, int start)
 {
     int sz = w->size();
@@ -1194,6 +1216,10 @@ template <typename T, typename V> T LGADBase::MaxDensity(V* w, T res, int start,
 template vector<int> LGADBase::Derivate<vector<int> >(std::vector<int> *, int);
 template vector<float> LGADBase::Derivate<vector<float> >(std::vector<float> *, int);
 template vector<double> LGADBase::Derivate<vector<double> >(std::vector<double> *, int);
+template bool LGADBase::IsVecEqual(std::vector<int>& , std::vector<int>& );
+template bool LGADBase::IsVecEqual(std::vector<bool>& , std::vector<bool>& );
+template bool LGADBase::IsVecEqual(std::vector<float>& , std::vector<float>& );
+template bool LGADBase::IsVecEqual(std::vector<double>& , std::vector<double>& );
 template double LGADBase::Mean<vector<int> >(std::vector<int> *, int, int);
 template double LGADBase::Mean<vector<bool> >(std::vector<bool> *, int, int);
 template double LGADBase::Mean<vector<float> >(std::vector<float> *, int, int);

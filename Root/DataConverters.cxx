@@ -85,9 +85,9 @@ bool LGADBase::ConvertData()
        }
     if (m_TrackComb && (m_Trackdatadir.IsNull() || m_Trackdataname.IsNull()))
        { 
-        std::cout << "--> Warning: Tracking input file not defined, switching to non-test beam mode" << std::endl;
-        m_TrackComb = false;
+        std::cout << "--> Warning: Tracking input file not defined, switching to shadow test beam mode" << std::endl;
        }
+    else CombineTrack(m_Trackdatadir.Data(), m_Trackdataname.Data());
 
     m_nchan = 0;
     m_channels.clear();
@@ -117,9 +117,6 @@ bool LGADBase::ConvertData()
              if (m_ext.IsNull()) m_convert = WriteTectronixTXT(m_datadir.Data(), m_dataname.Data(), "txt");
              else m_convert = WriteTectronixTXT(m_datadir.Data(), m_dataname.Data(), m_ext.Data());
             }
-
-  // this has to go into each of the testbeam supported instruments (WriteTestBeamBinary, WriteLecroyBinary)
-  if (m_TrackComb) CombineTrack(m_Trackdatadir.Data(), m_Trackdataname.Data());
 
   return true;
 }
@@ -954,7 +951,7 @@ bool LGADBase::WriteTectronixTXT(const char* dir, const char* name, const char* 
 // --------------------------------------------------------------------------------------------------------------
 // Function to merge tracking information from EUTelescope reconstruction
 //
-// Author: Luci�a Castillo Garci�a - lucia.castillo.garcia@cern.ch - IFAE-BARCELONA
+// Author: Lucia Castillo Garcia - lucia.castillo.garcia@cern.ch - IFAE-BARCELONA
 //
 bool LGADBase::CombineTrack(const char* dir, const char* name)
 {
@@ -1354,7 +1351,7 @@ bool LGADBase::CombineTrack(const char* dir, const char* name)
 }
 // --------------------------------------------------------------------------------------------------------------
 // Function to read Lecroy oscilloscope data from DESY test beams
-// Author: Luc�a Castillo Garc�a - lucia.castillo.garcia@cern.ch - IFAE-BARCELONA
+// Author: Lucia Castillo Garcia - lucia.castillo.garcia@cern.ch - IFAE-BARCELONA
 // Has to be merged with the TestBeamBin function that follows and instrument type depricated
 bool LGADBase::WriteLecroyBinary(const char* dir, const char* name, const char* ext, unsigned int evt1, unsigned int evt2)
 {
@@ -1652,6 +1649,7 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
     static FILE* fd_file = NULL;  // internal
     char* fileBuf;  // internal
     size_t lCurPos;
+    size_t lPrevPos;
     size_t size;
     std::vector<float> yscale;
     std::vector<float> yoffset;
@@ -1660,6 +1658,7 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
     std::vector<unsigned int> l_npoints;
     std::vector<double> l_triggtimeVec;
     std::vector<Long64_t> l_srate;
+    std::vector<unsigned int> l_scope;
     char ifname[2048];
     char sn0[1024], sn1[1024], sn2[1024];
     char time0[1024], time1[1024], time2[1024];
@@ -1669,18 +1668,21 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
     int scope = 0;
     m_nchan = 0;
     bool readhead = false;
-    bool doublescope = false;
+    bool doublescope = false; // Variable to identify 8-channel versions of the tektronix scope
 
     yscale.clear();
     yoffset.clear();
     nevt_seq.clear();
     l_npoints.clear();
     l_srate.clear();
+    l_scope.clear();
     xoffset.clear();
     dattype.clear();
     l_triggtimeVec.clear();
 
-    // Open file
+    // Open file and define oscilloscope 
+    // TestBeamBin1 = Agilent Scope
+    // TestBeamBin2 = Tektronix Scope
     strncpy(ifname, dir, sizeof(ifname));
     strcat(ifname, name);
     strcat(ifname, ".txt");
@@ -1726,6 +1728,7 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
            else if (m_instrument == TestBeamBin2)
                    {
                     nel = sscanf(ifname, "%i;%*i;%*[^;];%[^;];%*[^;];%[^;];%[^;];%i;%*[^;];%*[^;];%*[^;];%lf;%*lf;%i;%*[^;];%f;%*f;%f;%*[^;];%*[^;];%*f;%*f;%*f;%*i", &n_bytes, sn0, sn2, sn1, &npts, &sr, &xorg, &yinc, &yorg);
+                    // Either it fails becasue the fromat in incorect (no channels read) or it fails because it progressed to the date/time part of the file
                     if (!(nel == 9 && npts > 0 && n_bytes > 0))
                        {
                         if (m_nchan == 0) // failed right from the start, no channels were read
@@ -1734,7 +1737,7 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
                             return false; 
                            }
                         else {
-                              readhead = true;
+                              readhead = true; // we finhsed reading the part containing channel info, move along to timestamps
                               nrec = 0; 
                               for (unsigned int k = 0; k < sizeof(ifname); k++) { if (ifname[k] != '\0') nrec++; else break; }
 #ifdef _WIN32
@@ -1800,7 +1803,7 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
                         dattype.push_back(type);
                         memset(&sn0[0], 0, sizeof(sn0));
                         memset(&sn2[0], 0, sizeof(sn2));
-                        sscanf(sn1, "\"Ch%u, %*[^\"]\"", &type);
+                        sscanf(sn1, "\"Ch%u, %*[^\"]\"", &type); // Reusing the integer here
                         memset(&sn1[0], 0, sizeof(sn1));
                         m_nchan++;
                         if (!doublescope) type = (scope * 4) + type;
@@ -1810,12 +1813,15 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
                              if (m_channels.at(k) >= type) 
                                 {
                                  scope++;
-                                 if ((m_nchan - nrec) > 4) doublescope = true;
+                                 if ((m_nchan - 1 - nrec) > 4) doublescope = true;
                                  else doublescope = false;
                                  nrec = m_nchan;
+                                 if (!doublescope) type = (scope * 4) + type;
+                                 else type = (scope * 8) + type;
                                  break;
                                 }
                             }
+                        l_scope.push_back(scope);
                         m_channels.push_back(type);
                        }
               }
@@ -1833,26 +1839,39 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
         long double milisec = 0;
         long double milisec1 = 0;
 #ifdef _WIN32
+        if (TestBeamBin2) _fseeki64(fd_file, _ftelli64(fd_file) - (3*scope), 0);
+        else _fseeki64(fd_file, _ftelli64(fd_file), 0);
         lCurPos = _ftelli64(fd_file);
+        if (scope > 0) lPrevPos = lCurPos; 
         while (_ftelli64(fd_file) < (int)size)
 #else
+        if (TestBeamBin2) fseek(fd_file, ftell(fd_file) - (3 * scope), 0);
+        else fseek(fd_file, ftell(fd_file), 0);
         lCurPos = ftell(fd_file);
+        if (scope > 0) lPrevPos = lCurPos;
         while (ftell(fd_file) < (int)size)
 #endif
               {
                fread(ifname, 1, 64, fd_file); // do not read more than 64 charcters, you should have found the next event if it exists within
                for (int i = 1; i < 64; i++) 
-                   {              
-                    if (ifname[i] == ',' || ifname[i] == '\n' || ifname[i] == '"') // search for the comma separator or the end of line
+                   {         
+                    // std::cout << ifname[i] << std::endl;
+                    if (ifname[i] == ',' || ifname[i] == '\n' || ifname[i] == '"') // search for the comma separator or end of line
                        {
-                        ievent = 99; // for createing the sting to read in later, reusing the integer
+                        ievent = 99; // for creating the string to read in later, reusing the integer
                         if (ifname[i] == '"' && ifname[i + 1] == '"') ievent = 0; 
-                        else if (ifname[i] == ',') ievent = 1; 
-                        else if (ifname[i] == '\n') ievent = 1; 
+                        else if (ifname[i] == ',' || ifname[i] == '\n') ievent = 1;
                         if (ievent != 99)
                            {
-                            memset(&ifname[i-ievent+1], 0, sizeof(ifname)-i+ievent-1);
+                            // Move ittertor to process the next string
                             lCurPos += i + 1;
+                            if (scope > 0 && ifname[i] == '\n') 
+                               {
+                                lCurPos += scope*(lCurPos - lPrevPos) + 1; 
+                                lPrevPos = lCurPos;
+                               }
+                            // Restructure read string to contain exactly one event
+                            memset(&ifname[i - ievent + 1], 0, sizeof(ifname) - i + ievent - 1);
 #ifdef _WIN32                        
                             _fseeki64(fd_file, lCurPos, 0);
 #else
@@ -1941,7 +1960,7 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
          if (m_instrument == TestBeamBin1) lCurPos += (l_npoints.at(f) + 1) * 2 * ievent;
          else if (m_instrument == TestBeamBin2)
                  {
-                  scope = 0; // reuse the integer
+                  n_bytes = 0; // reuse the integer
                   if (dattype.at(f) < 200) l_bytes.push_back(1);
                   else if (dattype.at(f) > 200) l_bytes.push_back(2);
                   else {
@@ -1949,8 +1968,8 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
                         return false;
                        }
                   nrec = l_npoints.at(f)*l_bytes.at(f); // reuse the integer
-                  do { nrec /= 10; scope++; } while (nrec != 0);
-                  l_digits.push_back(scope);
+                  do { nrec /= 10; n_bytes++; } while (nrec != 0);
+                  l_digits.push_back(n_bytes);
                   lCurPos += ((l_npoints.at(f) * l_bytes.at(f)) + 3 + l_digits.at(f)) * ievent - nevt_seq.size();
                  }
         }
@@ -1973,8 +1992,18 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
        }
 
     // Copy file to buffer, Reading sequence by sequence
-    printf("Starting loop over %d events on %d channels, number of samples per channel and event: %d \n", ievent, m_nchan, l_npoints.at(0));
-    lCurPos = 0;
+    if (LGADBase::GetTrackComb()) ievent = ievent - 1;
+    printf("Starting loop over %d events on %d channels, number of samples per channel and event: %d", ievent, m_nchan, l_npoints.at(0));
+    lPrevPos = l_npoints.at(0); // reusing integer
+    for (unsigned int j = 0; j < m_nchan; j ++)
+        {
+         if (lPrevPos != l_npoints.at(j)) 
+            { 
+             lPrevPos = l_npoints.at(j);
+             printf(", %d", lPrevPos);
+            }
+        }
+    printf("\n");
     
     // Verify and adjust start/stop events
     if (evt1 > 0 && evt1 > ievent)
@@ -2009,10 +2038,12 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
          // Start Converting events in buffer
          for (unsigned int i = 0; i < nevt_seq.at(d); i++)
              { 
+              if (i == 0 && d == 0 && LGADBase::GetTrackComb()) continue;
               if (m_event < evt1) continue;
               if (evt2 != 0 && m_event >= evt2) break;
               if (evt2 != 0) LGADBase::ProgressBar(m_event - evt1, evt2 - evt1);
               else LGADBase::ProgressBar(m_event - evt1, ievent - evt1);
+              readhead = false; // reuse the boolean for skipping events
               for (unsigned int j = 0; j < m_nchan; j++)
                   {  
                    if (m_instrument == TestBeamBin2 && j == 0) m_trigtime = l_triggtimeVec.at(m_event);
@@ -2025,13 +2056,30 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
                             }
                        m_npoints[j] = l_npoints[j];
                        m_srate[j] = l_srate[j];
+                       m_scope[j] = l_scope[j];
                       }
                    m_w[j].clear();
-                   m_w[j].reserve(l_npoints.at(j));
                    m_t[j].clear();
-                   m_t[j].reserve(l_npoints.at(j));
-                   // Sequence reading is done channel by channel, we need to reconstruct the envent by pointing the buffer
-                   // to the correct position. BUffer positions here are related to buffer type
+                   // Fix the number of reserved points to reject unecessety data
+                   if (m_instrument == TestBeamBin2 && LGADBase::GetTrackComb())
+                      {
+                       // cacluclate the number of points required for +/- 2 FEi4 cycles
+                       if (ceil(m_oscdel*l_srate[j]) < ceil(2*m_trigclk*l_srate[j]))
+                          {
+                           m_w[j].reserve(2*ceil(m_oscdel*l_srate[j]));
+                           m_t[j].reserve(2*ceil(m_oscdel*l_srate[j]));
+                          }
+                       else {
+                             m_w[j].reserve(ceil(4*m_trigclk*l_srate[j]));
+                             m_t[j].reserve(ceil(4*m_trigclk*l_srate[j]));
+                            }
+                      }
+                   else { 
+                         m_w[j].reserve(l_npoints.at(j));
+                         m_t[j].reserve(l_npoints.at(j));
+                        }
+                   // Oscilloscope data readout is performed channel by channel, we need to reconstruct each envent by pointing the buffer
+                   // to the correct position for each chunnel block. Buffer positions are related to buffer type
                    lCurPos = 0; // re-use the integer
                    for (unsigned int h = 0; h < j; h++) 
                        {
@@ -2041,33 +2089,51 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
                    // previous loop gets the itterator to skip the channels we already read, we still need to get to the 
                    // correct position within the channel block we are reading for the specific event
                    if (m_instrument == TestBeamBin1) lCurPos += i*2*(l_npoints.at(j)+1)-1;
-                   if (m_instrument == TestBeamBin2) lCurPos += i*((l_npoints.at(j)*l_bytes.at(j))+3+l_digits.at(j))+1+l_digits.at(j);
+                   if (m_instrument == TestBeamBin2) lCurPos += i*((l_npoints.at(j)*l_bytes.at(j))+3+l_digits.at(j))+2+l_digits.at(j);
                    for (unsigned int w = 0; w < l_npoints.at(j); w++)
                        {                       
                         if (m_instrument == TestBeamBin2) 
                            {
+                            // lets cut off unnecessery points, set to accomodate +/- 2 x 25 nsec FEi4 cycles
+                            if (LGADBase::GetTrackComb())
+                               {
+                                if (w < (ceil(m_oscdel*l_srate[j]-m_w[j].capacity()/2) + l_scope.at(j)*2700)) continue; 
+                                if (w >= (ceil(m_oscdel*l_srate[j]+m_w[j].capacity()/2) + l_scope[j]*2700)) break;
+                               }
                             // 1 byte, MSB, signed int RI (SHOULD ADD +128?)
-                            if (dattype.at(j) == 111 || dattype.at(j) == 121) m_w[j].push_back((int)(((int8_t)fileBuf[lCurPos + w])+128) * yscale[j] + yoffset[j]);
+                            if (dattype.at(j) == 111 || dattype.at(j) == 121) m_w[j].push_back((double)(((int8_t)fileBuf[lCurPos+w]))*yscale[j] + yoffset[j]);
                             // 1 byte, MSB, positive int RP
-                            else if (dattype.at(j) == 112 || dattype.at(j) == 122) m_w[j].push_back(((uint8_t)fileBuf[lCurPos + w])*yscale[j] + yoffset[j]);
+                            else if (dattype.at(j) == 112 || dattype.at(j) == 122) m_w[j].push_back((double)((uint8_t)fileBuf[lCurPos+w])*yscale[j] + yoffset[j]);
                             // 2 byte, MSB, signed int RI (SHOULD ADD +32,768?)
-                            else if (dattype.at(j) == 211) m_w[j].push_back((double)((short int)(fileBuf[lCurPos+2*w]+fileBuf[lCurPos+2*w+1]*256)+32768)*yscale[j] + yoffset[j]);
+                            else if (dattype.at(j) == 211) m_w[j].push_back((double)(((int8_t)fileBuf[lCurPos+2*w]<<8) | ((uint8_t)fileBuf[lCurPos+2*w+1]))*yscale[j] + yoffset[j]);
                             // 2 byte, MSB, positive int RP 
-                            else if (dattype.at(j) == 212) m_w[j].push_back((unsigned short int)(fileBuf[lCurPos+2*w]+fileBuf[lCurPos+2*w+1]*256)*yscale[j] + yoffset[j]);
+                            else if (dattype.at(j) == 212) m_w[j].push_back((double)(((uint8_t)fileBuf[lCurPos+2*w]<<8) | ((uint8_t)fileBuf[lCurPos+2*w+1]))*yscale[j]+yoffset[j]);
                             // 2 byte, LSB, signed int RI (SHOULD ADD +32,768?)
-                            else if (dattype.at(j) == 221) m_w[j].push_back((double)((short int)(fileBuf[lCurPos+2*w]*256+fileBuf[lCurPos+2*w+1])+32768)*yscale[j] + yoffset[j]);
+                            else if (dattype.at(j) == 221) m_w[j].push_back((double)((uint8_t)fileBuf[lCurPos+2*w] | ((int8_t)fileBuf[lCurPos+2*w+1]<<8))*yscale[j] + yoffset[j]);
                             // 2 byte, LSB, positive int RP 
-                            else if (dattype.at(j) == 222) m_w[j].push_back((unsigned short int)(fileBuf[lCurPos+2*w]*256+fileBuf[lCurPos+2*w+1])*yscale[j] + yoffset[j]);                          
+                            else if (dattype.at(j) == 222) m_w[j].push_back((double)((uint8_t)fileBuf[lCurPos+2*w] | ((uint8_t)fileBuf[lCurPos+2*w+1]<<8))*yscale[j] + yoffset[j]);
                             m_t[j].push_back((double)(w+xoffset[j])/l_srate.at(j));
                            }
-                        else { // Assumes MSB representation (BIG ENDIANESS)
+                        else { // Assumes LSB representation (SMALL ENDIANESS)
                               m_w[j].push_back((short int)(fileBuf[lCurPos+2*w]+fileBuf[lCurPos+2*w+1])*256*yscale[j] + yoffset[j]);
                               m_t[j].push_back((double)w/l_srate.at(j));
                              }
                        }
-                  }   
-              m_event++;
-              m_tree->Fill(); // fill every event
+                   if (j > 0) 
+                      { 
+                       if (LGADBase::IsVecEqual(m_w[j], m_w[j-1]))
+                          {
+                           std::cout << __FUNCTION__ << "          ERROR: Removing event " << i << ", detected no channel change at oscilloscope readout between channels " << j << " and " << j+1 << "!!" << std::endl;
+                           readhead = true;
+                           break;
+                          }
+                      }
+                  }  
+              if (!readhead)
+                 {
+                  m_event++;
+                  m_tree->Fill(); // fill every event
+                 }
              }
          free(fileBuf);
         }
@@ -2078,7 +2144,7 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
     fclose(fd_file);
 
     TListIter l_next_object(gDirectory->GetList());
-    l_next_object.Reset();
+    l_next_object.Reset();  
     TObject* l_obj;
     while ((l_obj=l_next_object()))
           {
@@ -2143,9 +2209,10 @@ bool LGADBase::CreateOutputFile(const char* dir, const char* ofname, std::vector
              m_tree->Branch(Form("nPoints%02u", nchan.at(ich)), &(m_npoints.at(ich)), "m_npoints.at(ich)/i");
              m_tree->Branch(Form("SnRate%02u", nchan.at(ich)), &(m_srate.at(ich)), "m_srate.at(ich)/L");
              if (m_instrument == TektronixScope) m_tree->Branch(Form("triggTime%02u", nchan.at(ich)), &(m_triggTime.at(ich)), "m_triggTime.at(ich)/D");
+             if (m_instrument == TestBeamBin1 || m_instrument == TestBeamBin2) m_tree->Branch(Form("Scope%02u", nchan.at(ich)), &(m_scope.at(ich)), "m_scope.at(ich)/i");
             }
         }
-    if (m_instrument == LabTXT || m_instrument == TektronixScope || m_instrument == TestBeamBin2) m_tree->Branch("trigtime", &m_trigtime, "m_trigtime/D");
+    if (m_instrument == LabTXT || m_instrument == TestBeamBin2) m_tree->Branch("trigtime", &m_trigtime, "m_trigtime/D");
     m_tree->Branch("EvnNo", &m_event, "m_event/i");
     if (m_instrument == Sampic)
        {

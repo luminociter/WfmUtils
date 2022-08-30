@@ -194,7 +194,7 @@ Bool_t LGADRun::Process(Long64_t entry)
          b_w.at(ich)->GetEntry(entry);
         }
     // Get instrument specific branches
-    if (m_instrument == Sampic) 
+    if (LGADBase::GetInstrument() == Sampic)
        { 
         b_nPoints.at(0)->GetEntry(entry);
         b_SnRate.at(0)->GetEntry(entry);
@@ -212,9 +212,10 @@ Bool_t LGADRun::Process(Long64_t entry)
                b_SnRate.at(ich)->GetEntry(entry);
                m_RunDUTCh.at(ich)->DUTChannel::SetChRate(m_srate.at(ich));
                b_vScale.at(ich)->GetEntry(entry);
-               if (m_instrument == TektronixScope) b_TriggTime.at(ich)->GetEntry(entry);
+               if (LGADBase::GetInstrument() == TektronixScope) b_triggTime.at(ich)->GetEntry(entry);
               }
-          if (m_instrument != TestBeamBin1) b_trigtime->GetEntry(entry);
+          if (LGADBase::GetInstrument() != TestBeamBin1) b_trigtime->GetEntry(entry);
+          if (LGADBase::GetInstrument() != LabTXT && LGADBase::GetInstrument() != TektronixScope) b_Scope->GetEntry(entry);
          }
     if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Branches retrieved!" << std::endl;
 
@@ -610,16 +611,19 @@ void LGADRun::SlaveTerminate()
          ChFitComplete = std::make_pair(-99, -99);
          ChFitSoNR = std::make_pair(-99, -99);
 
-         unsigned int iter = (m_nchan-(ich+1));
-         TmDiffChi2.clear();
-         TmDiffFitQts.clear();
-         TmDiffChi2.resize(iter);
-         TmDiffFitQts.resize(iter);
-         for (unsigned int k = 0; k < iter; k++)
-             {
-              (TmDiffChi2.at(k)).resize(19*19, -99.0);
-              (TmDiffFitQts.at(k)).resize(19*19, std::make_pair(-99, -99));
-             }
+         if (ich < (m_nchan - 1))
+            {
+             unsigned int iter = (m_nchan-(ich+1));
+             TmDiffChi2.clear();
+             TmDiffFitQts.clear();
+             TmDiffChi2.resize(iter);
+             TmDiffFitQts.resize(iter);
+             for (unsigned int k = 0; k < iter; k++)
+                 {
+                  (TmDiffChi2.at(k)).resize(19*19, -99.0);
+                  (TmDiffFitQts.at(k)).resize(19*19, std::make_pair(-99, -99));
+                 }
+            }
 
          MaxIndxFtChi2 = -99.;
          MinIndxFtChi2 = -99.;
@@ -875,9 +879,11 @@ void LGADRun::SlaveTerminate()
          unsigned int a = 0;
          unsigned int b = 0;
          // Lets create the Time difference histos and polupate the time difference sigmas histo
+         std::cout << "Probing channel: " << ich+1 << " from " << ich+1 << " to " << m_nchan << std::endl;
          for (unsigned int ich2 = ich + 1; ich2 < m_nchan; ich2++)
              {
-              a = ((float)(ich*(ich2 - 1)))/2;
+              a = ((float)(ich*(ich2-1)))/2;
+              std::cout << ich2 << " " << m_nchan  << " alpha: " << a << std::endl;
               std::pair <double, double> mean;
               std::pair <double, double> sigma;
               int qual;
@@ -902,9 +908,10 @@ void LGADRun::SlaveTerminate()
                                                                     (h_TmDiffCFD.at(a)).at(b), 
                                                                     (TmDiffChi2.at(a)).at(b), 
                                                                     "GaussInt", std::make_pair(-1, -1), false);
-                            }
+                           }
                         else if (m_RunBase->LGADBase::GetFitMethode() == "root" || m_RunBase->LGADBase::GetFitMethode() == "RooFit")
                                 {
+                                 std::cout << a << " " << b << " " << m_EvTmDiff.size() << " " << (m_EvTmDiff.at(a)).size() << " " << h_TmDiffCFD.size() << " " << (h_TmDiffCFD.at(a)).size() << " " << TmDiffChi2.size() << " " << (TmDiffChi2.at(a)).size() << std::endl;
                                  qual = m_RunBase->LGADBase::IterativeFit(&(m_EvTmDiff.at(a)).at(b), mean, sigma, 
                                                                           (h_TmDiffCFD.at(a)).at(b), 
                                                                           (TmDiffChi2.at(a)).at(b), 

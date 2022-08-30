@@ -133,7 +133,7 @@ void LGADSel::Init(TTree *tree)
     for (unsigned int ich = 1; ich < 65; ich++)
         {
          if (fChain->GetBranch(Form("t%02u", ich))) m_channels.push_back(ich);
-         if (fChain->GetBranch(Form("ordrt%02u", ich))) m_instrument = Sampic;
+         if (!(m_instrument == Sampic)) { if (fChain->GetBranch(Form("ordrt%02u", ich))) m_instrument = Sampic; }
         }
     m_nchan = m_channels.size();
 
@@ -147,7 +147,8 @@ void LGADSel::Init(TTree *tree)
     b_vScale.resize(m_nchan);
     b_nPoints.resize(m_nchan);
     b_SnRate.resize(m_nchan);
-    b_TriggTime.resize(m_nchan);
+    b_Scope.resize(m_nchan);
+    b_triggTime.resize(m_nchan);
     for (unsigned int i = 0; i < m_nchan; i++)
         {
          t.push_back(new std::vector<double>(i));
@@ -172,18 +173,13 @@ void LGADSel::Init(TTree *tree)
     zHit = 0;
 
    fChain->SetBranchAddress("EvnNo", &EvnNo, &b_EvnNo);
-
-   if (fChain->GetBranch("SnRate") && fChain->GetBranch("nPoints")) m_instrument = Sampic;
+   bool category1 = false;
+   if (fChain->GetBranch("SnRate") && fChain->GetBranch("nPoints")) LGADBase::SetInstrument(Sampic);
    else if (fChain->GetBranch("trigtime"))
            {
-            m_instrument = Unasigned; // ok we do not know the instrument yet, it can be LabTXT, TektronixScope, TestBeamBin2)
             fChain->SetBranchAddress("trigtime", &m_trigtime, &b_trigtime);
+            category1 = true;
            }
-   else { 
-         // We cannot seperate the two.....
-         m_instrument = TestBeamBin1; 
-         // m_instrument = LeCroyWRBin;
-        }
 
    for (unsigned int ich = 0; ich < m_nchan; ich++)
        {
@@ -196,7 +192,7 @@ void LGADSel::Init(TTree *tree)
 
    LGADBase::SetVectorSize(m_nchan);
 
-   if (m_instrument == Sampic)
+   if (LGADBase::GetInstrument() == Sampic)
       {
        fChain->SetBranchAddress("nPoints", &m_npoints.at(0), &b_nPoints.at(0));
        fChain->SetBranchAddress("SnRate", &m_srate.at(0), &b_SnRate.at(0));
@@ -212,23 +208,21 @@ void LGADSel::Init(TTree *tree)
    else {
          for (unsigned int ich = 0; ich < m_nchan; ich++)
              {
-              if (fChain->GetBranch(Form("nPoints%02u", m_channels.at(ich))))
-                 { 
-                  fChain->SetBranchAddress(Form("nPoints%02u", m_channels.at(ich)), &m_npoints.at(ich), &b_nPoints.at(ich));
-                  fChain->SetBranchAddress(Form("SnRate%02u", m_channels.at(ich)), &m_srate.at(ich), &b_SnRate.at(ich));
-                  fChain->SetBranchAddress(Form("vScale%02u", m_channels.at(ich)), &m_scale.at(ich), &b_vScale.at(ich));
-                  if (fChain->GetBranch(Form("TriggTime%02u", m_channels.at(ich))))
-                     { 
-                      m_instrument = TektronixScope;
-                      fChain->SetBranchAddress(Form("TriggTime%02u", m_channels.at(ich)), &m_triggTime.at(ich), &b_TriggTime.at(ich));
-                     }
-                  else if (m_instrument != TestBeamBin1) 
-                          {
-                           // we cannot seperte the two...
-                           m_instrument = LabTXT;
-                           // m_instrument = TestBeamBin2; 
-                          }
+              fChain->SetBranchAddress(Form("nPoints%02u", m_channels.at(ich)), &m_npoints.at(ich), &b_nPoints.at(ich));
+              fChain->SetBranchAddress(Form("SnRate%02u", m_channels.at(ich)), &m_srate.at(ich), &b_SnRate.at(ich));
+              fChain->SetBranchAddress(Form("vScale%02u", m_channels.at(ich)), &m_scale.at(ich), &b_vScale.at(ich));
+              if (fChain->GetBranch(Form("triggTime%02u", m_channels.at(ich))))
+                 {
+                  LGADBase::SetInstrument(TektronixScope);
+                  fChain->SetBranchAddress(Form("triggTime%02u", m_channels.at(ich)), &m_triggTime.at(ich), &b_triggTime.at(ich));
                  }
+              else if (fChain->GetBranch(Form("Scope%02u", m_channels.at(ich))))
+                      {
+                       fChain->SetBranchAddress(Form("Scope%02u", m_channels.at(ich)), &m_scope.at(ich), &b_Scope.at(ich));
+                       if (category1) LGADBase::SetInstrument(TestBeamBin2);
+                       else LGADBase::SetInstrument(TestBeamBin1);
+                      }
+              else LGADBase::SetInstrument(LabTXT);
              }
         }
 

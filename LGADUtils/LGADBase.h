@@ -16,6 +16,7 @@
 #include <iomanip>
 #include <algorithm> 
 #include <numeric>
+#include <unordered_set>
 
 #include "TSystemFile.h"
 #include "TSystemDirectory.h"
@@ -42,6 +43,7 @@
 #include "TPad.h"
 #include "TText.h"
 #include "TGaxis.h"
+#include "TDirectory.h"
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -81,11 +83,14 @@ class LGADBase : public TSelector {
   unsigned int m_nchan;
   unsigned int m_evnt1;
   unsigned int m_evnt2;
+  double m_oscdel;
+  double m_trigclk;
   AqInstrument m_instrument;
 
   // nTuple Variables
   std::vector<float> m_scale;
   std::vector<unsigned int> m_npoints;
+  std::vector<unsigned int> m_scope;
   std::vector<Long64_t> m_srate;
   std::vector<double> m_triggTime;
   std::vector<double> m_physt;
@@ -108,6 +113,8 @@ class LGADBase : public TSelector {
   void SetDoTrnsCorr(bool TrnsCorr = false) { m_TrnsCorr = TrnsCorr; };
   void SetTrackComb (bool comb = false);
   void SetFEi4Eff(bool FEi4Eff = false);
+  void SetScopeDelay(double delay = 52e-9) { m_oscdel = delay; };
+  void SetTrigClk (double clk = 25e-9) { m_trigclk = clk; };
   void SetTrackInDataNames (TString DataDir = "", TString DataName = "");
   void SetVerbose(int verbose = 1) { m_verbose = verbose; };
   void SetFitMethode(std::string method);
@@ -156,6 +163,8 @@ class LGADBase : public TSelector {
   TTree* GetRootTree() { return m_tree; };
   bool GetConvertSucess() { return m_convert; };
   bool GetWaveShape() { return m_WaveShape; };
+  double GetScopeDelay() { return m_oscdel; };
+  double GetTrigClk() { return m_trigclk; };
   TString GetExtention() { return m_ext; };
   TString GetDataDir() { return m_datadir; };
   TString GetDataName() { return m_dataname; };
@@ -193,6 +202,7 @@ class LGADBase : public TSelector {
   int RecursMkDir(const char* dirname);
   std::vector<std::string> ListFileNames(const char* path, const char* ext);
   template <typename T> T Derivate(T *w, int start = 1);
+  template <typename A> bool IsVecEqual(std::vector<A>& first, std::vector<A>& second);
   template <typename U> double Mean(U *w, int start = -1, int stop = -1);
   template <typename V> double Stdev(V *w, int start = -1, int stop = -1, double mean = 0.0);
   template <typename V, typename T> double BayesianErr(V *w, T value = 1);

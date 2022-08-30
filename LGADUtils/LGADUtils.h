@@ -24,6 +24,8 @@ public:
    void SetFEi4Eff(bool FEi4Eff);
    bool SetSRate(Long64_t rate, unsigned int ch);
    bool SetNPoints(unsigned int points, unsigned int ch);
+   void SetScopeDelay(double delay);
+   void SetTrigClk(double clk);
    void Initialize();
    void SetFitMethode(std::string method);
    void SetInstrument(AqInstrument instr);

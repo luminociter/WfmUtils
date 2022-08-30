@@ -59,7 +59,8 @@ public :
    std::vector<TBranch*> b_SnRate;   //!
    std::vector<TBranch*> b_ordrt;   //!   
    std::vector<TBranch*> b_physt;   //!
-   std::vector<TBranch*> b_TriggTime;   //!
+   std::vector<TBranch*> b_triggTime;   //!
+   std::vector<TBranch*> b_Scope;   //!
 
    TBranch        *b_trigtime;   //!
    TBranch        *b_EvnNo;   //!

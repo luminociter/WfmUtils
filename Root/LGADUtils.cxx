@@ -60,6 +60,16 @@ bool LGADUtils::SetNPoints(unsigned int points, unsigned int ch)
     return m_Base->LGADBase::SetNPoints(points, ch);
 }
 // --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetScopeDelay(double delay)
+{
+    m_Base->LGADBase::SetScopeDelay(delay);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetTrigClk(double clk)
+{
+    m_Base->LGADBase::SetTrigClk(clk);
+}
+// --------------------------------------------------------------------------------------------------------------
 void LGADUtils::SetFitMethode(std::string method)
 {
     m_Base->LGADBase::SetFitMethode(method);
