@@ -1648,9 +1648,9 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
     std::vector<unsigned int> nevt_seq;  // internal, number of events per sequence, identical for all channels
     static FILE* fd_file = NULL;  // internal
     char* fileBuf;  // internal
-    size_t lCurPos;
-    size_t lPrevPos;
-    size_t size;
+    size_t lCurPos = 0;
+    size_t lPrevPos = 0;
+    size_t size = 0;
     std::vector<float> yscale;
     std::vector<float> yoffset;
     std::vector<unsigned int> xoffset;
@@ -1852,7 +1852,11 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
         while (ftell(fd_file) < (int)size)
 #endif
               {
-               fread(ifname, 1, 64, fd_file); // do not read more than 64 charcters, you should have found the next event if it exists within
+               if (!(fread(ifname, 1, 64, fd_file) == 64)) // do not read more than 64 charcters, you should have found the next event if it exists within
+                  {
+                   std::cout << __FUNCTION__ << " ERROR: Read Error while pharsing date/time file!" << std::endl;
+                   return false;
+                  } 
                for (int i = 1; i < 64; i++) 
                    {         
                     // std::cout << ifname[i] << std::endl;
@@ -2000,7 +2004,7 @@ bool LGADBase::WriteTestBeamBinary(const char* dir, const char* name, const char
          if (lPrevPos != l_npoints.at(j)) 
             { 
              lPrevPos = l_npoints.at(j);
-             printf(", %d", lPrevPos);
+             printf(", %u", lPrevPos);
             }
         }
     printf("\n");

@@ -213,9 +213,9 @@ Bool_t LGADRun::Process(Long64_t entry)
                m_RunDUTCh.at(ich)->DUTChannel::SetChRate(m_srate.at(ich));
                b_vScale.at(ich)->GetEntry(entry);
                if (LGADBase::GetInstrument() == TektronixScope) b_triggTime.at(ich)->GetEntry(entry);
+               if (LGADBase::GetInstrument() != LabTXT && LGADBase::GetInstrument() != TektronixScope) b_Scope.at(ich)->GetEntry(entry);
               }
-          if (LGADBase::GetInstrument() != TestBeamBin1) b_trigtime->GetEntry(entry);
-          if (LGADBase::GetInstrument() != LabTXT && LGADBase::GetInstrument() != TektronixScope) b_Scope->GetEntry(entry);
+          if (LGADBase::GetInstrument() != TestBeamBin1) b_trigtime->GetEntry(entry);   
          }
     if (m_RunBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Branches retrieved!" << std::endl;
 
