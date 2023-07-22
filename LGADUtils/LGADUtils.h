@@ -11,7 +11,6 @@
 #define __LGADUtils__
 
 #include "LGADRun.h"
-#include "TChain.h"
 
 class LGADUtils : public LGADRun {
 
@@ -21,15 +20,18 @@ public:
    ~LGADUtils();
 
    void SetTrackComb(bool comb);
+   void SetExcludeTrackFiles(std::vector<unsigned int> trackExclude);
+   void SetDoFFT(bool dofft);
    void SetFEi4Eff(bool FEi4Eff);
    bool SetSRate(Long64_t rate, unsigned int ch);
    bool SetNPoints(unsigned int points, unsigned int ch);
-   void SetScopeDelay(double delay);
+   void SetScopeDelay(std::vector<double> delay);
    void SetTrigClk(double clk);
    void Initialize();
    void SetFitMethode(std::string method);
    void SetInstrument(AqInstrument instr);
    void SetStartStopEvnt(int Evnt1 = 0, int Evnt2 = 0);
+   void SetTestEvn(int Evn = -1);
    bool ConvertData();
    void SetTreeName(std::string treename);
    void SetInDataNames(TString DataDir = "", TString DataName = "", TString ext = "");
@@ -56,6 +58,7 @@ public:
    void SetDUTFracts(std::vector<float> Fracs);
    void SetDUTCap(int ChId, double cap);
    void SetDUTCaps(std::vector<double> Caps);
+
    // Channel level cuts
    void SetChVoltCut(int ChId, double VoltCut);
    void SetChVoltCuts(std::vector<double> VoltCuts);
@@ -71,13 +74,12 @@ public:
    void SetPlaneDCrg(int PlaneId1, int PlaneId2, double DCrg);
    void SetPlaneDCrgs(std::vector<double> DCrgs);
 
-   bool Analyse(Long64_t nprocess = 0, std::string tree = "");
+   bool Analyse(unsigned int stage = 1, std::string tree = "");
    std::string GetTreeName() { return LGADBase::GetTreeName(); };
 
 private:
 
    LGADRun *m_Run;
-   TChain *m_chain;
    LGADBase *m_Base;
 
    // ClassDef(LGADUtls, 1);

@@ -39,6 +39,7 @@ LGADBase::LGADBase()
     // This is the default constructor, so we use default settings
     m_instrument = Unasigned;
     m_TrnsCorr = false;
+    m_TrackComb = false;
     Initialize();
     m_nchan = 0;
     m_event = 0;
@@ -48,6 +49,144 @@ LGADBase::LGADBase()
 // --------------------------------------------------------------------------------------------------------------
 LGADBase::~LGADBase()
 {
+}
+// --------------------------------------------------------------------------------------------------------------
+LGADBase::LGADBase(LGADBase& base)
+{
+    InportProperties(base);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADBase::InportProperties(LGADBase& base)
+{
+    // Basic object properties
+    m_instrument = base.GetInstrument();
+    m_channels = base.GetChannels();
+    m_DUTChsNames = base.GetDUTNames();
+    m_DUTChsCaps = base.GetDUTCaps();
+    m_DUTChsBrd = base.GetDUTBoards();
+    m_DUTChsTrns = base.GetDUTransImps();
+    m_DUTChsAmp = base.GetDUTSecStages();
+    m_DUTChsAmpGn = base.GetDUTAmpGains();
+    m_nchan = base.GetChNo();
+    for (unsigned int a = 0; a < m_nchan; a++)
+        { 
+         m_srate.push_back(base.GetSRate(a));
+         m_npoints.push_back(base.GetNPoints(a));
+        } 
+    // Input file names and directory
+    m_datanames = base.GetInFileNames();
+    m_datadir = base.GetInDataDir();
+    m_infiles = base.GetInRootFiles();
+    m_ext = base.GetExtention();
+    m_ofname = base.GetOutFileName();
+    m_ofdir = base.GetOutFileDir();
+    m_ofile = base.GetOutRootFile();
+    // Data Tree
+    m_trees = base.GetRootTrees();
+    m_treename = base.GetTreeName();
+    // Transimpedence file name
+    m_TransFileName = base.GetTransFileName();
+    m_TransFile =  base.GetTransFile();
+    // Boolean Switches
+    m_TrackComb = base.GetTrackComb();
+    m_dofft = base.GetDoFFT();
+    m_hasfft = base.GetHasFFT();
+    m_hastrck = base.GetHasTrck();
+    m_fei4Eff = base.GetFEi4Eff();
+    m_TrnsCorr = base.GetDoTrnsCorr();
+    m_convert = base.GetConvertSucess();
+    m_WaveShape = base.GetWaveShape();
+    m_hasWaveShape = base.GetHasWaveShape();
+    // Debug level
+    m_verbose = base.GetVerbosity();
+    // Basic analyis options
+    m_stage = base.GetAnaStage();
+    m_filelvl = base.GetFileLVL();
+    m_fitopt = base.GetFitMethode();
+    m_trkpck = base.GetTrackPackage();
+    m_event = base.GetEvntNo();
+    m_TrsHists = base.GetTransHistos();
+    m_oscdel = base.GetScopeDelay();
+    m_trigclk = base.GetTrigClk();
+    // Channel level analysis cuts
+    m_DUTChsTrigg = base.GetDUTriggs();
+    m_DUTChsFrc = base.GetDUTFracts();
+    m_ChVoltCuts = base.GetChVoltCuts();
+    m_ChNoiseCuts = base.GetChNoiseCuts();
+    m_ChJitterCuts = base.GetChJitterCuts();
+    m_ChChargeCuts = base.GetChChargeCuts();
+    // Interchannel level analysis cuts
+    m_PlaneDTs = base.GetPlaneDTs();
+    m_PlaneDCs = base.GetPlaneDCs();
+    m_testEvn = base.GetTestEvtNm();
+    m_trackExclude = base.GetExcludeTrackFiles();
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADBase::ExportProperties(LGADBase& base)
+{
+    // Basic object properties
+    base.SetInstrument(m_instrument);
+    base.SetChannels(m_channels);
+    for (unsigned int a = 0; a < m_nchan; a++)
+        { 
+         if (m_DUTChsNames.size() > a) base.SetDUTName((m_DUTChsNames.at(a)).first, (m_DUTChsNames.at(a)).second);
+         if (m_srate.size() > a) base.SetSRate(m_srate.at(a), a);
+         if (m_npoints.size() > a) base.SetNPoints(m_npoints.at(a), a);
+         if (m_DUTChsCaps.size() > a) base.SetDUTCap((m_DUTChsCaps.at(a)).first, (m_DUTChsCaps.at(a)).second);
+         if (m_DUTChsBrd.size() > a) base.SetDUTBoard((m_DUTChsBrd.at(a)).first, (m_DUTChsBrd.at(a)).second);
+         if (m_DUTChsTrns.size() > a) base.SetDUTransImp((m_DUTChsTrns.at(a)).first, (m_DUTChsTrns.at(a)).second);
+         if (m_DUTChsAmp.size() > a) base.SetDUTSecStage((m_DUTChsAmp.at(a)).first, (m_DUTChsAmp.at(a)).second);
+         if (m_DUTChsAmpGn.size() > a) base.SetDUTAmpGain((m_DUTChsAmpGn.at(a)).first, (m_DUTChsAmpGn.at(a)).second);
+         // Channel level analysis cuts
+         if (m_DUTChsTrigg.size() > a) base.SetDUTrigg((m_DUTChsTrigg.at(a)).first, (m_DUTChsTrigg.at(a)).second);
+         if (m_DUTChsFrc.size() > a) base.SetDUTFract((m_DUTChsFrc.at(a)).first, (m_DUTChsFrc.at(a)).second);
+        } 
+    // Input file names and directory
+    base.SetInFileNames(m_datanames);
+    base.SetInDataDir(m_datadir);
+    base.SetInRootFiles(m_infiles);
+    base.SetExtention(m_ext);
+    base.SetOutFileName(m_ofname);
+    base.SetOutFileDir(m_ofdir);
+    base.SetOutRootFile(m_ofile);
+    // Data Tree
+    base.SetRootTrees(m_trees);
+    base.SetTreeName(m_treename);
+    // Transimpedence file name
+    base.SetTransFileName(m_TransFileName);
+    base.SetTransFile(m_TransFile);
+    // Boolean Switches
+    base.SetTrackComb(m_TrackComb);
+    base.SetDoFFT(m_dofft);
+    base.SetHasFFT(m_hasfft);
+    base.SetHasTrck(m_hastrck);
+    base.SetFEi4Eff(m_fei4Eff);
+    base.SetDoTrnsCorr(m_TrnsCorr);
+    base.SetConvertSucess(m_convert);
+    base.SetWaveShape(m_WaveShape);
+    base.SetHasWaveShape(m_hasWaveShape);
+    // Debug level
+    base.SetVerbose(m_verbose);
+    // Basic analyis options
+    base.SetAnaStage(m_stage);
+    base.SetFileLVL(m_filelvl);
+    base.SetFitMethode(m_fitopt);
+    base.SetTrackPackage(m_trkpck);
+    base.SetEvntNo(m_event);
+    base.SetTransHistos(m_TrsHists);
+    base.SetScopeDelay(m_oscdel);
+    base.SetTrigClk(m_trigclk);
+    base.SetExcludeTrackFiles(m_trackExclude);
+    for (unsigned int a = 0; a < m_ChVoltCuts.size(); a++) SetChMag((m_ChVoltCuts.at(a)).first, (m_ChVoltCuts.at(a)).second, 0);
+    for (unsigned int a = 0; a < m_ChNoiseCuts.size(); a++) SetChMag((m_ChNoiseCuts.at(a)).first, (m_ChNoiseCuts.at(a)).second, 1);
+    for (unsigned int a = 0; a < m_ChJitterCuts.size(); a++) SetChMag((m_ChJitterCuts.at(a)).first, (m_ChJitterCuts.at(a)).second, 2);
+    for (unsigned int a = 0; a < m_ChChargeCuts.size(); a++) SetChMag((m_ChChargeCuts.at(a)).first, (m_ChChargeCuts.at(a)).second, 3);
+    // Interchannel level analysis cuts
+    for (unsigned int a = 0; a < m_PlaneDTs.size(); a++) 
+        base.SetPlaneDMgt(((m_PlaneDTs.at(a)).first).first, ((m_PlaneDTs.at(a)).first).second, (m_PlaneDTs.at(a)).second, 0);
+    for (unsigned int a = 0; a < m_PlaneDCs.size(); a++) 
+        base.SetPlaneDMgt(((m_PlaneDCs.at(a)).first).first, ((m_PlaneDCs.at(a)).first).second, (m_PlaneDCs.at(a)).second, 1);
+    base.SetTestEvn(m_testEvn);
 }
 // --------------------------------------------------------------------------------------------------------------
 void LGADBase::SetFitMethode(std::string method)
@@ -68,8 +207,8 @@ void LGADBase::SetInstrument(AqInstrument instr)
         m_instrument = instr;
         if (instr == TestBeamBin || instr == TestBeamBin1 || instr == TestBeamBin2)
            {
-            LGADBase::SetScopeDelay();
-            LGADBase::SetTrigClk();
+            if (m_oscdel.size() == 0) SetScopeDelay();
+            if (m_trigclk == -99) SetTrigClk();
            }
        }
     else {
@@ -83,11 +222,6 @@ AqInstrument LGADBase::GetInstrument()
 {
     if (m_instrument == Unasigned) std::cout << __FUNCTION__ << " WARNING: Instrument is not asigned!!" << std::endl;
     return m_instrument;
-}
-// --------------------------------------------------------------------------------------------------------------
-void LGADBase::SetTrackComb(bool comb)
-{
-    m_TrackComb = comb;
 }
 // --------------------------------------------------------------------------------------------------------------
 void LGADBase::SetTransFileName(TString filename) 
@@ -247,6 +381,15 @@ void LGADBase::SetDUTCaps(std::vector<double> Caps)
         }
 }
 //---------------------------------------------------------------------------------------------------------------
+bool LGADBase::GetTestEvn(UInt_t Evn)
+{
+    if (m_testEvn == -1) return false;
+    else {
+          if (int(Evn) != m_testEvn) return true;
+          else return false;
+         }
+}
+//---------------------------------------------------------------------------------------------------------------
 void LGADBase::SetChMag(int ChId, double ChMag, int Qt)
 {
     if (0 < ChId && ChId < 65)
@@ -381,21 +524,6 @@ bool LGADBase::OpenTransFile(TString filename)
          }
 }
 // --------------------------------------------------------------------------------------------------------------
-bool LGADBase::GetTrackComb()
-{
-    return m_TrackComb;
-}
-// --------------------------------------------------------------------------------------------------------------
-void LGADBase::SetFEi4Eff(bool FEi4Eff)
-{
-    m_fei4Eff = FEi4Eff;
-}
-// --------------------------------------------------------------------------------------------------------------
-bool LGADBase::GetFEi4Eff()
-{
-    return m_fei4Eff;
-}
-// --------------------------------------------------------------------------------------------------------------
 bool LGADBase::SetSRate(Long64_t rate, unsigned int ch)
 {
     if (ch > m_srate.size())
@@ -430,7 +558,12 @@ unsigned int LGADBase::GetNPoints(unsigned int ch)
 // --------------------------------------------------------------------------------------------------------------
 void LGADBase::Initialize()
 {
-    m_verbose = 1;
+    m_trees.clear();
+    m_verbose = 0;
+    m_trigclk = -99;
+    m_oscdel.clear();
+    m_stage = 1;
+    m_filelvl = 0;
     m_channels.clear();
     m_channels.push_back(0);
     m_scale.clear();
@@ -456,6 +589,7 @@ void LGADBase::Initialize()
     m_ChVoltCuts.clear();
     m_ChChargeCuts.clear();
     m_ChJitterCuts.clear();
+    m_trackExclude.clear();
     if (m_instrument == TektronixScope)
        {
         m_npoints.push_back(1024);
@@ -475,24 +609,33 @@ void LGADBase::Initialize()
             {
              m_npoints.push_back(1024);
              m_srate.push_back(4e10);
-             LGADBase::SetScopeDelay();
-             LGADBase::SetTrigClk();
+             if (m_oscdel.size() == 0) SetScopeDelay();
+             if (m_trigclk == -99) SetTrigClk();
             }
-
+    if (m_TrackComb)
+       {
+        m_Trackdatadir.Clear();
+        m_Trackdataname.clear();
+        m_trackTrees.clear();
+       }
     m_evnt1 = 0;
     m_evnt2 = 0;
-    m_TrackComb = false;
+    m_testEvn = 0;
     m_fei4Eff = false;
     m_convert = false;
     m_WaveShape = false;
+    m_hasWaveShape = false;
+    m_dofft = false;
+    m_hasfft = false;
+    m_hastrck = false;
     m_ext = "";
     m_datadir = "";
-    m_dataname = "";
-    m_treename = "";
+    m_datanames.clear();
+    m_treename = "wfm";
     m_ofdir = "";
     m_ofname = "";
     if (m_TrnsCorr) OpenTransFile(m_TransFileName);
-    if (m_verbose == 2) std::cout << __FUNCTION__ << " INFO: Initializing sampling rate to default value : " << m_srate.at(0) / 1e6 << "MS/sec and no. of points to : " << m_npoints.at(0) << std::endl;
+    if (m_verbose >= 2) std::cout << __FUNCTION__ << " INFO: Initializing sampling rate to default value : " << m_srate.at(0) / 1e6 << " MSamples/sec and no. of points to : " << m_npoints.at(0) << std::endl;
 }
 // --------------------------------------------------------------------------------------------------------------
 void LGADBase::SetStartStopEvnt(int Evnt1, int Evnt2)
@@ -506,7 +649,7 @@ void LGADBase::SetStartStopEvnt(int Evnt1, int Evnt2)
 // --------------------------------------------------------------------------------------------------------------
 std::pair <unsigned int, unsigned int> LGADBase::GetStartStopEvnt()
 {
-    return  std::make_pair(m_evnt1, m_evnt2);
+    return std::make_pair(m_evnt1, m_evnt2);
 }
 // --------------------------------------------------------------------------------------------------------------
 void LGADBase::SetVectorSize(unsigned int nch)
@@ -520,25 +663,23 @@ void LGADBase::SetVectorSize(unsigned int nch)
     m_npoints.clear();
     m_srate.clear();
     m_scope.clear();
-
-    m_t.resize(nch);
-    m_w.resize(nch);
+    m_t.resize(nch, std::vector<double>());
+    m_w.resize(nch, std::vector<double>());
 
     if (m_instrument == TektronixScope || m_instrument == Unasigned) m_triggTime.resize(nch);
     if (m_instrument == Sampic)
        {
-        m_physt.resize(nch);
-        m_ordrt.resize(nch);
-        m_npoints.resize(1);
-        m_srate.resize(1);
+        m_physt.resize(nch, -99.);
+        m_ordrt.resize(nch, -99.);
+        m_npoints.resize(1, 99);
+        m_srate.resize(1, -99.);
        }
     else {
-          m_npoints.resize(nch);
-          m_srate.resize(nch);
-          m_scale.resize(nch);
-          m_scope.resize(nch);
+          m_npoints.resize(nch, 99);
+          m_srate.resize(nch, -99.);
+          m_scale.resize(nch, -99.);
+          m_scope.resize(nch, 99);
          }
-
 }
 // --------------------------------------------------------------------------------------------------------------
 int LGADBase::Addoriel(int val)
@@ -572,34 +713,105 @@ bool LGADBase::ProgressBar(Long64_t evt, Long64_t total)
     return false;
 }
 // --------------------------------------------------------------------------------------------------------------
-bool LGADBase::SetRootTree(TFile* f, std::string name)
+bool LGADBase::SetRootTrees(std::vector<TFile*> files, std::vector<unsigned int> &indx, std::string name)
 {
-int n = 0;
-TTree* data_tree = NULL;
-TIter nextkey(f->GetListOfKeys());
-TKey *key = 0;
-
-while ((key = (TKey*)nextkey())) 
-      {
-       TObject *obj = key->ReadObj();
-       if (obj->IsA()->InheritsFrom(TTree::Class())) 
-          {
-           if (name != "" && obj->GetName() == name)
-              { 
-               data_tree = (TTree*)obj;
-               n = 1;
-               break;
+    int n;
+    TTree* data_tree = NULL;
+    TKey* key = NULL;
+    
+    for (unsigned int r = 0; r < files.size(); r++)
+        {
+         TIter nextkey(files.at(r)->GetListOfKeys());
+         data_tree = NULL;
+         key = NULL;
+         n = 0;
+         while ((key = (TKey*)nextkey())) 
+               {
+                TObject *obj = key->ReadObj();
+                if (obj->IsA()->InheritsFrom(TTree::Class())) 
+                   {
+                    if (name != "" && obj->GetName() == name)
+                       { 
+                        data_tree = (TTree*)obj;
+                        n = 1;
+                        break;
+                       }
+                    else {
+                          data_tree = (TTree*)obj;
+                          n++;
+                         }
+                   }
+               }
+         if (n == 1) 
+            { 
+             m_trees.push_back(data_tree); 
+             indx.push_back(r); 
+            }
+         else {
+               std::cout << __FUNCTION__ << " WARNIGIN: Data file " << files.at(r)->GetName() << " containts " << n << " trees with name " << name << ". Skipping..." << std::endl;
+               continue;
               }
-           else {
-                 data_tree = (TTree*)obj;
-                 n++;
-                }
-          }
-      }
+        }
 
-if (n == 1) { m_tree = data_tree; return true; }
-else if (n == 0) return false;
-else return false;
+    if (indx.size() > 0 && m_trees.size() > 0) return true;
+    else return false;
+}
+// --------------------------------------------------------------------------------------------------------------
+int LGADBase::SetInRootFiles(std::vector<TString> &files, std::vector<unsigned int> &indx)
+{
+    int opfiles = 0;
+    for (unsigned int k = 0; k < files.size(); k++)
+        {
+         if (!gSystem->AccessPathName(GetInDataDir() + files.at(k) + "." + GetExtention()))
+            {
+             std::cout << __FUNCTION__ << " ERROR: Data file " << GetInDataDir() + files.at(k) + "." + GetExtention() << " does not exist" << std::endl;
+             files.erase(files.begin() + k);
+             k--;
+            }
+         else {
+               m_infiles.push_back(TFile::Open(GetInDataDir() + files.at(k) + "." + GetExtention()));
+               if (m_infiles.back()) { opfiles++; indx.push_back(k); }
+               else {
+                     std::cout << __FUNCTION__ << " ERROR: Data file " << GetInDataDir() + (GetInFileNames()).at(k) << "." << GetExtention() << " cannot be openned! Probably zombie???" << std::endl;
+                     opfiles--;
+                     m_infiles.pop_back();
+                     files.erase(files.begin()+k);
+                     k--;
+                    }
+              }
+        }
+    return opfiles;
+}
+// --------------------------------------------------------------------------------------------------------------
+int LGADBase::SetInRootFile(TFile* file) 
+{ 
+    m_infiles.push_back(file); 
+    if (m_infiles.back()) return 1;
+    else {
+          std::cout << __FUNCTION__ << " ERROR: Data file " << file->GetName() << " cannot be openned! Probably zombie???" << std::endl;
+          return -1;
+         }
+}
+// --------------------------------------------------------------------------------------------------------------
+// One of the methodews to set the output root file. Another exists that only takes as iunput a TFile
+bool LGADBase::SetOutRootFile(const char* file)
+{
+    m_ofile = new TFile(file, "recreate");
+    if (m_ofile) return true;
+    else {
+          std::cout << __FUNCTION__ << " ERROR: Could not create output file (" << m_ofile << ")!" << std::endl;
+          return false;
+         }
+}
+// --------------------------------------------------------------------------------------------------------------
+bool LGADBase::SetOutRootFile(TFile* file)
+{
+    m_ofile = file;
+    if (m_ofile) return true;
+    else {
+          std::cout << __FUNCTION__ << " ERROR: Could not create output file (" << m_ofile << ")!" << std::endl;
+          return false;
+         }
 }
 // --------------------------------------------------------------------------------------------------------------
 // Helper Function integrated to trim strings by reoving spaces or other defined characters from it's begining and end. 
@@ -615,7 +827,7 @@ std::string LGADBase::trim(const std::string str, const std::string whitespace)
 // Function to remove characters and/or spaces from the totality, beginning and end of the string.
 std::string LGADBase::reduce(const std::string str, const std::string fill, const std::string whitespace)
 {
-    std::string result = LGADBase::trim(str, whitespace); // trim first
+    std::string result = trim(str, whitespace); // trim first
                                                 // Replace sub ranges
     int beginSpace = result.find_first_of(whitespace);
     while ((int)std::string::npos != beginSpace)
@@ -659,12 +871,12 @@ int LGADBase::RecursMkDir(const char* dirname)
              t++;
              if (t == 1) continue;
              *p = '\0'; // Temporarily truncate 
-             if (LGADBase::CreateDir(_path) != 1) return -1;
+             if (CreateDir(_path) != 1) return -1;
              *p = '/';
             }
         }
 
-    if (LGADBase::CreateDir(_path) != 1) return -1;
+    if (CreateDir(_path) != 1) return -1;
 
     return 1;
 }
@@ -703,21 +915,56 @@ int LGADBase::DirExists(const char* path)
     else return -1;
 }
 // --------------------------------------------------------------------------------------------------------------
-// Function to return vector of filenames in a directory                                                                                                                        
+// Function insensitive to the extention having or not a dot included at astart
+unsigned int LGADBase::CountFiles(const char* dir, const char* ext)
+{
+    // Count the number of files in the idrectory
+    unsigned int nfiles = 0;
+    TSystemDirectory *directory = new TSystemDirectory("", dir);
+    TList *files = directory->GetListOfFiles();
+    if (files)
+       {
+        TSystemFile *sfile;
+        TIter next(files);
+        TString fname;
+        while ((sfile=(TSystemFile*)next()))
+              {
+               fname = sfile->GetName();
+               // Ignore directories and windows temporary backup files
+               if (!sfile->IsDirectory() && !fname.BeginsWith("~$"))
+                  {
+                   if (ext != nullptr && fname.EndsWith(ext)) nfiles++;
+                   else if (m_instrument == Sampic && (TString(fname(0, fname.Length() - 5))).EndsWith(ext)) nfiles++;
+                   else if (ext == nullptr) nfiles++;
+                  }
+              }
+       }
+    return nfiles;
+}
+// --------------------------------------------------------------------------------------------------------------
+// Function to return vector of filenames in a directory, insensitive to extention having or not a dot as first character                                                                                                                    
 std::vector<std::string> LGADBase::ListFileNames(const char* path, const char* ext)
 {
     std::vector<std::string> filenames;
     std::string search_path = path;
-    std::string search_ext = ext;
+    std::string search_ext;
+    if (ext != nullptr) 
+       {
+        search_ext = ext;
+        if (search_ext.rfind(".", 0) == 0) search_ext.erase(0, 1);
+        if (m_instrument == Sampic) search_ext += "*";
+       }
 #ifdef _WIN32
     search_path += "*.";
-    search_path += search_ext;
+    if (ext != nullptr) search_path += search_ext;
+    else search_path.pop_back();
     WIN32_FIND_DATA fd;
     HANDLE hFind = ::FindFirstFile(search_path.c_str(), &fd);
     if (hFind != INVALID_HANDLE_VALUE)
        {
         do {
-            if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) filenames.push_back(fd.cFileName);
+            // It will ingore directories and temporary hidden windws backup files
+            if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && ((std::string)(fd.cFileName)).rfind("~$", 0) != 0) filenames.push_back(fd.cFileName);
            } 
         while (::FindNextFile(hFind, &fd));
         ::FindClose(hFind);
@@ -728,7 +975,8 @@ std::vector<std::string> LGADBase::ListFileNames(const char* path, const char* e
     while ((pdir = readdir(path_dir)))
           {
            search_path = pdir->d_name;
-           if (search_path.find(search_ext) != std::string::npos) filenames.push_back(pdir->d_name);
+           if (ext != nullptr && search_path.find(search_ext) != std::string::npos) filenames.push_back(pdir->d_name);
+           else if (strcmp(pdir->d_name, ".") != 0 && strcmp(pdir->d_name, "..") != 0) filenames.push_back(pdir->d_name);
           }
 #endif
 
@@ -751,30 +999,6 @@ bool LGADBase::SetScale(std::vector<unsigned int> channel, unsigned int nchan, s
             }
         }
     return true;
-}
-// --------------------------------------------------------------------------------------------------------------
-unsigned int LGADBase::CountFiles(const char* dir, const char* ext)
-{
-    // Count the number of files in the idrectory
-    unsigned int nfiles = 0;
-    TSystemDirectory *directory = new TSystemDirectory("", dir);
-    TList *files = directory->GetListOfFiles();
-    if (files)
-       {
-        TSystemFile *sfile;
-        TIter next(files);
-        TString fname;
-        while ((sfile=(TSystemFile*)next()))
-              {
-               fname = sfile->GetName();
-               if (!sfile->IsDirectory())
-                  {
-                   if (fname.EndsWith(ext)) nfiles++;
-                   else if (m_instrument == Sampic && (TString(fname(0, fname.Length()-5))).EndsWith(ext)) nfiles++;
-                  }
-              }
-       }
-    return nfiles;
 }
 // --------------------------------------------------------------------------------------------------------------
 bool LGADBase::PrintFitInfo(TH1D* histo, TCanvas** ca, std::string funcName)
@@ -872,6 +1096,52 @@ bool LGADBase::PrintFitInfo(TH1D* histo, TCanvas** ca, std::string funcName)
         std::cout << __FUNCTION__ << " WARNING: Requested function not found in histogram " << histo->GetName() << std::endl;
         return false;
        }
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADBase::PrintBranches(TTree* tree, std::string name)
+{
+    // Printout registered Branches
+    TIter next(tree->GetListOfBranches());
+    TBranch* b2;
+    std::cout << "--> Booking " << name.c_str() << " tree branches: " << std::endl << "\t";
+    // Get the names of all the branches
+    std::vector<string> brcname;
+    while ((b2 = (TBranch*)next())) brcname.push_back(b2->GetName());
+    // Find the mazimumm branch length
+    unsigned int max_size = 0;
+    for (unsigned int k = 0; k < brcname.size(); k++)
+        { 
+         if ((brcname.at(k)).size() > max_size) max_size = (brcname.at(k)).size();
+        }
+    // Print out the list of object names
+    int l_space = 0;
+    for (unsigned int k = 0; k < brcname.size(); k++)
+        {
+         std::cout << std::setw(max_size+2) << std::left << brcname.at(k);
+         l_space++;
+         if (l_space % 4 == 0) std::cout << std::endl << "\t";
+        }
+    if (l_space % 4 != 0) std::cout << std::endl;
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADBase::PrintObjects(TFile* rootfile, std::string ignore)
+{
+    rootfile->cd();
+    TListIter l_next_object(gDirectory->GetList());
+    l_next_object.Reset();
+    TObject* l_obj;
+    std::cout << "\r--> Booking Objects: " << std::endl << "\t";
+    int l_space = 0;
+    while ((l_obj=l_next_object()))
+          {
+           TString l_objname = l_obj->GetName();
+           if (l_objname.Contains(ignore)) continue;
+           std::cout << std::setw(21) << std::left << l_objname ;
+           l_space++;
+           if (l_space %5 == 0) cout << std::endl << "\t" ;
+          }
+    if (l_space % 5 != 0) std::cout << std::endl;
+    std::cout << std::endl;
 }
 // --------------------------------------------------------------------------------------------------------------
 template <typename A> bool LGADBase::IsVecEqual(std::vector<A>& first, std::vector<A>& second)
@@ -972,6 +1242,11 @@ template <typename V> double LGADBase::CalcMeadian(V *vec, int start, int stop)
         std::cout << __FUNCTION__ << " ERROR: Trying to calculate median of empty vector!" << std::endl;
         return -1;  // Undefined, realy.
        }
+    else if (Wsize == 1)
+            {
+             std::cout << __FUNCTION__ << " Warning: Trying to calculate median of a single element vector!" << std::endl;
+             return wmod.at(0);
+            }
     else {
           sort(wmod.begin(), wmod.end());
           if (Wsize % 2 == 0) return (wmod.at((Wsize/2)-1) + wmod.at(Wsize/2))/2;
@@ -987,7 +1262,10 @@ template <typename V> double LGADBase::CalcFWHM(V* vec, double median, int start
     V wmod;
     if (start != 0 && stop != 0)
        {
-        for (int ga = start; ga < stop; ga++) wmod.push_back(vec->at(ga));
+        for (int ga = start; ga < stop; ga++) 
+            {
+             wmod.push_back(vec->at(ga));
+            }
        }
     else wmod = *vec;
     unsigned int Wsize = wmod.size();
@@ -996,8 +1274,13 @@ template <typename V> double LGADBase::CalcFWHM(V* vec, double median, int start
         std::cout << __FUNCTION__ << " ERROR: Trying to calculate FWHM of empty vector!" << std::endl;
         return -1;  // Undefined, realy.
        }
+    else if (Wsize == 1)
+       {
+        std::cout << __FUNCTION__ << " Warning: FWHM of a single element vector is 0!" << std::endl;
+        return 0;
+       }
     else {
-          if (median == -99) median = LGADBase::CalcMeadian(&wmod);
+          if (median == -99) median = CalcMeadian(&wmod);
           if (median == -1)
              {
               std::cout << __FUNCTION__ << " ERROR: Median calcuulation failed, will not continue!" << std::endl;
@@ -1023,8 +1306,8 @@ template <typename V> double LGADBase::CalcFWHM(V* vec, double median, int start
              } 
           while (a <= (wmod.size() - wb.size()));
           if (m_verbose >= 3) std::cout << __FUNCTION__  << " INFO: Original size: " << wmod.size() << " first half size: " << wb.size() << " second half size: " << wb2.size() << std::endl;
-          double FWHM1 = LGADBase::CalcMeadian(&wb);
-          double FWHM2 = LGADBase::CalcMeadian(&wb2);
+          double FWHM1 = CalcMeadian(&wb);
+          double FWHM2 = CalcMeadian(&wb2);
           if (m_verbose >=3 ) std::wcout << __FUNCTION__ << " INFO: First median: " << FWHM1 << " second median: " << FWHM2 << " Full width half max: " << FWHM2 - FWHM1 << std::endl;
           if (FWHM2 != -1 && FWHM1 != -1) return (FWHM2 - FWHM1);
           else {
@@ -1070,7 +1353,7 @@ template <typename T, typename V> T LGADBase::CalResolution(V *w, unsigned int o
 
     T res = -1;
     V mag;
-    mag.reserve(LGADBase::Addoriel(stop-start-1));
+    mag.reserve(Addoriel(stop-start-1));
     double l = 0;
     for (int ga = start; ga < stop - 1; ga++)
         {
@@ -1081,7 +1364,7 @@ template <typename T, typename V> T LGADBase::CalResolution(V *w, unsigned int o
              }
         }
     // Remove extreme elements from vectors to account for accuracy issues
-    l = LGADBase::Mean(&mag);
+    l = Mean(&mag);
     for (unsigned int kr = 0; kr < mag.size(); kr++)
             {
              if (fabs(log10(mag.at(kr)/l)) >= order)
@@ -1111,9 +1394,8 @@ template <typename T, typename V> T LGADBase::MaxDensity(V* w, T res, int start,
         std::vector<double> density;
         for (unsigned int k = 0; k < (wmod.size() - 1); k++) 
             {
-             if (wmod.at(k + 1) != wmod.at(k)) density.push_back(1.0/(fabs(wmod.at(k + 1) - wmod.at(k))));
+             if (wmod.at(k + 1) != wmod.at(k)) density.push_back(fabs(wmod.at(k + 1)/fabs(wmod.at(k + 1) - wmod.at(k))));
              else density.push_back(0.0);
-             // std::cout << __FUNCTION__ << " Density at " << k << " " << density.back() << " " << wmod.at(k) << " " << wmod.at(k + 1) << std::endl;
             }
         // Find points of zero density and correct them with respect to the frequency
         for (unsigned int gi = 0; gi < density.size(); gi++)
@@ -1137,7 +1419,6 @@ template <typename T, typename V> T LGADBase::MaxDensity(V* w, T res, int start,
                 }
             }
         double maxdens = *std::max_element(density.begin(), density.end());
-        // std::cout << __FUNCTION__ << " Max density: " << maxdens << " " << density.size() << std::endl;
 
         // Find if points of increased densitty exist 
         std::vector<unsigned int> dens_points[5];
@@ -1207,7 +1488,7 @@ template <typename T, typename V> T LGADBase::MaxDensity(V* w, T res, int start,
                if (fabs(wmod_value.at(a + 1) - wmod_value.at(a)) > res) miselem+=1;
               }
           miselem = miselem/(ceil(0.8*wmod_value.size())-ceil(0.2*wmod_value.size()));
-          int maxfrq = std::max_element(wmod_count.begin(), wmod_count.end()) - wmod_count.begin();
+          int maxfrq = *std::max_element(wmod_count.begin(), wmod_count.end()) - wmod_count.begin();
           return wmod_value.at(maxfrq);
          }*/
 }

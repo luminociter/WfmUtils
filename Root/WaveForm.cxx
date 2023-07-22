@@ -114,12 +114,6 @@ WaveForm::~WaveForm()
 // --------------------------------------------------------------------------------------------------------------
 void WaveForm::InitializeWaveForm(LGADBase* tBase, int level)
 {
-     m_instrument = tBase->LGADBase::GetInstrument();
-     m_TrackComb = tBase->LGADBase::GetTrackComb();
-     m_TrnsCorr = tBase->LGADBase::GetDoTrnsCorr();
-     m_fitopt = tBase->LGADBase::GetFitMethode();
-     m_WaveShape = tBase->LGADBase::GetWaveShape();
-
      // Pointers
      m_voltage = NULL;
      m_time = NULL;
@@ -197,7 +191,7 @@ bool WaveForm::Calculate()
         return false;
        }
     m_pol = FindPolarity(m_voltage);
-    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Polarity: " << m_pol << std::endl;
+    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << std::endl << __FUNCTION__ << " INFO: Polarity: " << m_pol << std::endl;
     m_maxIndx = VoltMaxIndx(m_voltage, false, false);
     if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Max Voltage Index: " << m_maxIndx << std::endl;
     m_maxVolt = VoltMax(m_voltage, false, false);
@@ -240,7 +234,7 @@ bool WaveForm::Calculate()
     if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Using range for noise from " << noisepts.first << " to " << noisepts.second << std::endl;
     std::pair <double, double> baseline (-1., -1.);
     std::pair <double, double> noise_rms (-1., -1.);
-    if (m_fitopt == "rootInt") m_NoiseFtQl = m_WvBase->LGADBase::IterativeFit(m_voltage, baseline, noise_rms, m_noiseFit, m_fitchi2, "GaussInt", noisepts, false);
+    if (m_WvBase->LGADBase::GetFitMethode() == "rootInt") m_NoiseFtQl = m_WvBase->LGADBase::IterativeFit(m_voltage, baseline, noise_rms, m_noiseFit, m_fitchi2, "GaussInt", noisepts, false);
     else m_NoiseFtQl = m_WvBase->LGADBase::IterativeFit(m_voltage, baseline, noise_rms, m_noiseFit, m_fitchi2, "Gauss", noisepts, false);
     if (m_fitchi2 != -1) 
        {
@@ -297,18 +291,22 @@ bool WaveForm::Calculate()
     if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: CFD ToT: " << m_CFDToT << std::endl;
     m_TriggToT = TriggToTLinear(&m_voltageAdj, m_time, m_trigg);
     if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Triger ToT: " << m_TriggToT << std::endl;
-    m_signalFFT = LGADBase::FFT(&m_voltageAdj, m_SnRate, m_StrIndx, m_EndIndx);
-    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Signal FFT: " << m_signalFFT << std::endl;
-    m_noiseFFT = LGADBase::FFT(&m_voltageAdj, m_SnRate, noisepts.first, noisepts.second);
-    if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Noise FFT: " << m_noiseFFT << std::endl;
-    if (m_signalFFT != -99 && m_WvBase->LGADBase::GetDoTrnsCorr()) m_charge = CollectedCharge(&m_voltageAdj, m_SnRate, GetTrsFromHisto(m_signalFFT, m_trnsHist), m_ampgain, m_StrIndx, m_EndIndx);
+    if (m_WvBase->LGADBase::GetDoFFT()) 
+       {
+        m_signalFFT = LGADBase::FFT(&m_voltageAdj, m_SnRate, m_StrIndx, m_EndIndx);
+        if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Signal FFT: " << m_signalFFT << std::endl;
+        m_noiseFFT = LGADBase::FFT(&m_voltageAdj, m_SnRate, noisepts.first, noisepts.second);
+        if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Noise FFT: " << m_noiseFFT << std::endl;
+        if (m_signalFFT != -99 && m_WvBase->LGADBase::GetDoTrnsCorr()) m_charge = CollectedCharge(&m_voltageAdj, m_SnRate, GetTrsFromHisto(m_signalFFT, m_trnsHist), m_ampgain, m_StrIndx, m_EndIndx);
+        else m_charge = CollectedCharge(&m_voltageAdj, m_SnRate, m_transimp, m_ampgain, m_StrIndx, m_EndIndx);
+       }
     else m_charge = CollectedCharge(&m_voltageAdj, m_SnRate, m_transimp, m_ampgain, m_StrIndx, m_EndIndx);
     if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Collected Charge: " << m_charge << std::endl;
     m_jitter1 = m_noise / m_dVdTCFD;
     if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Jitter from Noise/dVdT: " << m_charge << std::endl;
     m_jitter2 = m_RiseTime*m_noise / m_maxVolt;
     if (m_WvBase->LGADBase::GetVerbosity() >= 2) std::cout << __FUNCTION__ << " INFO: Jitter from RieTime/pMax: " << m_charge << std::endl;
-    if (m_WvBase->LGADBase::GetVerbosity() >= 3) dump();
+    if (m_WvBase->LGADBase::GetVerbosity() >= 3) WaveForm::dump();
 
     return true;
 }
@@ -852,7 +850,9 @@ WaveForm::polarity WaveForm::FindPolarity(std::vector<double> *w)
 {
     polarity pol = undef;
     std::vector<double> firstder = m_WvBase->LGADBase::Derivate(w, 3);
-
+    // 0-> Positive
+    // 1-> Negative
+    // 2-> Undefined
     if (firstder.size() != 0)
        { 
         std::vector<double> secordr = m_WvBase->LGADBase::Derivate(&firstder, 1);
@@ -866,8 +866,7 @@ WaveForm::polarity WaveForm::FindPolarity(std::vector<double> *w)
                 { 
                  // We find two consecutive points with different sign, examine the sign of second derivative
                  // No linear interpolation needed, it is already incorporated in derivation
-                 if ((firstder.at(h) >= 0 && firstder.at(h+1) < 0) || (firstder.at(h) < 0 && firstder.at(h+1) >= 0) ||
-                     (firstder.at(h) > 0 && firstder.at(h+1) <= 0) || (firstder.at(h) <= 0 && firstder.at(h + 1) > 0))
+                 if ((firstder.at(h) >= 0 && firstder.at(h+1) < 0) || (firstder.at(h) < 0 && firstder.at(h+1) >= 0))
                     {
                      if (secordr.at(h) >= 0) { minvolt.push_back(w->at(h+3)); minindx.push_back(h+3); }
                      else if (secordr.at(h) < 0) { maxvolt.push_back(w->at(h+3)); maxindx.push_back(h+3); }
@@ -875,6 +874,7 @@ WaveForm::polarity WaveForm::FindPolarity(std::vector<double> *w)
                 }
             if (maxvolt.size() != 0 && minvolt.size() != 0)
                {
+                // estimate extremum average and standard deviations
                 m_maxavg = m_WvBase->LGADBase::Mean(&maxvolt);
                 m_minavg = m_WvBase->LGADBase::Mean(&minvolt);
                 double maxstdev = m_WvBase->LGADBase::Stdev(&maxvolt, -1, -1, m_maxavg);
@@ -882,12 +882,51 @@ WaveForm::polarity WaveForm::FindPolarity(std::vector<double> *w)
                 // caculate extremum distances
                 double minextr = fabs(*std::min_element(minvolt.begin(), minvolt.end()) - m_minavg);
                 double maxextr = fabs(*std::max_element(maxvolt.begin(), maxvolt.end()) - m_maxavg);
-                // Combine extremum std, extremum limit values and base position to determine polarity
-                if (maxstdev >= minstdev && maxextr > minextr) pol = pos;
-                else if (maxstdev <= minstdev && maxextr < minextr) pol = neg;
-                else if (maxextr > minextr && minstdev < (1.05*maxstdev)) pol = pos;
-                else if (maxextr < minextr && maxstdev < (1.05*minstdev)) pol = neg;
-                else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Cannot determine polarity with available info!!" << std::endl;
+                // Calculate waveform average
+                double wfmavg =  m_WvBase->LGADBase::Mean(w);
+                // Distances from wavefom avaerage
+                double minextrWfmAAvgDist = fabs(wfmavg - *std::min_element(minvolt.begin(), minvolt.end()));
+                double maxstdevWfmAAvgDist = fabs(wfmavg - *std::max_element(maxvolt.begin(), maxvolt.end()));
+                // Seting up category weights
+                double posweight = 0.0;
+                double negweight = 0.0;
+                double hpl1 = 0.0; // temporary helper container
+                double hpl2 = 0.0; // temporary helper container
+                for (unsigned int i = 0; i < 4; i++)
+                    {
+                     if (i == 0) // Ectremum Vector STDV criteria
+                        {
+                         hpl1 = maxstdev;
+                         hpl2 = minstdev;
+                        }
+                     else if (i == 1) // Extremum vector mean distance to waveform average
+                             {
+                              hpl1 = fabs(wfmavg - m_maxavg);
+                              hpl2 = fabs(wfmavg - m_minavg);
+                             }
+                     else if (i == 2) // Extremum vector limit distance to extremum vector mean
+                             {
+                              hpl1 = maxextr;
+                              hpl2 = minextr;
+                             }
+                     else { // Extremum vector limit distance to waveform average
+                           hpl1 = maxstdevWfmAAvgDist;
+                           hpl2 = minextrWfmAAvgDist;
+                          }
+                     if (hpl1 > hpl2) posweight += fabs((hpl1 - hpl2)/hpl2);
+                     else negweight += fabs((hpl1 - hpl2)/hpl2);
+                     if (m_WvBase->LGADBase::GetVerbosity() > 2) std::cout << __FUNCTION__ << " INFO:" << i << " : " << hpl2 << "\t" 
+                                                                           << hpl1 << "\t" << fabs((hpl1 - hpl2) / hpl2) << std::endl;
+                    }
+                // Estimate polariy from criteria
+                if (posweight > negweight) pol = pos;
+                else if (negweight > posweight) pol = neg;
+                else { 
+                      if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Cannot determine polarity with available info!!" << std::endl; 
+                      pol = undef;
+                     }
+                if (m_WvBase->LGADBase::GetVerbosity() > 1) std::cout << __FUNCTION__ << " INFO: Polarity is : " << pol << ", Positive weight: " 
+                                                                      << posweight << ", Negative Weight: " << negweight << std::endl;
                }
             else if (m_WvBase->LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " ERROR: Cannot determine polarity, no maxima or minima found!" << std::endl;
            }
@@ -1000,59 +1039,79 @@ std::vector<int> WaveForm::FindHalfPoints(std::vector<double> *w, bool adj)
     if (m_minVolt == -99) m_minVolt = VoltMin(w, adj);
     double halfvalue = 0.0;
     std::vector<int> halfPtsIndx;
-
+    std::cout << "======================================================" << std::endl;
     // Calculate 90% of the distance between max and min voiltages
-    if (m_pol == pos || m_pol == undef || adj) halfvalue = m_minVolt + abs(m_maxVolt - m_minVolt)*0.9;
-    else halfvalue = m_minVolt - abs(m_maxVolt - m_minVolt)*0.8;
+    if (m_pol == pos || m_pol == undef || adj) halfvalue = m_minVolt + fabs(m_minVolt - m_maxVolt)*0.9;
+    else halfvalue = m_minVolt - fabs(m_minVolt - m_maxVolt)*0.9;
     for (unsigned int d = 0; d < (w->size()-1); d++)
         {
          if ((w->at(d) < halfvalue && w->at(d + 1) > halfvalue) ||
              (w->at(d) > halfvalue && w->at(d + 1) < halfvalue) || 
-             (w->at(d) == halfvalue && w->at(d+1) != halfvalue)) halfPtsIndx.push_back(d);
+             (w->at(d) == halfvalue && w->at(d+1) != halfvalue)) halfPtsIndx.push_back(d);      
         }
 
-    if (halfPtsIndx.size() > 2 && (halfPtsIndx.at(halfPtsIndx.size()-1)-halfPtsIndx.at(0)) >= 8)
+    // -20 is noise
+    // -10 is signal
+    // 1 is undetermined
+
+    if (halfPtsIndx.size() > 6)
        {
-        halfPtsIndx.clear();
-        if (m_pol == pos || m_pol == undef) halfvalue = m_minVolt + abs(m_maxVolt - m_minVolt)*0.8;
-        else halfvalue = m_minVolt - abs(m_maxVolt - m_minVolt)*0.7;
-        for (unsigned int d = 0; d < (w->size()-1); d++)
-            {
-             if ((w->at(d) < halfvalue && w->at(d + 1) > halfvalue) ||
-                (w->at(d) > halfvalue && w->at(d + 1) < halfvalue) || 
-                (w->at(d) == halfvalue && w->at(d+1) != halfvalue)) halfPtsIndx.push_back(d);
+        // At least one consequtive index difference between (4e-10)*m_SnRate and (1.4e-10)*m_SnRate
+        // All other consequtive point diferences less than (8e-11)*m_SnRate
+        unsigned int diff = 0;
+        unsigned int add = 0; // additional peaks not noise nor signal
+        unsigned int nse = 0; // noise peaks
+        unsigned int sig = 0; // signal peaks
+        for (unsigned int k = 0; k < (halfPtsIndx.size()-1); k++)
+            { 
+             diff = (halfPtsIndx.at(k + 1) - halfPtsIndx.at(k));
+             if (diff <= (4e-10)*m_SnRate && diff >= (1.4e-10) * m_SnRate) sig++;
+             else if (diff <= (8e-11)*m_SnRate) nse++;
+             else add++;
             }
-        if (halfPtsIndx.size() > 2 && (halfPtsIndx.at(halfPtsIndx.size()-1)-halfPtsIndx.at(0)) >= 12)
-           {
+        if (sig >=1 && add==0) // looks like signal, test 80% points
+           { 
             halfPtsIndx.clear();
-            if (m_pol == pos || m_pol == undef) halfvalue = m_minVolt + abs(m_maxVolt - m_minVolt)*0.7;
-            else halfvalue = m_minVolt - abs(m_maxVolt - m_minVolt)*0.6;
+            if (m_pol == pos || m_pol == undef) halfvalue = m_minVolt + fabs(m_minVolt - m_maxVolt)*0.8;
+            else halfvalue = m_minVolt - fabs(m_minVolt - m_maxVolt)*0.8;
             for (unsigned int d = 0; d < (w->size()-1); d++)
                 {
                  if ((w->at(d) < halfvalue && w->at(d + 1) > halfvalue) ||
-                    (w->at(d) > halfvalue && w->at(d + 1) < halfvalue) || 
-                    (w->at(d) == halfvalue && w->at(d + 1) != halfvalue)) halfPtsIndx.push_back(d);
+                     (w->at(d) > halfvalue && w->at(d + 1) < halfvalue) || 
+                     (w->at(d) == halfvalue && w->at(d+1) != halfvalue)) halfPtsIndx.push_back(d);
                 }
-            if (halfPtsIndx.size() > 2 && (halfPtsIndx.at(halfPtsIndx.size()-1)-halfPtsIndx.at(0)) >= 16)
-               { 
+            if (halfPtsIndx.size() > 6 && (halfPtsIndx.at(halfPtsIndx.size()-1)-halfPtsIndx.at(0)) >= 12)
+               {
                 halfPtsIndx.clear();
-                if (m_pol == pos || m_pol == undef) halfvalue = m_minVolt + abs(m_maxVolt - m_minVolt)*0.6;
-                else halfvalue = m_minVolt - abs(m_maxVolt - m_minVolt)*0.5;
+                if (m_pol == pos || m_pol == undef) halfvalue = m_minVolt + fabs(m_minVolt - m_maxVolt)*0.7;
+                else halfvalue = m_minVolt - fabs(m_minVolt - m_maxVolt)*0.7;
                 for (unsigned int d = 0; d < (w->size()-1); d++)
                     {
                      if ((w->at(d) < halfvalue && w->at(d + 1) > halfvalue) ||
                          (w->at(d) > halfvalue && w->at(d + 1) < halfvalue) || 
                          (w->at(d) == halfvalue && w->at(d + 1) != halfvalue)) halfPtsIndx.push_back(d);
                     }
-                if (halfPtsIndx.size() > 2 && (halfPtsIndx.at(halfPtsIndx.size()-1)-halfPtsIndx.at(0)) >= 20) halfPtsIndx.push_back(0);
-                else halfPtsIndx.push_back(1);              
+                if (halfPtsIndx.size() > 6 && (halfPtsIndx.at(halfPtsIndx.size()-1)-halfPtsIndx.at(0)) >= 16)
+                   { 
+                    halfPtsIndx.clear();
+                    if (m_pol == pos || m_pol == undef) halfvalue = m_minVolt + fabs(m_minVolt - m_maxVolt)*0.6;
+                    else halfvalue = m_minVolt - fabs(m_minVolt - m_maxVolt)*0.6;
+                    for (unsigned int d = 0; d < (w->size()-1); d++)
+                        {
+                         if ((w->at(d) < halfvalue && w->at(d + 1) > halfvalue) ||
+                             (w->at(d) > halfvalue && w->at(d + 1) < halfvalue) || 
+                             (w->at(d) == halfvalue && w->at(d + 1) != halfvalue)) halfPtsIndx.push_back(d);
+                        }
+                    if (halfPtsIndx.size() > 6 && (halfPtsIndx.at(halfPtsIndx.size()-1)-halfPtsIndx.at(0)) >= 20) halfPtsIndx.push_back(-20);
+                    else halfPtsIndx.push_back(1);              
+                   }
+                else halfPtsIndx.push_back(-10);
                }
-            else halfPtsIndx.push_back(1);
-           }
-        else halfPtsIndx.push_back(1);
+            }
+        else halfPtsIndx.push_back(-10);
        }
-      else halfPtsIndx.push_back(1);
-
+    else halfPtsIndx.push_back(-10);
+    // std::cout << " HalfPoints Size: " << halfPtsIndx.size() << " IsSignal criteria: " << halfPtsIndx.at(halfPtsIndx.size()-1) << std::endl;
     return halfPtsIndx;
 }
 // --------------------------------------------------------------------------------------------------------------
@@ -1060,7 +1119,7 @@ bool WaveForm::IsSignal(std::vector<int>* halfPtsIndx)
 {
     bool signal = false;
     unsigned int hpoint = halfPtsIndx->size();
-    if (hpoint > 2 && halfPtsIndx->at(hpoint -1) == 0) signal = false;
+    if (hpoint > 2 && halfPtsIndx->at(hpoint - 1) == -20) signal = false;
     else signal = true;
     return signal; 
 }
@@ -1149,7 +1208,7 @@ bool WaveForm::InWindow(std::vector<double>* w)
     return window;
 }
 // --------------------------------------------------------------------------------------------------------------
-// Function to determin the start of the signal. If called without the baseline value, it gives a rougph estimate of 
+// Function to determine the start of the signal. If called without the baseline value, it gives a rougph estimate of 
 // the zero crossing value with respect to the maximum. Configured for both positive and negative signals.
 int WaveForm::StartIndx(std::vector<double> *w, bool adj, bool poldef)
 {
@@ -1568,9 +1627,14 @@ bool WaveForm::dump()
         "\t Maximum dV/dT             :" << m_dVdTMax << std::endl <<
         "\t dV/dT at CFD calue of " << m_fraction << " :" << m_dVdTCFD << std::endl <<
         "\t CFD ToT for " << m_fraction << "           :" << m_CFDToT << std::endl <<
-        "\t Trigger ToT at " << m_trigg << " mV    :" << m_TriggToT << std::endl <<
-        "\t Signal FFT                :" << m_signalFFT << std::endl <<
-        "\t Noise FFT                 :" << m_noiseFFT << std::endl <<
+        "\t Trigger ToT at " << m_trigg << " mV    :" << m_TriggToT << std::endl;
+    if (m_WvBase->LGADBase::GetDoFFT())
+       {
+        std::cout <<
+            "\t Signal FFT                :" << m_signalFFT << std::endl <<
+            "\t Noise FFT                 :" << m_noiseFFT << std::endl << std::endl;
+       }
+    std::cout <<
         "\t Amplifier transimpedence  :" << m_transimp << " and gain: " << m_ampgain << std::endl <<
         "\t jitter [noise/dVdt]       :" << m_jitter1 << std::endl <<
         "\t jitter [Rise time/SNR]    :" << m_jitter2 << std::endl;

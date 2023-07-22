@@ -76,20 +76,19 @@ int LGADBase::IterativeFit(std::vector<double> *w, std::pair <double, double> &g
     if (((methode == "Gauss" ||methode == "GaussVarBin" || methode == "GaussInt" || methode == "GaussIntVarBin" ) && abs(last - first) < 5) 
         || ((methode == "LandauXGauss" || methode == "LandauXGaussVarBin" || methode == "LandauXGaussInt" || methode == "LandauXGaussIntVarBin") && abs(last - first) < 10))
        {
-        if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Inadequate number of points for " << methode << " calculation["
+        if (LGADBase::GetVerbosity() > 0) std::cout << __FUNCTION__ << " WARNING: Inadequate number of points for " << methode << " calculation["
                                      << abs(last - first) << "] -> will not cuntinue!" << std::endl;
         return -1;
        }
 
     // Outlier rejection
-    w2 = LGADBase::OutlierReject(w, 4, 0.2, first, last);
+    w2 = LGADBase::OutlierReject(w, 3, 0.2, first, last);
     
     // Calculate dataset mean, std, min and max value for limits and binning variations
     double mean = LGADBase::Mean(&w2);
     double strdv = LGADBase::Stdev(&w2);
     double wmax = *std::max_element(w2.begin(), w2.end());
     double wmin = *std::min_element(w2.begin(), w2.end());
-
     if (mean == -99 || strdv == -99 || strdv == 0)
        {
         if (m_verbose > 0) std::cout << __FUNCTION__ << " WARNING: Unabale to determine mean and stdv ["
@@ -651,24 +650,22 @@ int LGADBase::RooConvFit(std::vector<double>* vec, std::pair <double, double> &m
     RooRealVar var1;
     RooRealVar var2;
     RooFFTConvPdf* Conv;
-    RooLandau landau;
-    RooPolynomial poly1;
+    RooLandau landau("lx", "lx", t, var1, var2);
+    RooPolynomial poly1("linx", "linx", t, RooArgList(var1, var2), 1);
 
     if (conv == "LanXGau")
        { 
-        // Construct landau(t,ml,sl) ;
-        var1 = RooRealVar("ml", "mean landau", mean, -4 * fabs(mean), 2 * fabs(mean));
-        var2 = RooRealVar("sl", "sigma landau", strd, 0.001*strd, 2 * strd);
-        landau = RooLandau("lx", "lx", t, var1, var2);
+        // Construct landau(t,ml,sl)
+        var1.SetNameTitle("ml", "mean landau"); var1.setMin(-4*fabs(mean)); var1.setMax(2*fabs(mean)); var1.setVal(mean);
+        var2.SetNameTitle("sl", "sigma landau"); var2.setMin(0.001*strd); var2.setMax(2*strd); var2.setVal(strd);
         // Construct landau (x) gauss
         Conv = new RooFFTConvPdf("lxg", "landau (X) gauss", t, landau, gauss, 2);
        }
     else if (conv == "LinXGau")
             {
              // Construct linear(t,slope,interc)
-             var1 = RooRealVar("ilin", "intersect linear", mean, mean - 3 * strd, mean + 3 * strd);
-             var2 = RooRealVar("slin", "slope linear", strd, 0.01*strd, 20.*strd);
-             poly1 = RooPolynomial("linx", "linx", t, RooArgList(var1, var2), 1);
+             var1.SetNameTitle("ilin", "intersect linear"); var1.setMin(mean-3*strd); var1.setMax(mean+3*strd); var1.setVal(mean);
+             var2.SetNameTitle("slin", "slope linear"); var2.setMin(0.01*strd); var2.setMax(20.*strd); var2.setVal(strd);
              // Construct linear (x) gauss
              Conv = new RooFFTConvPdf("linXg", "linear (X) gauss", t, poly1, gauss, 2);
             }
@@ -792,7 +789,7 @@ int LGADBase::LinearFit(std::vector<double>* vec, std::pair <double, double> &sl
      
     TF1 *line = new TF1("line", "pol1", 0, pulses);
     line->SetParameter(0, mean);
-    line->SetParameter(1, strdv);
+    line->SetParameter(1, 0);
     TFitResultPtr myfit = ped->Fit(line, "S Q N E", "+rob=0.75"); // 'q' to suppress messages  
     // if (m_verbose >= 2) myfit->Print("V");
 

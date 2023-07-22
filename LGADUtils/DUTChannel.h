@@ -4,7 +4,7 @@
 *
 *      Author: Gkougkousis Evangelos - Leonidas
 *              egkougko@cern.ch
-*               IFAE-BARCELONA
+*               CERN-GENEVA
 */
 
 #ifndef __DUTChannel__
@@ -12,8 +12,8 @@
 
 #include "WaveForm.h"
 
-class DUTChannel : public LGADBase {
-
+class DUTChannel : public LGADBase 
+{
 public:
 
   // Constructors
@@ -136,7 +136,7 @@ public:
 
   // Publicly accessible methods
   void ChannelInit(LGADBase *tBase);
-  bool AppendEvent(std::vector<double> *volt, std::vector<double>* time, bool waveshape = false);
+  bool AppendEvent(std::vector<double> *volt, std::vector<double>* time);
   int updateChProperties(bool waveshape = false, TTree* wavetree = NULL);
 
 private:

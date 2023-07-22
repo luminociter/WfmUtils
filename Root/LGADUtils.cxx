@@ -45,6 +45,11 @@ void LGADUtils::SetTrackComb(bool comb)
     m_Base->LGADBase::SetTrackComb(comb);
 }
 // --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetDoFFT(bool dofft)
+{
+    m_Base->LGADBase::SetDoFFT(dofft);
+}
+// --------------------------------------------------------------------------------------------------------------
 void LGADUtils::SetFEi4Eff(bool FEi4Eff)
 {
     m_Base->LGADBase::SetFEi4Eff(FEi4Eff);
@@ -60,7 +65,7 @@ bool LGADUtils::SetNPoints(unsigned int points, unsigned int ch)
     return m_Base->LGADBase::SetNPoints(points, ch);
 }
 // --------------------------------------------------------------------------------------------------------------
-void LGADUtils::SetScopeDelay(double delay)
+void LGADUtils::SetScopeDelay(std::vector <double> delay)
 {
     m_Base->LGADBase::SetScopeDelay(delay);
 }
@@ -84,6 +89,11 @@ void LGADUtils::SetInstrument(AqInstrument instr)
 void LGADUtils::SetStartStopEvnt(int Evnt1, int Evnt2)
 {
     m_Base->LGADBase::SetStartStopEvnt(Evnt1, Evnt2);
+}
+// --------------------------------------------------------------------------------------------------------------
+void LGADUtils::SetTestEvn(int Evn)
+{
+    m_Base->LGADBase::SetTestEvn(Evn);
 }
 // --------------------------------------------------------------------------------------------------------------
 void LGADUtils::Initialize()
@@ -276,7 +286,12 @@ void LGADUtils::SetPlaneDCrgs(std::vector<double> DCrgs)
     m_Base->LGADBase::SetPlaneDMgts(DCrgs, 1);
 }
 // --------------------------------------------------------------------------------------------------------------
-bool LGADUtils::Analyse(Long64_t nprocess, std::string tree)
+void LGADUtils::SetExcludeTrackFiles(std::vector<unsigned int> trackExclude)
+{
+    m_Base->LGADBase::SetExcludeTrackFiles(trackExclude);
+}
+// --------------------------------------------------------------------------------------------------------------
+bool LGADUtils::Analyse(unsigned int stage, std::string tree)
 {
 #ifdef _WIN32
     char print[MAX_PATH];
@@ -284,74 +299,95 @@ bool LGADUtils::Analyse(Long64_t nprocess, std::string tree)
     char print[PATH_MAX];
 #endif
 
-    int setup = 0;
-
-    if (m_Base->LGADBase::GetExtention() == ".root" || m_Base->LGADBase::GetConvertSucess())
-       {
-        bool file = false;
-        if (!m_Base->LGADBase::GetConvertSucess()) 
-           {
-           if ((m_Base->LGADBase::GetOutFileName() == "" || m_Base->LGADBase::GetOutFileName() == m_Base->LGADBase::GetDataName()) && (m_Base->LGADBase::GetOutFileDir() == m_Base->LGADBase::GetDataDir()))
-              {
-               file = m_Base->SetRootFile(m_Base->GetDataDir() + m_Base->GetDataName() + m_Base->GetExtention());
-              }
-           else {
-                 std::cout <<  __FUNCTION__ << " INFO: Creating new output file at " << m_Base->GetOutFileDir() << " With name: " << m_Base->GetOutFileName() + ".root" << std::endl;
-                 if (m_Base->LGADBase::GetOutFileName() != "") m_Base->SetOutDataNames(m_Base->GetOutFileDir(), m_Base->GetOutFileName());
-                 else m_Base->SetOutDataNames(m_Base->GetOutFileDir(), m_Base->GetDataName());
-                 (m_Base->GetRootFile())->TFile::Cp(m_Base->GetDataDir() + m_Base->GetDataName() + m_Base->GetExtention(), m_Base->GetOutFileDir() + m_Base->GetOutFileName() + ".root", kTRUE, 1000000);
-                 file = m_Base->SetRootFile(m_Base->GetOutFileDir() + m_Base->GetOutFileName() + ".root");
-                }
-           }
-        else file = m_Base->SetRootFile(m_Base->GetOutFileDir() + m_Base->GetOutFileName() + ".root");
-        if (file)
-           {
-            if (tree == "")
-               {
-                if (m_Base->SetRootTree(m_Base->GetRootFile(), m_Base->GetTreeName()))
-                   {
-                    m_chain = new TChain(m_Base->GetRootTree()->GetName(), "");
-                    setup = 1;
-                   }
-                else {
-                      std::cout << __FUNCTION__ << " ERROR: Failed to find tree or more than one trees present!!" << std::endl;
-                      return false;
+    int file1 = -1;
+    bool file2 = false;
+    std::size_t found = 0;
+    std::vector<TString> rootfiles;
+    srd::vector<unsigned int> fileindx;
+    // m_convert takes the return value of the data cnersion function and m_datanames is cleanes at the end of the data conereter
+    if (m_Base->LGADBase::GetConvertSucess() && (m_Base->GetInFileNames()).size() == 0) // finsihed conversion but did not reset the input files        
+       { 
+        file1 = m_Base->LGADBase::SetInRootFile(m_Base->GetOutRootFile()->GetName());
+        file2 = m_Base->LGADBase::SetOutRootFile(m_Base->LGADBase::GetOutFileDir() + m_Base->LGADBase::GetOutFileName() + ".root");
+       }
+    else if ((m_Base->GetInFileNames()).size() != 0)
+            {
+             rootfiles.clear();
+             for (unsigned int k = 0; k < (m_Base->GetInFileNames()).size(); k++)
+                 { 
+                  rootfiles.push_back((m_Base->GetInFileNames()).at(k));
+                  if (m_Base->LGADBase::GetExtention() == "")
+                     { 
+                      if (!(rootfiles.back().Contains("."))) { rootfiles.pop_back(); continue; }
+                      else found = (rootfiles.back()).Last('.');
+                      if (rootfiles.back()(found + 1, (rootfiles.back()).Length()) != "root")
+                         {
+                          rootfiles.pop_back(); 
+                          continue;
+                         }
+                      else rootfiles.back() = rootfiles.back()(0, found);
                      }
-               }
-            else {
-                  strcpy(print, tree.c_str());
-                  if (m_Base->SetRootTree(m_Base->GetRootFile(), std::string(print)))
-                     {
-                      m_chain = new TChain(print, "");
-                      setup = 2;
-                     }
-                  else {
-                        std::cout << __FUNCTION__ << " ERROR: Failed to find tree " << std::string(print) << std::endl;
-                        return false;
-                       }
                  }
-           }
-        else {
-              std::cout << __FUNCTION__ << " ERROR: Failed to open file: ";
-              if (!m_Base->LGADBase::GetConvertSucess()) std::cout << (m_Base->GetDataDir() + m_Base->GetDataName() + m_Base->GetExtention()).Data() << "!" << std::endl;
-              else std::cout << m_Base->GetRootFile()->GetName() << "!" << std::endl;
-              return false;
-             }
-        }
+             if (m_Base->LGADBase::GetExtention() == "") m_Base->LGADBase::SetExtention("root");
+             // Fix the filenames and extentions in a single vector
+             for (unsigned int k = 0; k < rootfiles.size(); k++) rootfiles.at() = m_Base->GetInDataDir() + rootfiles.at() "." + m_Base->GetExtention();
+             file1 = m_Base->LGADBase::SetInRootFiles(rootfiles, fileindx);
+            // Append on the input file
+            if ((m_Base->LGADBase::GetOutFileName() == "" || (m_Base->LGADBase::GetOutFileName() == (m_Base->LGADBase::GetInFileNames()).at(0)) && (m_Base->LGADBase::GetOutFileDir() == m_Base->LGADBase::GetInDataDir())))
+               {
+                file2 = true;
+                m_Base->LGADBase::SetOutRootFile((m_Base->GetInRootFiles()).at(0));
+               }
+            // Create a new file for the analysis output
+            else file2 = m_Base->LGADBase::SetOutRootFile(m_Base->LGADBase::GetOutFileDir() + m_Base->LGADBase::GetOutFileName() + ".root");
+            }
     else {
-          std::cout << __FUNCTION__ << " ERROR: No input root file set!!"<< std::endl;
+          std::cout << __FUNCTION__ << " ERROR: No input root file set!!" << std::endl;
           return false;
          }
-   
-    if (setup == 1 || setup == 2)
-      {
-       m_chain->SetCacheSize(500 * 1024 * 1024);
-       m_chain->Add((const char*)(m_Base->GetRootFile()->GetName()));
-       m_Run = new LGADRun(m_Base);
-       if (nprocess != 0 && nprocess < m_chain->GetEntries()) m_chain->Process(m_Run, "", nprocess);
-       else m_chain->Process(m_Run);
-       if (setup == 1) m_Base->LGADBase::SetConvertSucess(false);
-      }
+        
+    // Block to determine the name of the data tree to analyze for the input files. Normal is wfm
+    if (file1 != -1 && file2)
+       {
+        if (tree == "")
+           {
+            if (!(m_Base->SetRootTree(m_Base->GetInRootFiles(), fileindx, m_Base->GetTreeName())))
+               {
+                std::cout << __FUNCTION__ << " ERROR: Failed to find tree or more than one trees present!!" << std::endl;
+                return false;
+               }
+           }
+        else {
+              if (!(m_Base->SetRootTree(m_Base->GetInRootFile(), fileindx, tree)))
+                 {
+                  std::cout << __FUNCTION__ << " ERROR: Failed to find tree " << tree << std::endl;
+                  return false;
+                 }
+             }
+       }
+    else {
+          if (!file1) std::cout << __FUNCTION__ << " ERROR: Failed to open file: " << m_Base->GetInDataDir() + (m_Base->GetInFileNames()).at(0) + "." + m_Base->GetExtention() << "!" << std::endl;
+          if (!file2) std::cout << __FUNCTION__ << " ERROR: Output root file not correctly set!!" << std::endl;
+          return false;
+         }
+
+    // Setting analysis level
+    // Stage 1: Only waveform class run in the event loop 
+    // Stage 2: The Channel class is run after the event loop to update channel histograms
+    // Stage 3: The CFD maps and chi2 minimizagion is run alognside the inter-channel purity cuts if they are defined
+    // Stage 4: The efficiency tracking class is run to produce the 3D timing maps with the CFD selectedcuts
+    if (stage > 0 && stage < 5) m_Base->LGADBase::SetAnaStage(stage);
+    else {
+          std::cout << __FUNCTION__ << " WARNING: Analysis level invalid, (" << stage << "), setting to first level..." << std::endl;
+          m_Base->LGADBase::SetAnaStage(1);
+         }
+
+    if (tree == "") m_Base->LGADBase::SetConvertSucess(false);
+    m_Base->LGADBase::SetAnaStage(stage);
+    m_Run = new LGADRun(m_Base);
+    // Input root files are already open at this point, the m_infiles and m_trees vectors should be populated with the appropriate pointers which can be immediately used
+    m_Run->LGADRun::InitAnalysis(fileindx);
 
     return true;
 }
+// --------------------------------------------------------------------------------------------------------------

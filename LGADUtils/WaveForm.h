@@ -4,7 +4,7 @@
 *
 *      Author: Gkougkousis Evangelos - Leonidas
 *              egkougko@cern.ch
-*               IFAE-BARCELONA
+*               CERN-GENEVA
 */
 
 #ifndef __WaveForm__
@@ -12,8 +12,8 @@
 
 #include "LGADBase.h"
 
-class WaveForm : public LGADBase {
-
+class WaveForm : public LGADBase 
+{
 public:
 
     LGADBase* m_WvBase;
@@ -110,8 +110,11 @@ private:
     int m_StrIndx;
     int m_EndIndx;
 
+    //Non NTuple variables usefull though the class
     double m_maxavg;
     double m_minavg;
+    double m_wfmavg;
+    double m_wfmstdv;
 
     double m_noise;
     double m_noiseErr;

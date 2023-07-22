@@ -1,19 +1,19 @@
  {
     gInterpreter->Reset(); // Reset Root
-    
-    gInterpreter->LoadMacro("C:/Users/egkougko/cernbox/WINDOWS/Desktop/LGADUtils/LGADUtils/Root/LGADBase.cxx+");
-    gInterpreter->LoadMacro("C:/Users/egkougko/cernbox/WINDOWS/Desktop/LGADUtils/LGADUtils/Root/LGADFits.cxx+");
-    gInterpreter->LoadMacro("C:/Users/egkougko/cernbox/WINDOWS/Desktop/LGADUtils/LGADUtils/Root/DataConverters.cxx+");
-    gInterpreter->LoadMacro("C:/Users/egkougko/cernbox/WINDOWS/Desktop/LGADUtils/LGADUtils/Root/LGADSel.cxx+");
-    gInterpreter->LoadMacro("C:/Users/egkougko/cernbox/WINDOWS/Desktop/LGADUtils/LGADUtils/Root/WaveForm.cxx+");
-    gInterpreter->LoadMacro("C:/Users/egkougko/cernbox/WINDOWS/Desktop/LGADUtils/LGADUtils/Root/DUTChannel.cxx+");
-    gInterpreter->LoadMacro("C:/Users/egkougko/cernbox/WINDOWS/Desktop/LGADUtils/LGADUtils/Root/LGADRun.cxx+");
-    gInterpreter->LoadMacro("C:/Users/egkougko/cernbox/WINDOWS/Desktop/LGADUtils/LGADUtils/Root/LGADUtils.cxx+");
+
+    gInterpreter->LoadMacro("C:/Users/Vagelis/Desktop/LGADUtils/LGADUtils/Root/LGADBase.cxx++");
+    gInterpreter->LoadMacro("C:/Users/Vagelis/Desktop/LGADUtils/LGADUtils/Root/LGADFits.cxx++");
+    gInterpreter->LoadMacro("C:/Users/Vagelis/Desktop/LGADUtils/LGADUtils/Root/TrackCombine.cxx++");
+    gInterpreter->LoadMacro("C:/Users/Vagelis/Desktop/LGADUtils/LGADUtils/Root/DataConverters.cxx++");
+    gInterpreter->LoadMacro("C:/Users/Vagelis/Desktop/LGADUtils/LGADUtils/Root/WaveForm.cxx++");
+    gInterpreter->LoadMacro("C:/Users/Vagelis/Desktop/LGADUtils/LGADUtils/Root/DUTChannel.cxx++");
+    gInterpreter->LoadMacro("C:/Users/Vagelis/Desktop/LGADUtils/LGADUtils/Root/IOHandler.cxx++");
+    gInterpreter->LoadMacro("C:/Users/Vagelis/Desktop/LGADUtils/LGADUtils/Root/LGADRun.cxx++");
+    gInterpreter->LoadMacro("C:/Users/Vagelis/Desktop/LGADUtils/LGADUtils/Root/LGADUtils.cxx++");
 
     gROOT->ProcessLine("LGADUtils* Utils = new LGADUtils()");
     gROOT->ProcessLine("Utils->SetVerbose(0)");
     gEnv->SetValue("TFile.AsyncPrefetching", 1);
-
 /*
    // Basic analysis options
    // For the instrument type, use the AqInstrument type definition values as described at the forward declaration section of LGADBase
@@ -29,6 +29,8 @@
     gROOT->ProcessLine("Utils->SetOutDataNames(TString DataDir, TString DataName)");
     gROOT->ProcessLine("Utils->SetVerbose(int verbose)"); // Code verbosity level, rnaging from 0 - 3
     gROOT->ProcessLine("Utils->SetWaveShape(bool shape)"); // Enable the wavefornm shape sit methode for more accurate resutls (computationaly intensive)
+    gROOT->ProcessLine("Utils->SeDoFFT(bool dofft)"); // Enable or disable the per evetn FFT and overall FFT fits for the run
+    gROOT->ProcessLine("Utils->SetTestEvn(int EVN)"); // Test only a specific event in the analysis (1st stage) 
 
     // Transimpedence correction with respect to signal frquency when available simulation data
     gROOT->ProcessLine("Utils->SetDoTrnsCorr(bool TrnsCorr)");
@@ -37,8 +39,11 @@
     //TestBeam Related Options
     gROOT->ProcessLine("Utils->SetTrackComb(bool comb)");
     gROOT->ProcessLine("Utils->SetFEi4Eff(bool FEi4Eff)");
-    gROOT->ProcessLine("Utils->SetScopeDelay(double delay)");
-    gROOT->ProcessLine("Utils->SetTrigClk(double clk");
+    gROOT->ProcessLine("Utils->SetTrackPackage(std::string package)");
+    gROOT->ProcessLine("Utils->SetScopeDelay(std::vector<double> delay)"); // Delay between the ROI trigger and the oscilloscope trigger. THis is intially an empty vector, initialized to 
+                                                                           // default valus 50e-9 and 162e-9. In case of more oscilloscopes, additional instruments are intialized to -99.
+    gROOT->ProcessLine("Utils->SetTrigClk(double clk"); // Trigger clock of the ROI. Dfault value 25 nsec initialized only when processing testbeam instruments and only
+                                                        // has an effect when used in conjuction with TrackComb variable. 
     gROOT->ProcessLine("Utils->SetTrackInDataNames(TString DataDir, TString DataName)");
 
     // When seeting channel lelvel propertires use the correct definition of the enumerators for the secind stage amplifier and the 
@@ -84,23 +89,23 @@
 
     // TestBeam Example
     gROOT->ProcessLine("Utils->SetTrackComb(true)");
+    gROOT->ProcessLine("Utils->SetTrigClk(25e-9)");
+    gROOT->ProcessLine("Utils->SetScopeDelay({50e-9, 162e-9})");
+    gROOT->ProcessLine("Utils->SetTrackInDataNames(\"C:/Users/Vagelis/Desktop/LGADUtils/LGADUtils/SampleDatasets/TestbeamTek/run000426.root\")");
     gROOT->ProcessLine("Utils->SetInstrument(TestBeamBin)");
-    // gROOT->ProcessLine("Utils->SetInDataNames(\"K:/Telescope 2021/Oscilloscope/RAW\", \"data_1634934742\")"); 
-    // gROOT->ProcessLine("Utils->SetOutDataNames(\"K:/Telescope 2021/Oscilloscope/NewConvert\")");
-    // gROOT->ProcessLine("Utils->SetInDataNames(\"K:/Angle Study 2021/H6A_August/RAW/0_degrees\", \"data_1628782701\")");
-    // gROOT->ProcessLine("Utils->SetOutDataNames(\"K:/Angle Study 2021/H6A_August/ROOT/0_degrees\")");
-    gROOT->ProcessLine("Utils->SetInDataNames(\"C:/Users/egkougko/cernbox/WINDOWS/Desktop/LGADUtils/LGADUtils/SampleDatasets/TestbeamTek\", \"data_1657215023\")");
-    gROOT->ProcessLine("Utils->SetOutDataNames(\"C:/Users/egkougko/cernbox/WINDOWS/Desktop/LGADUtils/LGADUtils/SampleDatasets/TestbeamTek\", \"analyzed.root\")");;
-    // gROOT->ProcessLine("Utils->SetInDataNames(\"C:/Users/egkougko/cernbox/WINDOWS/Desktop/LGADUtils/LGADUtils/SampleDatasets/TestbeamTek\", \"data_1634934742.root\")");
-    //gROOT->ProcessLine("Utils->SetOutDataNames(\"C:/Users/egkougko/cernbox/WINDOWS/Desktop/LGADUtils/LGADUtils/SampleDatasets/TestbeamTek\", \"processed.root\")");
+    gROOT->ProcessLine("Utils->SetStartStopEvnt(0, 500)");
+    gROOT->ProcessLine("Utils->SetInDataNames(\"C:/Users/Vagelis/Desktop/LGADUtils/LGADUtils/SampleDatasets/TestbeamTek\", \"data_1657215023\")");
+    gROOT->ProcessLine("Utils->SetOutDataNames(\"C:/Users/Vagelis/Desktop/LGADUtils/LGADUtils/SampleDatasets/TestbeamTek\", \"Combined.root\")");
     gROOT->ProcessLine("Utils->ConvertData();");
-
+    // gROOT->ProcessLine("Utils->SetInDataNames(\"C:/Users/Vagelis/Desktop/LGADUtils/LGADUtils/SampleDatasets/TestbeamTek\", \"Converted_Reducted.root\")");
+    // gROOT->ProcessLine("Utils->SetOutDataNames(\"C:/Users/Vagelis/Desktop/LGADUtils/LGADUtils/SampleDatasets/TestbeamTek\", \"Analyzsed1stStageTest.root\")");
+    // gROOT->ProcessLine("Utils->SetWaveShape(false)");
+    // gROOT->ProcessLine("Utils->SetTestEvn(496)");
+    // gROOT->ProcessLine("Utils->Analyse(1)");
+ 
     // Sampic Example
     // gROOT->ProcessLine("Utils->SetInstrument(Sampic)");
-    // gROOT->ProcessLine("Utils->SetInDataNames(\"C:/Users/egkougko/cernbox/WINDOWS/Desktop/HPK_-10C_-90V_Sampic\")");
-    // gROOT->ProcessLine("Utils->SetOutDataNames(\"C:/Users/egkougko/cernbox/WINDOWS/Desktop/HPK_-10C_-90V_Sampic\")");
+    // gROOT->ProcessLine("Utils->SetInDataNames(\"C:/Users/Vagelis/Desktop/HPK_-10C_-90V_Sampic\")");
+    // gROOT->ProcessLine("Utils->SetOutDataNames(\"C:/Users/Vagelis/Desktop/HPK_-10C_-90V_Sampic\")");
     // gROOT->ProcessLine("Utils->ConvertData();");
-
-    gROOT->ProcessLine("Utils->SetWaveShape(false)");
-    //gROOT->ProcessLine("Utils->Analyse()");
 }
